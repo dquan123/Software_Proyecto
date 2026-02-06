@@ -1,26 +1,25 @@
-**Organización del repositorio:
-**
+# Organización del repositorio
 
-•	Avances 1: documentos y enlaces para la entrega del primer avance.
+## Avances 1
+Documentos y enlaces para la entrega del primer avance.
 
-•	Avances 2: documentos y enlaces para la entrega del segundo avance.
+## Avances 2
+Documentos y enlaces para la entrega del segundo avance.
 
-•	Corte 1: Documentos, enlaces y material adicional del Corte 1.
+## Corte 1
+Documentos, enlaces y material adicional del Corte 1.
 
-•	Corte 2: Documentos, enlaces y material adicional del Corte 2.
+## Corte 2
+Documentos, enlaces y material adicional del Corte 2.
 
-•	Scrum: carpeta que se usará para las siguientes entregas.
+## Scrum
+Carpeta que se usará para las siguientes entregas.
 
 
 
+# Integrantes del grupo
 
-**Integrantes del grupo:
-**
-
-•	Diego Quan
-
-•	Norman Aguirre
-
-•	Diego Guevara
-
-•	Juan Francisco Orozco
+- Diego Quan  
+- Norman Aguirre  
+- Diego Guevara  
+- Juan Francisco Orozco  
