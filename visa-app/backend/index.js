@@ -9,10 +9,10 @@ const PORT = process.env.PORT || 3000;
 // conexión a PostgreSQL
 const pool = new Pool({
   user: "postgres",
-  host: "127.0.0.1",
+  host: "db",         
   database: "visa_db",
   password: "postgres",
-  port: 5433,
+  port: 5432,        
 });
 
 // probar conexión
@@ -27,6 +27,8 @@ app.get("/", (req, res) => {
 
 // endpoint registro REAL
 app.post("/register", async (req, res) => {
+  console.log("ESTOY EN EL REGISTER");
+
   const { nombre, correo, contrasena } = req.body;
 
   try {
@@ -41,9 +43,11 @@ app.post("/register", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("ERROR DETALLADO:", error.message);
+    console.log("ERROR COMPLETO");
+    console.log(error);
+
     res.status(500).json({ error: error.message });
-    }
+  }
 });
 
 // iniciar servidor
