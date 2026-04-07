@@ -50,6 +50,31 @@ app.post("/register", async (req, res) => {
   }
 });
 
+//Login
+app.post("/login", async (req, res) => {
+  const { correo, contrasena } = req.body;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2",
+      [correo, contrasena]
+    );
+
+    if (result.rows.length > 0) {
+      res.json({
+        message: "Login exitoso",
+        user: result.rows[0],
+      });
+    } else {
+      res.status(401).json({ error: "Credenciales incorrectas" });
+    }
+
+  } catch (error) {
+    console.log("ERROR LOGIN:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
