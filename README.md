@@ -22,4 +22,4 @@ Carpeta que se usará para las siguientes entregas.
 - Diego Quan  
 - Norman Aguirre  
 - Diego Guevara  
-- Juan Francisco Orozco  
+- Juan Francisco Orozco Mijangos (24647)
