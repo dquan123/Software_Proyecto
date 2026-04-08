@@ -13,16 +13,17 @@ const PORT = process.env.PORT || 3000;
 // conexión a PostgreSQL
 const pool = new Pool({
   user: "postgres",
-  host: "db",         
+  host: "db",
   database: "visa_db",
   password: "postgres",
-  port: 5432,        
+  port: 5432,
 });
 
 // probar conexión
-pool.connect()
+pool
+  .connect()
   .then(() => console.log("Conectado a PostgreSQL"))
-  .catch(err => console.error("Error conexión:", err));
+  .catch((err) => console.error("Error conexión:", err));
 
 // endpoint de prueba
 app.get("/", (req, res) => {
@@ -61,7 +62,6 @@ app.post("/register", async (req, res) => {
       message: "Usuario guardado en BD",
       data: result.rows[0],
     });
-
   } catch (error) {
     console.log("ERROR COMPLETO");
     console.log(error);
@@ -88,9 +88,40 @@ app.post("/login", async (req, res) => {
     } else {
       res.status(401).json({ error: "Credenciales incorrectas" });
     }
-
   } catch (error) {
     console.log("ERROR LOGIN:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar perfil seleccionado
+app.post("/guardar-perfil", async (req, res) => {
+  const { correo, perfil } = req.body;
+
+  if (!correo || !perfil) {
+    return res.status(400).json({
+      error: "Correo y perfil son obligatorios",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      "UPDATE usuario SET perfil = $1 WHERE correo = $2 RETURNING *",
+      [perfil, correo]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Usuario no encontrado",
+      });
+    }
+
+    res.json({
+      message: "Perfil guardado correctamente",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.log("ERROR GUARDAR PERFIL:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -108,9 +139,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     res.json({
       message: "Archivo subido",
-      filename: file.filename
+      filename: file.filename,
     });
-
   } catch (err) {
     res.status(500).json({ error: "Error al subir archivo" });
   }
