@@ -1,6 +1,19 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Upload from "./Upload";
 
 function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/upload" element={<Upload />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function Home() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -22,7 +35,6 @@ function App() {
       } else {
         alert("Error: " + data.error);
       }
-
     } catch (err) {
       alert("Error de conexión");
     }
@@ -45,7 +57,6 @@ function App() {
       } else {
         alert("Credenciales incorrectas");
       }
-
     } catch (err) {
       alert("Error de conexión");
     }
@@ -85,6 +96,14 @@ function App() {
 
         <button style={styles.secondaryBtn} onClick={handleLogin}>
           Iniciar sesión
+        </button>
+
+        {/* 👇 BOTÓN NUEVO */}
+        <button
+          style={styles.secondaryBtn}
+          onClick={() => (window.location.href = "/upload")}
+        >
+          Ir a subir documentos
         </button>
       </div>
     </div>

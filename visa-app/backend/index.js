@@ -1,6 +1,7 @@
 const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
+const multer = require("multer");
 
 const app = express();
 
@@ -77,6 +78,30 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Endpoint para subir archivos
+const upload = require("./upload");
+
+app.post("/upload", upload.single("file"), async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+
+    res.json({
+      message: "Archivo subido",
+      filename: file.filename
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "Error al subir archivo" });
+  }
+});
+app.use("/uploads", express.static("uploads"));
+
 
 // iniciar servidor
 app.listen(PORT, () => {
