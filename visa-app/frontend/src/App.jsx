@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
+import ProfileSelection from "./pages/ProfileSelection";
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/upload" element={<Upload />} />
+        <Route path="/perfil" element={<ProfileSelection />} />
       </Routes>
     </BrowserRouter>
   );
@@ -53,6 +55,7 @@ function Home() {
       const data = await res.json();
 
       if (res.ok) {
+        localStorage.setItem("correoUsuario", correo);
         alert("Login exitoso");
       } else {
         alert("Credenciales incorrectas");
@@ -98,12 +101,18 @@ function Home() {
           Iniciar sesión
         </button>
 
-        {/* 👇 BOTÓN NUEVO */}
         <button
           style={styles.secondaryBtn}
           onClick={() => (window.location.href = "/upload")}
         >
           Ir a subir documentos
+        </button>
+
+        <button
+          style={styles.secondaryBtn}
+          onClick={() => (window.location.href = "/perfil")}
+        >
+          Ir a selección de perfil
         </button>
       </div>
     </div>
@@ -141,6 +150,7 @@ const styles = {
     marginBottom: "10px",
     borderRadius: "8px",
     border: "1px solid #ccc",
+    boxSizing: "border-box",
   },
   primaryBtn: {
     width: "100%",
