@@ -29,6 +29,22 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
+// NUEVO ENDPOINT: estado del trámite
+app.get("/estado-tramite", async (req, res) => {
+  try {
+    res.json({
+      estado: "En proceso",
+      etapaActual: "Formulario DS-160",
+      progreso: 40,
+      siguientePaso: "Completar formulario DS-160",
+      mensaje: "Tu trámite sigue avanzando correctamente"
+    });
+  } catch (error) {
+    console.log("ERROR ESTADO:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // endpoint registro REAL
 app.post("/register", async (req, res) => {
   console.log("ESTOY EN EL REGISTER");
@@ -54,7 +70,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-//Login
+// Login
 app.post("/login", async (req, res) => {
   const { correo, contrasena } = req.body;
 
@@ -90,7 +106,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-
     res.json({
       message: "Archivo subido",
       filename: file.filename
@@ -100,8 +115,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Error al subir archivo" });
   }
 });
-app.use("/uploads", express.static("uploads"));
 
+app.use("/uploads", express.static("uploads"));
 
 // iniciar servidor
 app.listen(PORT, () => {
