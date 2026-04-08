@@ -23,11 +23,8 @@ function App() {
         alert("Error: " + data.error);
       }
 
-      console.log(data);
-
     } catch (err) {
       alert("Error de conexión");
-      console.log(err);
     }
   };
 
@@ -44,33 +41,109 @@ function App() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Login exitoso ✅");
+        alert("Login exitoso");
       } else {
-        alert("Credenciales incorrectas ❌");
+        alert("Credenciales incorrectas");
       }
-
-      console.log(data);
 
     } catch (err) {
       alert("Error de conexión");
-      console.log(err);
     }
   };
 
   return (
-    <div>
-      <h1>Visa App</h1>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>VisaGuide</h1>
+        <br />
+        <p style={styles.subtitle}>
+          Te acompañamos en cada paso de tu proceso de visa.
+        </p>
 
-      <input placeholder="Nombre" onChange={(e) => setNombre(e.target.value)} />
-      <input placeholder="Correo" onChange={(e) => setCorreo(e.target.value)} />
-      <input placeholder="Contraseña" onChange={(e) => setContrasena(e.target.value)} />
+        <input
+          style={styles.input}
+          placeholder="Nombre"
+          onChange={(e) => setNombre(e.target.value)}
+        />
 
-      <br /><br />
+        <input
+          style={styles.input}
+          placeholder="Correo"
+          onChange={(e) => setCorreo(e.target.value)}
+        />
 
-      <button onClick={handleRegister}>Registrar</button>
-      <button onClick={handleLogin}>Login</button>
+        <input
+          style={styles.input}
+          type="password"
+          placeholder="Contraseña"
+          onChange={(e) => setContrasena(e.target.value)}
+        />
+
+        <button style={styles.primaryBtn} onClick={handleRegister}>
+          Registrarse
+        </button>
+
+        <button style={styles.secondaryBtn} onClick={handleLogin}>
+          Iniciar sesión
+        </button>
+      </div>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #1e3a8a, #3b82f6)",
+  },
+  card: {
+    background: "white",
+    padding: "30px",
+    borderRadius: "15px",
+    width: "320px",
+    boxShadow: "0px 10px 30px rgba(0,0,0,0.2)",
+    textAlign: "center",
+  },
+  title: {
+    marginBottom: "5px",
+    color: "#1e3a8a",
+  },
+  subtitle: {
+    fontSize: "14px",
+    color: "#555",
+    marginBottom: "20px",
+  },
+  input: {
+    width: "100%",
+    padding: "10px",
+    marginBottom: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+  },
+  primaryBtn: {
+    width: "100%",
+    padding: "10px",
+    marginTop: "10px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: "#ef4444",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  secondaryBtn: {
+    width: "100%",
+    padding: "10px",
+    marginTop: "10px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: "#3b82f6",
+    color: "white",
+    cursor: "pointer",
+  },
+};
 
 export default App;
