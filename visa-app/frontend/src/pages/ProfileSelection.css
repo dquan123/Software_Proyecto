@@ -1,0 +1,237 @@
+* {
+  box-sizing: border-box;
+}
+
+.profile-page {
+  min-height: 100vh;
+  background: #f4f5f7;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #0f172a;
+  padding: 28px 38px 48px;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 42px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff3d71, #ff5f8f);
+  color: white;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(255, 61, 113, 0.2);
+}
+
+.brand-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #12203a;
+}
+
+.login-link {
+  background: transparent;
+  border: none;
+  color: #1f2d4b;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.profile-main {
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.profile-title {
+  margin: 0;
+  font-size: 4rem;
+  line-height: 1.04;
+  font-weight: 800;
+  color: #111c36;
+}
+
+.profile-title span {
+  display: block;
+  color: #ff2f69;
+  margin-top: 10px;
+}
+
+.profile-subtitle {
+  max-width: 760px;
+  margin: 28px auto 42px;
+  font-size: 1.45rem;
+  line-height: 1.55;
+  color: #55657f;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 22px;
+  justify-content: center;
+}
+
+.profile-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #dde3ec;
+  border-radius: 22px;
+  padding: 24px 22px 22px;
+  text-align: left;
+  min-height: 255px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border 0.18s ease;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.profile-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+}
+
+.profile-card.selected {
+  border: 2px solid #ff2f69;
+  box-shadow: 0 18px 30px rgba(255, 47, 105, 0.14);
+  background: linear-gradient(180deg, #fff 0%, #fff8fb 100%);
+}
+
+.card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #f1f4f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+  margin-bottom: 20px;
+}
+
+.profile-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  color: #111c36;
+}
+
+.profile-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 1.12rem;
+  line-height: 1.55;
+  max-width: 95%;
+}
+
+.card-footer {
+  position: absolute;
+  left: 22px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ff2f69;
+  font-weight: 700;
+  font-size: 1.08rem;
+}
+
+.arrow {
+  font-size: 1.2rem;
+}
+
+.selected-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #ff2f69;
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 7px 11px;
+  border-radius: 999px;
+}
+
+.actions {
+  margin-top: 34px;
+  display: flex;
+  justify-content: center;
+}
+
+.save-button {
+  background: linear-gradient(135deg, #111c36, #1e2c52);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 15px 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 24px rgba(17, 28, 54, 0.18);
+}
+
+.save-button:hover {
+  opacity: 0.96;
+}
+
+.save-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+
+  .profile-title {
+    font-size: 3.2rem;
+  }
+
+  .profile-subtitle {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-page {
+    padding: 22px 18px 40px;
+  }
+
+  .profile-header {
+    margin-bottom: 28px;
+  }
+
+  .brand-name {
+    font-size: 1.5rem;
+  }
+
+  .profile-title {
+    font-size: 2.4rem;
+  }
+
+  .profile-subtitle {
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card {
+    min-height: 220px;
+  }
+}
