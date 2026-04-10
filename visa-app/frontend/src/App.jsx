@@ -10,7 +10,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/perfil" element={<ProfileSelection />} />
+
         <Route path="/dashboard" element={<Dashboard />} />
+
       </Routes>
     </BrowserRouter>
   );
@@ -116,6 +118,7 @@ function Home() {
           Ir a selección de perfil
         </button>
 
+
         <button
           style={styles.secondaryBtn}
           onClick={() => (window.location.href = "/dashboard")}
@@ -200,6 +203,7 @@ function Dashboard() {
         >
           Volver al inicio
         </button>
+
       </div>
     </div>
   );
