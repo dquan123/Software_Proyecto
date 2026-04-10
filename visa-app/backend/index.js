@@ -30,6 +30,22 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
+// NUEVO ENDPOINT: estado del trámite
+app.get("/estado-tramite", async (req, res) => {
+  try {
+    res.json({
+      estado: "En proceso",
+      etapaActual: "Formulario DS-160",
+      progreso: 40,
+      siguientePaso: "Completar formulario DS-160",
+      mensaje: "Tu trámite sigue avanzando correctamente"
+    });
+  } catch (error) {
+    console.log("ERROR ESTADO:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // endpoint registro REAL
 app.post("/register", async (req, res) => {
   console.log("ESTOY EN EL REGISTER");
