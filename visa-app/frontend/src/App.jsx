@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection";
 
@@ -40,7 +40,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Onboarding />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/perfil" element={<ProfileSelection />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -49,184 +51,38 @@ function App() {
   );
 }
 
-function Home() {
-  const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [contrasena, setContrasena] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+// Pantalla de Onboarding (la del Figma)
+function Onboarding() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Verificar sesión al cargar la página
   useEffect(() => {
     const session = SessionManager.getSession();
     if (session) {
-      setIsLoggedIn(true);
       setCurrentUser(session);
     }
   }, []);
 
-  // Limpiar mensajes después de 5 segundos
-  useEffect(() => {
-    if (error || success) {
-      const timer = setTimeout(() => {
-        setError("");
-        setSuccess("");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, success]);
-
-  // Validar campos antes de enviar
-  const validateFields = (isRegister = false) => {
-    setError("");
-    
-    if (!correo.trim()) {
-      setError("El correo es obligatorio");
-      return false;
-    }
-
-    if (!correo.includes("@") || !correo.includes(".")) {
-      setError("Ingresa un correo válido");
-      return false;
-    }
-
-    if (!contrasena.trim()) {
-      setError("La contraseña es obligatoria");
-      return false;
-    }
-
-    if (contrasena.length < 4) {
-      setError("La contraseña debe tener al menos 4 caracteres");
-      return false;
-    }
-
-    if (isRegister && !nombre.trim()) {
-      setError("El nombre es obligatorio para registrarse");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleRegister = async () => {
-    if (!validateFields(true)) return;
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("http://localhost:3000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ nombre, correo, contrasena }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
-        setNombre("");
-        setContrasena("");
-        // Mantener el correo para facilitar el login
-      } else {
-        // Manejar errores específicos del backend
-        if (data.error?.includes("duplicate") || data.error?.includes("unique")) {
-          setError("Este correo ya está registrado. Intenta iniciar sesión.");
-        } else {
-          setError(data.error || "Error al registrar. Intenta de nuevo.");
-        }
-      }
-    } catch (err) {
-      setError("Error de conexión. Verifica que el servidor esté corriendo.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!validateFields(false)) return;
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("http://localhost:3000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ correo, contrasena }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // Guardar sesión completa
-        SessionManager.saveSession(data.user);
-        
-        // También mantener compatibilidad con el código existente
-        localStorage.setItem("correoUsuario", correo);
-        
-        setCurrentUser(SessionManager.getSession());
-        setIsLoggedIn(true);
-        setSuccess("¡Bienvenido de vuelta!");
-        
-        // Limpiar campos
-        setNombre("");
-        setCorreo("");
-        setContrasena("");
-      } else {
-        // Manejar errores específicos
-        if (res.status === 401) {
-          setError("Correo o contraseña incorrectos. Verifica tus datos.");
-        } else if (res.status === 404) {
-          setError("No existe una cuenta con este correo. ¿Quieres registrarte?");
-        } else {
-          setError(data.error || "Error al iniciar sesión. Intenta de nuevo.");
-        }
-      }
-    } catch (err) {
-      setError("Error de conexión. Verifica que el servidor esté corriendo.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    SessionManager.clearSession();
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setSuccess("Sesión cerrada correctamente");
-  };
-
-  // Si está logueado, mostrar vista de usuario autenticado
-  if (isLoggedIn && currentUser) {
+  // Si ya está logueado, mostrar opciones
+  if (currentUser) {
     return (
       <div style={styles.container}>
         <div style={styles.card}>
+          <div style={styles.logo}>VG</div>
           <h1 style={styles.title}>VisaGuide</h1>
-          <br></br>
+          <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
 
-          
           <div style={styles.welcomeBox}>
             <p style={styles.welcomeText}>
               ¡Hola, <strong>{currentUser.nombre}</strong>!
             </p>
-            <p style={styles.emailText}>{currentUser.correo}</p>
+            <p style={styles.welcomeEmail}>{currentUser.correo}</p>
           </div>
-
-          {success && <div style={styles.successMessage}>{success}</div>}
 
           <button
             style={styles.primaryBtn}
             onClick={() => (window.location.href = "/dashboard")}
           >
-            Ir al Dashboard
+            Ir al Dashboard →
           </button>
 
           <button
@@ -237,58 +93,351 @@ function Home() {
           </button>
 
           <button
-            style={styles.secondaryBtn}
-            onClick={() => (window.location.href = "/upload")}
+            style={styles.linkBtn}
+            onClick={() => {
+              SessionManager.clearSession();
+              window.location.reload();
+            }}
           >
-            Subir Documentos
-          </button>
-
-          <button style={styles.logoutBtn} onClick={handleLogout}>
-            Cerrar Sesión
+            Cerrar sesión
           </button>
         </div>
+        <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
       </div>
     );
   }
 
-  // Vista de login/registro
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <div style={styles.logo}>VG</div>
         <h1 style={styles.title}>VisaGuide</h1>
-        <p style={styles.subtitle}>
-          Te acompañamos en cada paso de tu proceso de visa.
-        </p>
+        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
 
-        {/* Mensajes de error y éxito */}
+        <div style={styles.descriptionBox}>
+          <p style={styles.descriptionText}>
+            Te acompañamos en cada paso de tu proceso de visa estadounidense. 
+            Organiza, prepara y entiende todo lo que necesitas con claridad y confianza.
+          </p>
+        </div>
+
+        <button
+          style={styles.primaryBtn}
+          onClick={() => (window.location.href = "/registro")}
+        >
+          Comenzar →
+        </button>
+
+        <button
+          style={styles.linkBtn}
+          onClick={() => (window.location.href = "/login")}
+        >
+          Ya tengo una cuenta
+        </button>
+      </div>
+      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
+    </div>
+  );
+}
+
+// Pantalla de Login
+function Login() {
+  const [correo, setCorreo] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const session = SessionManager.getSession();
+    if (session) {
+      window.location.href = "/";
+    }
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  const validateFields = () => {
+    if (!correo.trim()) {
+      setError("El correo es obligatorio");
+      return false;
+    }
+    if (!correo.includes("@") || !correo.includes(".")) {
+      setError("Ingresa un correo válido");
+      return false;
+    }
+    if (!contrasena.trim()) {
+      setError("La contraseña es obligatoria");
+      return false;
+    }
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateFields()) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo, contrasena }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        SessionManager.saveSession(data.user);
+        localStorage.setItem("correoUsuario", correo);
+        window.location.href = "/";
+      } else {
+        if (res.status === 401) {
+          setError("Correo o contraseña incorrectos");
+        } else {
+          setError(data.error || "Error al iniciar sesión");
+        }
+      }
+    } catch (err) {
+      setError("Error de conexión. Verifica que el servidor esté corriendo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") handleLogin();
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <div style={styles.logo}>VG</div>
+        <h1 style={styles.title}>VisaGuide</h1>
+        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
+
+        <h2 style={styles.formTitle}>Iniciar Sesión</h2>
+
+        {error && <div style={styles.errorMessage}>{error}</div>}
+
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Correo electrónico</label>
+          <input
+            style={styles.input}
+            type="email"
+            placeholder="tu@correo.com"
+            value={correo}
+            onChange={(e) => setCorreo(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Contraseña</label>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="••••••••"
+            value={contrasena}
+            onChange={(e) => setContrasena(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
+
+        <button
+          style={{
+            ...styles.primaryBtn,
+            opacity: isLoading ? 0.7 : 1,
+            cursor: isLoading ? "not-allowed" : "pointer",
+          }}
+          onClick={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? "Ingresando..." : "Ingresar →"}
+        </button>
+
+        <button
+          style={styles.linkBtn}
+          onClick={() => (window.location.href = "/registro")}
+        >
+          ¿No tienes cuenta? Regístrate
+        </button>
+
+        <button
+          style={styles.backLink}
+          onClick={() => (window.location.href = "/")}
+        >
+          ← Volver al inicio
+        </button>
+      </div>
+      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
+    </div>
+  );
+}
+
+// Pantalla de Registro
+function Registro() {
+  const [nombre, setNombre] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [confirmarContrasena, setConfirmarContrasena] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const session = SessionManager.getSession();
+    if (session) {
+      window.location.href = "/";
+    }
+  }, []);
+
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError("");
+        setSuccess("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, success]);
+
+  const validateFields = () => {
+    if (!nombre.trim()) {
+      setError("El nombre es obligatorio");
+      return false;
+    }
+    if (!correo.trim()) {
+      setError("El correo es obligatorio");
+      return false;
+    }
+    if (!correo.includes("@") || !correo.includes(".")) {
+      setError("Ingresa un correo válido");
+      return false;
+    }
+    if (!contrasena.trim()) {
+      setError("La contraseña es obligatoria");
+      return false;
+    }
+    if (contrasena.length < 4) {
+      setError("La contraseña debe tener al menos 4 caracteres");
+      return false;
+    }
+    if (contrasena !== confirmarContrasena) {
+      setError("Las contraseñas no coinciden");
+      return false;
+    }
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateFields()) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("http://localhost:3000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, correo, contrasena }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setSuccess("¡Registro exitoso! Redirigiendo al login...");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
+      } else {
+        if (data.error?.includes("duplicate") || data.error?.includes("unique")) {
+          setError("Este correo ya está registrado");
+        } else {
+          setError(data.error || "Error al registrar");
+        }
+      }
+    } catch (err) {
+      setError("Error de conexión. Verifica que el servidor esté corriendo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") handleRegister();
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <div style={styles.logo}>VG</div>
+        <h1 style={styles.title}>VisaGuide</h1>
+        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
+
+        <h2 style={styles.formTitle}>Crear Cuenta</h2>
+
         {error && <div style={styles.errorMessage}>{error}</div>}
         {success && <div style={styles.successMessage}>{success}</div>}
 
-        <input
-          style={styles.input}
-          placeholder="Nombre (solo para registro)"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          disabled={isLoading}
-        />
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Nombre completo</label>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="Juan Pérez"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
 
-        <input
-          style={styles.input}
-          type="email"
-          placeholder="Correo"
-          value={correo}
-          onChange={(e) => setCorreo(e.target.value)}
-          disabled={isLoading}
-        />
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Correo electrónico</label>
+          <input
+            style={styles.input}
+            type="email"
+            placeholder="tu@correo.com"
+            value={correo}
+            onChange={(e) => setCorreo(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
 
-        <input
-          style={styles.input}
-          type="password"
-          placeholder="Contraseña"
-          value={contrasena}
-          onChange={(e) => setContrasena(e.target.value)}
-          disabled={isLoading}
-        />
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Contraseña</label>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="••••••••"
+            value={contrasena}
+            onChange={(e) => setContrasena(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Confirmar contraseña</label>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="••••••••"
+            value={confirmarContrasena}
+            onChange={(e) => setConfirmarContrasena(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+        </div>
 
         <button
           style={{
@@ -299,32 +448,35 @@ function Home() {
           onClick={handleRegister}
           disabled={isLoading}
         >
-          {isLoading ? "Cargando..." : "Registrarse"}
+          {isLoading ? "Creando cuenta..." : "Crear cuenta →"}
         </button>
 
         <button
-          style={{
-            ...styles.secondaryBtn,
-            opacity: isLoading ? 0.7 : 1,
-            cursor: isLoading ? "not-allowed" : "pointer",
-          }}
-          onClick={handleLogin}
-          disabled={isLoading}
+          style={styles.linkBtn}
+          onClick={() => (window.location.href = "/login")}
         >
-          {isLoading ? "Cargando..." : "Iniciar Sesión"}
+          ¿Ya tienes cuenta? Inicia sesión
+        </button>
+
+        <button
+          style={styles.backLink}
+          onClick={() => (window.location.href = "/")}
+        >
+          ← Volver al inicio
         </button>
       </div>
+      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
     </div>
   );
 }
 
+// Dashboard
 function Dashboard() {
   const [tramite, setTramite] = useState(null);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Verificar sesión
     const session = SessionManager.getSession();
     if (!session) {
       window.location.href = "/";
@@ -332,17 +484,12 @@ function Dashboard() {
     }
     setCurrentUser(session);
 
-    // Cargar estado del trámite
     fetch("http://localhost:3000/estado-tramite")
       .then((res) => {
-        if (!res.ok) {
-          throw new Error("No se pudo obtener el estado del trámite");
-        }
+        if (!res.ok) throw new Error("No se pudo obtener el estado del trámite");
         return res.json();
       })
-      .then((data) => {
-        setTramite(data);
-      })
+      .then((data) => setTramite(data))
       .catch((err) => {
         console.error(err);
         setError("Error al cargar la información del trámite");
@@ -352,17 +499,24 @@ function Dashboard() {
   return (
     <div style={styles.dashboardContainer}>
       <div style={styles.dashboardCard}>
-        <h1 style={styles.dashboardTitle}>Estado del trámite</h1>
+        <div style={styles.dashboardHeader}>
+          <div style={styles.logoSmall}>VG</div>
+          <h1 style={styles.dashboardTitle}>Estado del Trámite</h1>
+        </div>
 
         {currentUser && (
           <p style={styles.userInfo}>
-            Usuario: <strong>{currentUser.nombre}</strong>
+            Bienvenido, <strong>{currentUser.nombre}</strong>
           </p>
         )}
 
-        {error && <p style={styles.errorText}>{error}</p>}
+        {error && <div style={styles.errorMessage}>{error}</div>}
 
-        {!error && !tramite && <p>Cargando información...</p>}
+        {!error && !tramite && (
+          <div style={styles.loadingBox}>
+            <p>Cargando información...</p>
+          </div>
+        )}
 
         {!error && tramite && (
           <>
@@ -372,21 +526,22 @@ function Dashboard() {
             </div>
 
             <div style={styles.infoGroup}>
-              <p>
-                <strong>Etapa actual:</strong> {tramite.etapaActual}
-              </p>
-              <p>
-                <strong>Siguiente paso:</strong> {tramite.siguientePaso}
-              </p>
-              <p>
-                <strong>Mensaje:</strong> {tramite.mensaje}
-              </p>
+              <div style={styles.infoItem}>
+                <strong>Etapa actual:</strong>
+                <span>{tramite.etapaActual}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <strong>Siguiente paso:</strong>
+                <span>{tramite.siguientePaso}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <strong>Mensaje:</strong>
+                <span>{tramite.mensaje}</span>
+              </div>
             </div>
 
             <div style={styles.progressSection}>
-              <p>
-                <strong>Progreso general</strong>
-              </p>
+              <p style={styles.progressLabel}>Progreso general</p>
               <div style={styles.progressBar}>
                 <div
                   style={{
@@ -402,205 +557,361 @@ function Dashboard() {
         )}
 
         <button
-          style={styles.backBtn}
+          style={styles.primaryBtn}
           onClick={() => (window.location.href = "/")}
         >
-          Volver al inicio
+          ← Volver al inicio
         </button>
       </div>
     </div>
   );
 }
 
+// Estilos basados en el diseño de Figma
 const styles = {
+  // Contenedor principal con gradiente
   container: {
-    height: "100vh",
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 50%, #4a1a3d 100%)",
+    padding: "20px",
+    position: "relative",
+  },
+
+  // Card principal
+  card: {
+    background: "white",
+    padding: "40px 35px",
+    borderRadius: "20px",
+    width: "100%",
+    maxWidth: "380px",
+    boxShadow: "0px 20px 60px rgba(0,0,0,0.3)",
+    textAlign: "center",
+  },
+
+  // Logo VG
+  logo: {
+    width: "60px",
+    height: "60px",
+    backgroundColor: "#c73e4e",
+    borderRadius: "12px",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "linear-gradient(135deg, #1e3a8a, #3b82f6)",
-  },
-  card: {
-    background: "white",
-    padding: "30px",
-    borderRadius: "15px",
-    width: "350px",
-    boxShadow: "0px 10px 30px rgba(0,0,0,0.2)",
-    textAlign: "center",
-  },
-  title: {
-    marginBottom: "5px",
-    color: "#1e3a8a",
-  },
-  subtitle: {
-    fontSize: "14px",
-    color: "#555",
-    marginBottom: "20px",
-  },
-  input: {
-    width: "100%",
-    padding: "12px",
-    marginBottom: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    boxSizing: "border-box",
-    fontSize: "14px",
-  },
-  primaryBtn: {
-    width: "100%",
-    padding: "12px",
-    marginTop: "10px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: "#ef4444",
+    margin: "0 auto 15px auto",
     color: "white",
-    cursor: "pointer",
+    fontSize: "24px",
     fontWeight: "bold",
-    fontSize: "14px",
-  },
-  secondaryBtn: {
-    width: "100%",
-    padding: "12px",
-    marginTop: "10px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  logoutBtn: {
-    width: "100%",
-    padding: "12px",
-    marginTop: "20px",
-    borderRadius: "8px",
-    border: "2px solid #ef4444",
-    backgroundColor: "transparent",
-    color: "#ef4444",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  errorMessage: {
-    backgroundColor: "#fee2e2",
-    border: "1px solid #ef4444",
-    color: "#dc2626",
-    padding: "10px",
-    borderRadius: "8px",
-    marginBottom: "15px",
-    fontSize: "13px",
-  },
-  successMessage: {
-    backgroundColor: "#d1fae5",
-    border: "1px solid #10b981",
-    color: "#059669",
-    padding: "10px",
-    borderRadius: "8px",
-    marginBottom: "15px",
-    fontSize: "13px",
-  },
-  welcomeBox: {
-    backgroundColor: "#eff6ff",
-    padding: "15px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  },
-  welcomeText: {
-    margin: "0 0 5px 0",
-    fontSize: "18px",
-    color: "#1e3a8a",
-  },
-  emailText: {
-    margin: 0,
-    fontSize: "13px",
-    color: "#64748b",
-  },
-  userInfo: {
-    textAlign: "center",
-    color: "#64748b",
-    marginBottom: "20px",
+    fontFamily: "'Segoe UI', sans-serif",
   },
 
-  // Estilos del Dashboard
+  logoSmall: {
+    width: "40px",
+    height: "40px",
+    backgroundColor: "#c73e4e",
+    borderRadius: "8px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    color: "white",
+    fontSize: "16px",
+    fontWeight: "bold",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Títulos
+  title: {
+    margin: "0 0 5px 0",
+    color: "#1e2a3a",
+    fontSize: "28px",
+    fontWeight: "700",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  brandSubtitle: {
+    margin: "0 0 25px 0",
+    color: "#6b7280",
+    fontSize: "14px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  formTitle: {
+    margin: "0 0 20px 0",
+    color: "#1e2a3a",
+    fontSize: "20px",
+    fontWeight: "600",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Caja de descripción
+  descriptionBox: {
+    backgroundColor: "#f3f4f6",
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "25px",
+  },
+
+  descriptionText: {
+    margin: 0,
+    color: "#4b5563",
+    fontSize: "14px",
+    lineHeight: "1.6",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Inputs
+  inputGroup: {
+    marginBottom: "18px",
+    textAlign: "left",
+  },
+
+  label: {
+    display: "block",
+    marginBottom: "6px",
+    color: "#374151",
+    fontSize: "14px",
+    fontWeight: "500",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  input: {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    boxSizing: "border-box",
+    fontSize: "15px",
+    fontFamily: "'Segoe UI', sans-serif",
+    transition: "border-color 0.2s, box-shadow 0.2s",
+    outline: "none",
+  },
+
+  // Botones
+  primaryBtn: {
+    width: "100%",
+    padding: "14px",
+    marginTop: "10px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: "#c73e4e",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "15px",
+    fontFamily: "'Segoe UI', sans-serif",
+    transition: "background-color 0.2s, transform 0.1s",
+  },
+
+  secondaryBtn: {
+    width: "100%",
+    padding: "14px",
+    marginTop: "10px",
+    borderRadius: "10px",
+    border: "2px solid #1e3a5f",
+    backgroundColor: "transparent",
+    color: "#1e3a5f",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "15px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  linkBtn: {
+    background: "none",
+    border: "none",
+    color: "#c73e4e",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    marginTop: "18px",
+    fontFamily: "'Segoe UI', sans-serif",
+    display: "block",
+    width: "100%",
+  },
+
+  backLink: {
+    background: "none",
+    border: "none",
+    color: "#6b7280",
+    cursor: "pointer",
+    fontSize: "13px",
+    marginTop: "15px",
+    fontFamily: "'Segoe UI', sans-serif",
+    display: "block",
+    width: "100%",
+  },
+
+  // Mensajes
+  errorMessage: {
+    backgroundColor: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#dc2626",
+    padding: "12px",
+    borderRadius: "10px",
+    marginBottom: "18px",
+    fontSize: "14px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  successMessage: {
+    backgroundColor: "#ecfdf5",
+    border: "1px solid #a7f3d0",
+    color: "#059669",
+    padding: "12px",
+    borderRadius: "10px",
+    marginBottom: "18px",
+    fontSize: "14px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Footer
+  footerText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: "12px",
+    marginTop: "25px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Welcome box (usuario logueado)
+  welcomeBox: {
+    backgroundColor: "#f0f7ff",
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "25px",
+  },
+
+  welcomeText: {
+    margin: "0 0 5px 0",
+    color: "#1e3a5f",
+    fontSize: "18px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  welcomeEmail: {
+    margin: 0,
+    color: "#6b7280",
+    fontSize: "13px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  // Dashboard
   dashboardContainer: {
     minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f4f6f8",
+    background: "linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 50%, #4a1a3d 100%)",
     padding: "20px",
   },
+
   dashboardCard: {
-    width: "420px",
-    maxWidth: "95%",
+    width: "100%",
+    maxWidth: "450px",
     background: "white",
-    padding: "28px",
-    borderRadius: "16px",
-    boxShadow: "0px 10px 30px rgba(0,0,0,0.15)",
+    padding: "35px",
+    borderRadius: "20px",
+    boxShadow: "0px 20px 60px rgba(0,0,0,0.3)",
   },
+
+  dashboardHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "20px",
+  },
+
   dashboardTitle: {
-    marginTop: 0,
-    marginBottom: "20px",
-    textAlign: "center",
-    color: "#1e3a8a",
-    fontSize: "32px",
-    lineHeight: "1.1",
+    margin: 0,
+    color: "#1e2a3a",
+    fontSize: "22px",
+    fontWeight: "700",
+    fontFamily: "'Segoe UI', sans-serif",
   },
+
+  userInfo: {
+    color: "#6b7280",
+    fontSize: "14px",
+    marginBottom: "25px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  loadingBox: {
+    padding: "30px",
+    textAlign: "center",
+    color: "#6b7280",
+  },
+
   statusBox: {
-    backgroundColor: "#e8f0fe",
-    borderLeft: "6px solid #2563eb",
-    padding: "14px 16px",
+    backgroundColor: "#f0f7ff",
+    borderLeft: "4px solid #c73e4e",
+    padding: "18px 20px",
     borderRadius: "10px",
-    marginBottom: "20px",
+    marginBottom: "25px",
     display: "flex",
     flexDirection: "column",
   },
+
   statusLabel: {
-    fontSize: "14px",
-    color: "#4b5563",
-    marginBottom: "4px",
+    fontSize: "13px",
+    color: "#6b7280",
+    marginBottom: "5px",
+    fontFamily: "'Segoe UI', sans-serif",
   },
+
   statusValue: {
-    fontSize: "22px",
+    fontSize: "20px",
     fontWeight: "bold",
-    color: "#1d4ed8",
+    color: "#c73e4e",
+    fontFamily: "'Segoe UI', sans-serif",
   },
+
   infoGroup: {
+    marginBottom: "25px",
+  },
+
+  infoItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "12px 0",
+    borderBottom: "1px solid #f3f4f6",
+    fontSize: "14px",
+    fontFamily: "'Segoe UI', sans-serif",
     color: "#374151",
-    lineHeight: "1.8",
   },
+
   progressSection: {
-    marginTop: "24px",
+    marginBottom: "25px",
   },
+
+  progressLabel: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: "10px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
   progressBar: {
     width: "100%",
-    height: "30px",
-    backgroundColor: "#d1d5db",
-    borderRadius: "999px",
+    height: "28px",
+    backgroundColor: "#e5e7eb",
+    borderRadius: "14px",
     overflow: "hidden",
-    marginTop: "10px",
   },
+
   progressFill: {
     height: "100%",
-    backgroundColor: "#2563eb",
+    backgroundColor: "#c73e4e",
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: "13px",
     textAlign: "center",
-    lineHeight: "30px",
-    transition: "width 0.3s ease",
-  },
-  backBtn: {
-    width: "100%",
-    padding: "10px",
-    marginTop: "20px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: "#1e3a8a",
-    color: "white",
-    cursor: "pointer",
-  },
-  errorText: {
-    color: "red",
+    lineHeight: "28px",
+    transition: "width 0.4s ease",
+    fontFamily: "'Segoe UI', sans-serif",
   },
 };
 
