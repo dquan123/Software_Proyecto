@@ -1,21 +1,10 @@
 import DocumentCard from "../components/DocumentCard";
 
 const documents = [
-  {
-    id: 1,
-    title: "Pasaporte vigente",
-    status: "pending",
-  },
-  {
-    id: 2,
-    title: "Fotografía 5x5 cm",
-    status: "pending",
-  },
-  {
-    id: 3,
-    title: "Confirmación DS-160",
-    status: "pending",
-  },
+  { id: 1, title: "Pasaporte vigente", type: "pdf", status: "pending" },
+  { id: 2, title: "Fotografía 5x5 cm", type: "image", status: "pending" },
+  { id: 3, title: "Confirmación DS-160", type: "pdf", status: "pending" },
+  { id: 4, title: "Estados de Cuenta Bancarios", type: "pdf", status: "pending" },
 ];
 
 export default function Documents() {
