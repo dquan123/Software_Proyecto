@@ -36,16 +36,20 @@ export default function Documents() {
 const styles = {
   container: {
     minHeight: "100vh",
-    background: "#0f172a",
-    color: "white",
+    background: "#f1f5f9",
     padding: "40px",
+    fontFamily: "Segoe UI, sans-serif",
   },
+
   title: {
     fontSize: "32px",
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: "10px",
   },
+
   subtitle: {
-    color: "#94a3b8",
+    color: "#64748b",
     marginBottom: "30px",
   },
 };

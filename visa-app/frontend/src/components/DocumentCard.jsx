@@ -11,57 +11,130 @@ export default function DocumentCard({ doc }) {
     formData.append("file", file);
     formData.append("documentId", doc.id);
 
-    try {
-      const res = await fetch("http://localhost:3000/upload", {
-        method: "POST",
-        body: formData,
-      });
+    const res = await fetch("http://localhost:3000/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-      if (res.ok) {
-        setStatus("review");
-        alert("Archivo subido correctamente");
-      } else {
-        alert("Error al subir archivo");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error de conexión");
+    if (res.ok) {
+      setStatus("review");
     }
   };
 
-  const getStatusText = () => {
+  const getStatus = () => {
     switch (status) {
       case "review":
-        return "EN REVISIÓN";
+        return { text: "En revisión", color: "#f59e0b" };
       case "approved":
-        return "APROBADO";
+        return { text: "Aprobado", color: "#22c55e" };
       default:
-        return "PENDIENTE";
+        return { text: "Pendiente", color: "#64748b" };
     }
   };
+
+  const currentStatus = getStatus();
 
   return (
     <div style={styles.card}>
-      <h3>{doc.title}</h3>
-      <p>{getStatusText()}</p>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <div>
+          <h3 style={styles.title}>{doc.title}</h3>
+          <p style={styles.subtitle}>
+            Documento requerido • Actualizado: -
+          </p>
+        </div>
 
-      <input
-        type="file"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
+        <span style={styles.required}>REQUIRED</span>
+      </div>
 
-      <button onClick={handleUpload}>
-        Subir archivo
-      </button>
+      {/* STATUS */}
+      <div style={styles.statusRow}>
+        <span
+          style={{
+            ...styles.statusBadge,
+            background: currentStatus.color,
+          }}
+        >
+          {currentStatus.text}
+        </span>
+      </div>
+
+      {/* INPUT */}
+      <div style={styles.uploadRow}>
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files[0])}
+        />
+
+        <button style={styles.button} onClick={handleUpload}>
+          Subir archivo
+        </button>
+      </div>
     </div>
   );
 }
 
 const styles = {
   card: {
-    background: "#020617",
-    padding: "20px",
-    borderRadius: "10px",
+    background: "white",
+    borderRadius: "16px",
+    padding: "25px",
     marginBottom: "20px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  title: {
+    margin: 0,
+    fontSize: "20px",
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+
+  subtitle: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#64748b",
+  },
+
+  required: {
+    background: "#0f172a",
+    color: "white",
+    padding: "5px 10px",
+    borderRadius: "10px",
+    fontSize: "12px",
+  },
+
+  statusRow: {
+    marginTop: "15px",
+  },
+
+  statusBadge: {
+    padding: "6px 12px",
+    borderRadius: "10px",
+    color: "white",
+    fontSize: "13px",
+  },
+
+  uploadRow: {
+    marginTop: "20px",
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+  },
+
+  button: {
+    background: "#e11d48",
+    color: "white",
+    border: "none",
+    padding: "10px 15px",
+    borderRadius: "8px",
+    cursor: "pointer",
   },
 };
