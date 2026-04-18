@@ -126,27 +126,37 @@ app.post("/guardar-perfil", async (req, res) => {
   }
 });
 
-// Endpoint para subir archivos
-const upload = require("./upload");
+// Guardar documentos
+const path = require("path");
+const fs = require("fs");
 
-app.post("/upload", upload.single("file"), async (req, res) => {
+// crear carpeta uploads si no existe
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+// Endpoint para subir documentos
+app.post("/upload", upload.single("file"), (req, res) => {
   try {
-    const file = req.file;
+    console.log("Archivo guardado:", req.file.filename);
 
-    if (!file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    res.json({
-      message: "Archivo subido",
-      filename: file.filename,
-    });
+    res.json({ message: "Archivo subido correctamente" });
   } catch (err) {
     res.status(500).json({ error: "Error al subir archivo" });
   }
 });
-
-app.use("/uploads", express.static("uploads"));
 
 // iniciar servidor
 app.listen(PORT, () => {
