@@ -1,36 +1,51 @@
 import DocumentCard from "../components/DocumentCard";
 
-const mockDocuments = [
+const documents = [
   {
     id: 1,
     title: "Pasaporte vigente",
-    status: "correction",
-    feedback: "La imagen está borrosa en la zona MRZ.",
-    updatedAt: "Hace 2 días",
+    status: "pending",
   },
   {
     id: 2,
     title: "Fotografía 5x5 cm",
-    status: "approved",
-    updatedAt: "Ayer",
+    status: "pending",
   },
   {
     id: 3,
     title: "Confirmación DS-160",
     status: "pending",
-    updatedAt: "No subido",
   },
 ];
 
 export default function Documents() {
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Gestor de Documentos</h1>
-      <p>Sube y administra tus documentos</p>
+    <div style={styles.container}>
+      <h1 style={styles.title}>Gestor de Documentos</h1>
+      <p style={styles.subtitle}>
+        Sube tus documentos requeridos para continuar el proceso.
+      </p>
 
-      {mockDocuments.map((doc) => (
+      {documents.map((doc) => (
         <DocumentCard key={doc.id} doc={doc} />
       ))}
     </div>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: "100vh",
+    background: "#0f172a",
+    color: "white",
+    padding: "40px",
+  },
+  title: {
+    fontSize: "32px",
+    marginBottom: "10px",
+  },
+  subtitle: {
+    color: "#94a3b8",
+    marginBottom: "30px",
+  },
+};

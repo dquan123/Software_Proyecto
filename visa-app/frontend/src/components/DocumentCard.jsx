@@ -1,43 +1,67 @@
+import { useState } from "react";
+
 export default function DocumentCard({ doc }) {
-  const getStatusColor = () => {
-    switch (doc.status) {
-      case "approved":
-        return "green";
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState(doc.status);
+
+  const handleUpload = async () => {
+    if (!file) return alert("Selecciona un archivo");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("documentId", doc.id);
+
+    try {
+      const res = await fetch("http://localhost:3000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setStatus("review");
+        alert("Archivo subido correctamente");
+      } else {
+        alert("Error al subir archivo");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión");
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
       case "review":
-        return "orange";
-      case "correction":
-        return "red";
+        return "EN REVISIÓN";
+      case "approved":
+        return "APROBADO";
       default:
-        return "gray";
+        return "PENDIENTE";
     }
   };
 
   return (
-    <div
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "12px",
-        padding: "1rem",
-        marginBottom: "1rem",
-      }}
-    >
+    <div style={styles.card}>
       <h3>{doc.title}</h3>
-      <p>Actualizado: {doc.updatedAt}</p>
+      <p>{getStatusText()}</p>
 
-      <span style={{ color: getStatusColor() }}>
-        {doc.status.toUpperCase()}
-      </span>
+      <input
+        type="file"
+        onChange={(e) => setFile(e.target.files[0])}
+      />
 
-      {doc.feedback && (
-        <div style={{ marginTop: "1rem", color: "red" }}>
-          <strong>Feedback:</strong> {doc.feedback}
-        </div>
-      )}
-
-      <div style={{ marginTop: "1rem" }}>
-        <button>Subir archivo</button>
-        <button style={{ marginLeft: "10px" }}>Reemplazar</button>
-      </div>
+      <button onClick={handleUpload}>
+        Subir archivo
+      </button>
     </div>
   );
 }
+
+const styles = {
+  card: {
+    background: "#020617",
+    padding: "20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  },
+};
