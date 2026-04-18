@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection";
+import Documents from "./pages/Documents";
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -46,6 +47,7 @@ function App() {
         <Route path="/upload" element={<Upload />} />
         <Route path="/perfil" element={<ProfileSelection />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/documents" element={<Documents />} />
       </Routes>
     </BrowserRouter>
   );
