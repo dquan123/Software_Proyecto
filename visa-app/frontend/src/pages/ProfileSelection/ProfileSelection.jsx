@@ -4,46 +4,46 @@ import "./ProfileSelection.css";
 function ProfileSelection() {
   const [selectedProfile, setSelectedProfile] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const profiles = [
     {
       id: "turismo_negocios",
-      icon: "💼",
       title: "Turismo / Negocios (B1/B2)",
       description:
         "Viajes de placer, visitas familiares o reuniones de negocios.",
     },
     {
       id: "estudiante",
-      icon: "🎓",
       title: "Estudiante (F/M)",
       description:
         "Estudios académicos o vocacionales en instituciones de EE. UU.",
     },
     {
       id: "renovacion",
-      icon: "🔄",
       title: "Renovación",
       description:
         "Renovación de visa sin necesidad de entrevista consular.",
     },
     {
       id: "grupo_familiar",
-      icon: "👨‍👩‍👧",
       title: "Grupo Familiar",
       description:
         "Solicitud conjunta para varios miembros de la familia.",
     },
     {
       id: "adulto_mayor",
-      icon: "👓",
       title: "Adulto Mayor (Senior)",
       description:
         "Proceso simplificado con exención de entrevista por edad.",
     },
   ];
 
-  const handleSaveProfile = async () => {
+  const handleSelectProfile = (profileId) => {
+    setSelectedProfile(profileId);
+  };
+
+  const handleConfirmSelection = async () => {
     if (!selectedProfile) {
       alert("Selecciona un perfil primero.");
       return;
@@ -74,7 +74,11 @@ function ProfileSelection() {
 
       if (res.ok) {
         localStorage.setItem("perfilUsuario", selectedProfile);
-        alert("Perfil guardado correctamente");
+        setSuccessMessage("¡Perfil seleccionado con éxito!");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1500);
       } else {
         alert(data.error || "No se pudo guardar el perfil");
       }
@@ -92,7 +96,6 @@ function ProfileSelection() {
           <div className="brand-badge">VG</div>
           <span className="brand-name">VisaGuide</span>
         </div>
-
         <button className="login-link">Iniciar sesión</button>
       </header>
 
@@ -108,6 +111,10 @@ function ProfileSelection() {
           experiencia.
         </p>
 
+        {successMessage && (
+          <div className="success-message">{successMessage}</div>
+        )}
+
         <section className="cards-grid">
           {profiles.map((profile) => (
             <article
@@ -115,21 +122,15 @@ function ProfileSelection() {
               className={`profile-card ${
                 selectedProfile === profile.id ? "selected" : ""
               }`}
-              onClick={() => setSelectedProfile(profile.id)}
+              onClick={() => handleSelectProfile(profile.id)}
             >
-              <div className="card-icon">{profile.icon}</div>
-
+              <div className="card-icon" aria-hidden="true" />
               <h3>{profile.title}</h3>
               <p>{profile.description}</p>
-
               <div className="card-footer">
                 <span>Seleccionar</span>
-                <span className="arrow">→</span>
+                <span className="arrow">➜</span>
               </div>
-
-              {selectedProfile === profile.id && (
-                <div className="selected-badge">✓ Seleccionado</div>
-              )}
             </article>
           ))}
         </section>
@@ -137,10 +138,10 @@ function ProfileSelection() {
         <div className="actions">
           <button
             className="save-button"
-            onClick={handleSaveProfile}
+            onClick={handleConfirmSelection}
             disabled={loading}
           >
-            {loading ? "Guardando..." : "Guardar perfil"}
+            {loading ? "Guardando..." : "Continuar"}
           </button>
         </div>
       </main>
