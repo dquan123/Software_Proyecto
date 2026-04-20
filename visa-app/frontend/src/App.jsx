@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
-import ProfileSelection from "./pages/ProfileSelection";
+import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
 import Documents from "./pages/Documents";
 
 // Utilidades para manejo de sesión
