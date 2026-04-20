@@ -30,15 +30,52 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-// NUEVO ENDPOINT: estado del trámite
+// ENDPOINT: estado del trámite del usuario autenticado
 app.get("/estado-tramite", async (req, res) => {
+  const { correo } = req.query;
+
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+
   try {
+    // Buscar el usuario por correo
+    const userResult = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const id_usuario = userResult.rows[0].id_usuario;
+
+    // Buscar el trámite del usuario
+    const tramiteResult = await pool.query(
+      "SELECT * FROM tramite WHERE id_usuario = $1",
+      [id_usuario]
+    );
+
+    let tramite;
+
+    if (tramiteResult.rows.length === 0) {
+      // Si no existe trámite, crear uno inicial para el usuario
+      const nuevo = await pool.query(
+        "INSERT INTO tramite(id_usuario) VALUES($1) RETURNING *",
+        [id_usuario]
+      );
+      tramite = nuevo.rows[0];
+    } else {
+      tramite = tramiteResult.rows[0];
+    }
+
     res.json({
-      estado: "En proceso",
-      etapaActual: "Formulario DS-160",
-      progreso: 40,
-      siguientePaso: "Completar formulario DS-160",
-      mensaje: "Tu trámite sigue avanzando correctamente"
+      estado: tramite.estado,
+      etapaActual: tramite.etapa_actual,
+      progreso: tramite.progreso,
+      siguientePaso: tramite.siguiente_paso,
+      mensaje: tramite.mensaje,
     });
   } catch (error) {
     console.log("ERROR ESTADO:", error);

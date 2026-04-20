@@ -486,7 +486,7 @@ function Dashboard() {
     }
     setCurrentUser(session);
 
-    fetch("http://localhost:3000/estado-tramite")
+    fetch(`http://localhost:3000/estado-tramite?correo=${encodeURIComponent(session.correo)}`)
       .then((res) => {
         if (!res.ok) throw new Error("No se pudo obtener el estado del trámite");
         return res.json();
