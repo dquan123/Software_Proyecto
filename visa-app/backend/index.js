@@ -2,6 +2,8 @@ const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
 const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 
@@ -30,7 +32,32 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-// ENDPOINT: estado del trámite del usuario autenticado
+// ENDPOINT: validar sesión (verifica si el usuario existe en BD)
+app.get("/validar-sesion", async (req, res) => {
+  const { correo } = req.query;
+
+  if (!correo) {
+    return res.status(400).json({ valid: false, error: "Correo requerido" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (result.rows.length > 0) {
+      res.json({ valid: true });
+    } else {
+      res.json({ valid: false });
+    }
+  } catch (error) {
+    console.log("ERROR VALIDAR SESION:", error);
+    res.status(500).json({ valid: false, error: error.message });
+  }
+});
+
+// ENDPOINT: estado del trámite
 app.get("/estado-tramite", async (req, res) => {
   const { correo } = req.query;
 
@@ -39,7 +66,7 @@ app.get("/estado-tramite", async (req, res) => {
   }
 
   try {
-    // Buscar el usuario por correo
+    // Buscar usuario
     const userResult = await pool.query(
       "SELECT id_usuario FROM usuario WHERE correo = $1",
       [correo]
@@ -49,21 +76,23 @@ app.get("/estado-tramite", async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    const id_usuario = userResult.rows[0].id_usuario;
+    const userId = userResult.rows[0].id_usuario;
 
-    // Buscar el trámite del usuario
-    const tramiteResult = await pool.query(
+    // Buscar trámite del usuario
+    let tramiteResult = await pool.query(
       "SELECT * FROM tramite WHERE id_usuario = $1",
-      [id_usuario]
+      [userId]
     );
 
     let tramite;
 
+    // Si no tiene trámite, crear uno nuevo
     if (tramiteResult.rows.length === 0) {
-      // Si no existe trámite, crear uno inicial para el usuario
       const nuevo = await pool.query(
-        "INSERT INTO tramite(id_usuario) VALUES($1) RETURNING *",
-        [id_usuario]
+        `INSERT INTO tramite (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje) 
+         VALUES ($1, 'En proceso', 'Formulario DS-160', 10, 'Completar formulario DS-160', 'Tu trámite ha comenzado correctamente') 
+         RETURNING *`,
+        [userId]
       );
       tramite = nuevo.rows[0];
     } else {
@@ -83,7 +112,7 @@ app.get("/estado-tramite", async (req, res) => {
   }
 });
 
-// endpoint registro REAL
+// endpoint registro
 app.post("/register", async (req, res) => {
   console.log("ESTOY EN EL REGISTER");
 
@@ -164,9 +193,6 @@ app.post("/guardar-perfil", async (req, res) => {
 });
 
 // Guardar documentos
-const path = require("path");
-const fs = require("fs");
-
 // crear carpeta uploads si no existe
 const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) {

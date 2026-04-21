@@ -37,6 +37,25 @@ const SessionManager = {
   }
 };
 
+// Función para validar sesión contra la BD
+const validateSession = async (session) => {
+  if (!session || !session.correo) return false;
+  
+  try {
+    const res = await fetch(`http://localhost:3000/validar-sesion?correo=${encodeURIComponent(session.correo)}`);
+    if (!res.ok) {
+      SessionManager.clearSession();
+      return false;
+    }
+    const data = await res.json();
+    return data.valid;
+  } catch (err) {
+    // Si hay error de conexión, asumimos que la sesión no es válida
+    SessionManager.clearSession();
+    return false;
+  }
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -56,13 +75,33 @@ function App() {
 // Pantalla de Onboarding (la del Figma)
 function Onboarding() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    const session = SessionManager.getSession();
-    if (session) {
-      setCurrentUser(session);
-    }
+    const checkSession = async () => {
+      const session = SessionManager.getSession();
+      if (session) {
+        const isValid = await validateSession(session);
+        if (isValid) {
+          setCurrentUser(session);
+        }
+      }
+      setIsValidating(false);
+    };
+    checkSession();
   }, []);
+
+  // Mostrar loading mientras valida
+  if (isValidating) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <div style={styles.logo}>VG</div>
+          <p style={styles.descriptionText}>Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Si ya está logueado, mostrar opciones
   if (currentUser) {
@@ -150,10 +189,17 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const session = SessionManager.getSession();
-    if (session) {
-      window.location.href = "/";
-    }
+    const checkSession = async () => {
+      const session = SessionManager.getSession();
+      if (session) {
+        const isValid = await validateSession(session);
+        if (isValid) {
+          window.location.href = "/";
+        }
+        // Si no es válida, ya se limpió en validateSession
+      }
+    };
+    checkSession();
   }, []);
 
   useEffect(() => {
@@ -295,10 +341,17 @@ function Registro() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const session = SessionManager.getSession();
-    if (session) {
-      window.location.href = "/";
-    }
+    const checkSession = async () => {
+      const session = SessionManager.getSession();
+      if (session) {
+        const isValid = await validateSession(session);
+        if (isValid) {
+          window.location.href = "/";
+        }
+        // Si no es válida, ya se limpió en validateSession
+      }
+    };
+    checkSession();
   }, []);
 
   useEffect(() => {
@@ -477,26 +530,51 @@ function Dashboard() {
   const [tramite, setTramite] = useState(null);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    const session = SessionManager.getSession();
-    if (!session) {
-      window.location.href = "/";
-      return;
-    }
-    setCurrentUser(session);
+    const checkSessionAndLoadData = async () => {
+      const session = SessionManager.getSession();
+      if (!session) {
+        window.location.href = "/";
+        return;
+      }
 
-    fetch(`http://localhost:3000/estado-tramite?correo=${encodeURIComponent(session.correo)}`)
-      .then((res) => {
+      // Validar sesión contra BD
+      const isValid = await validateSession(session);
+      if (!isValid) {
+        window.location.href = "/";
+        return;
+      }
+
+      setCurrentUser(session);
+      setIsValidating(false);
+
+      // Cargar estado del trámite
+      try {
+        const res = await fetch(`http://localhost:3000/estado-tramite?correo=${encodeURIComponent(session.correo)}`);
         if (!res.ok) throw new Error("No se pudo obtener el estado del trámite");
-        return res.json();
-      })
-      .then((data) => setTramite(data))
-      .catch((err) => {
+        const data = await res.json();
+        setTramite(data);
+      } catch (err) {
         console.error(err);
         setError("Error al cargar la información del trámite");
-      });
+      }
+    };
+
+    checkSessionAndLoadData();
   }, []);
+
+  if (isValidating) {
+    return (
+      <div style={styles.dashboardContainer}>
+        <div style={styles.dashboardCard}>
+          <div style={styles.logoSmall}>VG</div>
+          <p>Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.dashboardContainer}>
@@ -557,6 +635,14 @@ function Dashboard() {
             </div>
           </>
         )}
+
+        {/* Botón para ir a Documentos */}
+        <button
+          style={styles.secondaryBtn}
+          onClick={() => (window.location.href = "/documents")}
+        >
+          📄 Gestionar Documentos
+        </button>
 
         <button
           style={styles.primaryBtn}
