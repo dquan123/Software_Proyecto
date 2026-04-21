@@ -20,9 +20,9 @@ function Upload() {
       });
 
       const data = await res.json();
-      setMessage("Archivo subido correctamente ✅");
+      setMessage("Archivo subido correctamente");
     } catch {
-      setMessage("Error al subir archivo ❌");
+      setMessage("Error al subir archivo");
     }
   };
 
