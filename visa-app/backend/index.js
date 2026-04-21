@@ -12,7 +12,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// conexión a PostgreSQL
+// Conexión a PostgreSQL
 const pool = new Pool({
   user: "postgres",
   host: "db",
@@ -21,13 +21,12 @@ const pool = new Pool({
   port: 5432,
 });
 
-// probar conexión
 pool
   .connect()
   .then(() => console.log("Conectado a PostgreSQL"))
   .catch((err) => console.error("Error conexión:", err));
 
-// endpoint de prueba
+// Prueba
 app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
@@ -114,8 +113,6 @@ app.get("/estado-tramite", async (req, res) => {
 
 // endpoint registro
 app.post("/register", async (req, res) => {
-  console.log("ESTOY EN EL REGISTER");
-
   const { nombre, correo, contrasena } = req.body;
 
   try {
@@ -129,14 +126,12 @@ app.post("/register", async (req, res) => {
       data: result.rows[0],
     });
   } catch (error) {
-    console.log("ERROR COMPLETO");
-    console.log(error);
-
+    console.log("ERROR REGISTER:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Login
+// POST: login
 app.post("/login", async (req, res) => {
   const { correo, contrasena } = req.body;
 
@@ -160,7 +155,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Guardar perfil seleccionado
+// POST: guardar perfil
 app.post("/guardar-perfil", async (req, res) => {
   const { correo, perfil } = req.body;
 
@@ -177,9 +172,7 @@ app.post("/guardar-perfil", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Usuario no encontrado",
-      });
+      return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
     res.json({
@@ -210,18 +203,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Endpoint para subir documentos
 app.post("/upload", upload.single("file"), (req, res) => {
   try {
     console.log("Archivo guardado:", req.file.filename);
-
     res.json({ message: "Archivo subido correctamente" });
   } catch (err) {
     res.status(500).json({ error: "Error al subir archivo" });
   }
 });
 
-// iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
