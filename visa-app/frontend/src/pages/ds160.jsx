@@ -393,3 +393,344 @@ export default function DS160Form() {
     </div>
   );
 }
+
+const styles = {
+  pageContainer: {
+    minHeight: "100vh",
+    background: "#f1f3f6",
+    padding: "28px 32px",
+    fontFamily: "'Segoe UI', sans-serif",
+    maxWidth: "1200px",
+    margin: "0 auto",
+    boxSizing: "border-box",
+  },
+
+  headerCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: "14px",
+    padding: "22px 28px 18px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
+    marginBottom: "22px",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "16px",
+  },
+
+  titulo: {
+    margin: 0,
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#0f172a",
+    letterSpacing: "-0.3px",
+  },
+
+  subtitulo: {
+    margin: "4px 0 0 0",
+    fontSize: "13px",
+    color: "#64748b",
+  },
+
+  guardarBtn: {
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "9px 16px",
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#475569",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontFamily: "'Segoe UI', sans-serif",
+    boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
+  },
+
+  // Espacio para ícono del botón guardar
+  btnIcon: {
+    display: "inline-block",
+    width: "14px",
+    height: "14px",
+    backgroundColor: "#94a3b8",
+    borderRadius: "2px",
+    flexShrink: 0,
+  },
+
+  progressContainer: {
+    width: "100%",
+    height: "5px",
+    backgroundColor: "#e2e8f0",
+    borderRadius: "99px",
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#e11d48",
+    borderRadius: "99px",
+    transition: "width 0.4s ease",
+  },
+
+  mensajeGuardado: {
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    color: "#15803d",
+    padding: "10px 16px",
+    borderRadius: "8px",
+    marginBottom: "18px",
+    fontSize: "13px",
+    fontWeight: "500",
+  },
+
+  mainContent: {
+    display: "flex",
+    gap: "22px",
+    alignItems: "flex-start",
+  },
+
+  formSection: {
+    flex: "1",
+    backgroundColor: "#ffffff",
+    borderRadius: "14px",
+    padding: "28px 30px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
+  },
+
+  sidebar: {
+    width: "310px",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+
+  campoContainer: {
+    marginBottom: "22px",
+  },
+
+  label: {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: "7px",
+    letterSpacing: "0.6px",
+    textTransform: "uppercase",
+  },
+
+  input: {
+    width: "100%",
+    padding: "13px 16px",
+    fontSize: "15px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "10px",
+    boxSizing: "border-box",
+    outline: "none",
+    transition: "border-color 0.2s",
+    fontFamily: "'Segoe UI', sans-serif",
+    color: "#0f172a",
+    backgroundColor: "#ffffff",
+  },
+
+  radioGroup: {
+    display: "flex",
+    gap: "10px",
+  },
+
+  radioBtn: {
+    flex: 1,
+    padding: "13px 20px",
+    fontSize: "14px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "10px",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    transition: "all 0.15s",
+    fontFamily: "'Segoe UI', sans-serif",
+    color: "#0f172a",
+    fontWeight: "500",
+  },
+
+  radioBtnSelected: {
+    backgroundColor: "#0f172a",
+    color: "#ffffff",
+    borderColor: "#0f172a",
+  },
+
+  navegacion: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "28px",
+    paddingTop: "20px",
+    borderTop: "1px solid #f1f5f9",
+  },
+
+  navBtn: {
+    padding: "13px 30px",
+    fontSize: "14px",
+    fontWeight: "600",
+    borderRadius: "99px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  navBtnPrimary: {
+    backgroundColor: "#e11d48",
+    background: "linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)",
+    color: "#ffffff",
+    border: "none",
+    boxShadow: "0 4px 12px rgba(225,29,72,0.30)",
+  },
+
+  navBtnSecondary: {
+    backgroundColor: "transparent",
+    color: "#64748b",
+    border: "none",
+    padding: "13px 8px",
+    fontWeight: "400",
+  },
+
+  // ¿Por qué preguntan esto? — ámbar suave
+  helpBox: {
+    backgroundColor: "#fffbeb",
+    borderRadius: "12px",
+    padding: "16px 18px",
+    border: "1px solid #fde68a",
+  },
+
+  helpTitle: {
+    margin: "0 0 10px 0",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#92400e",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  // Espacio para ícono de ayuda (ⓘ)
+  helpIcon: {
+    display: "inline-block",
+    width: "16px",
+    height: "16px",
+    borderRadius: "50%",
+    border: "1.5px solid #d97706",
+    flexShrink: 0,
+  },
+
+  helpText: {
+    margin: 0,
+    fontSize: "13px",
+    color: "#78350f",
+    lineHeight: "1.65",
+  },
+
+  // Tip del Asesor — navy oscuro
+  tipBox: {
+    backgroundColor: "#0f172a",
+    borderRadius: "12px",
+    padding: "18px 20px",
+    border: "2px solid #e11d48",
+  },
+
+  tipTitle: {
+    margin: "0 0 14px 0",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#f8fafc",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  // Espacio para ícono de tip (bombilla)
+  tipIcon: {
+    display: "inline-block",
+    width: "14px",
+    height: "14px",
+    borderRadius: "50%",
+    backgroundColor: "#334155",
+    flexShrink: 0,
+  },
+
+  tipItem: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "10px",
+    marginBottom: "10px",
+  },
+
+  // Espacio para checkmark verde
+  tipCheck: {
+    display: "inline-block",
+    width: "16px",
+    height: "16px",
+    borderRadius: "50%",
+    border: "1.5px solid #10b981",
+    flexShrink: 0,
+    marginTop: "2px",
+  },
+
+  tipText: {
+    margin: 0,
+    fontSize: "13px",
+    color: "#94a3b8",
+    lineHeight: "1.6",
+  },
+
+  seccionesBox: {
+    backgroundColor: "#1e3a5f",
+    borderRadius: "12px",
+    padding: "18px 20px",
+  },
+
+  seccionesTitle: {
+    margin: "0 0 14px 0",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#e2e8f0",
+    letterSpacing: "0.3px",
+  },
+
+  seccionesList: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+  },
+
+  seccionItem: {
+    padding: "8px 0",
+    fontSize: "13px",
+    color: "#7fb3d3",
+    cursor: "pointer",
+    transition: "color 0.15s",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+
+  seccionItemActual: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+
+  seccionItemCompletada: {
+    color: "#34d399",
+  },
+
+  volverBtn: {
+    marginTop: "22px",
+    padding: "11px 18px",
+    fontSize: "13px",
+    color: "#64748b",
+    backgroundColor: "transparent",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+};
