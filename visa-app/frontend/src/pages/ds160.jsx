@@ -183,7 +183,7 @@ export default function DS160Form() {
     
     setTimeout(() => {
       setGuardando(false);
-      setMensajeGuardado("✓ Progreso guardado");
+      setMensajeGuardado("Progreso guardado");
       setTimeout(() => setMensajeGuardado(""), 3000);
     }, 500);
   };
@@ -272,24 +272,25 @@ export default function DS160Form() {
 
   return (
     <div style={styles.pageContainer}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.titulo}>Formulario DS-160</h1>
-          <p style={styles.subtitulo}>Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})</p>
+      {/* Header card */}
+      <div style={styles.headerCard}>
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.titulo}>Formulario DS-160</h1>
+            <p style={styles.subtitulo}>Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})</p>
+          </div>
+          <button
+            style={styles.guardarBtn}
+            onClick={guardarProgreso}
+            disabled={guardando}
+          >
+            <span style={styles.btnIcon} />
+            {guardando ? "Guardando..." : "Guardar progreso"}
+          </button>
         </div>
-        <button 
-          style={styles.guardarBtn} 
-          onClick={guardarProgreso}
-          disabled={guardando}
-        >
-          {guardando ? "Guardando..." : "💾 Guardar progreso"}
-        </button>
-      </div>
-
-      {/* Barra de progreso */}
-      <div style={styles.progressContainer}>
-        <div style={{...styles.progressBar, width: `${progreso}%`}} />
+        <div style={styles.progressContainer}>
+          <div style={{...styles.progressBar, width: `${progreso}%`}} />
+        </div>
       </div>
 
       {mensajeGuardado && (
@@ -309,7 +310,7 @@ export default function DS160Form() {
               onClick={anteriorSeccion}
               disabled={seccionActual === 1}
             >
-              ← Anterior
+              Anterior
             </button>
             
             {seccionActual < totalSecciones ? (
@@ -317,7 +318,7 @@ export default function DS160Form() {
                 style={{...styles.navBtn, ...styles.navBtnPrimary}}
                 onClick={siguienteSeccion}
               >
-                Siguiente →
+                Siguiente
               </button>
             ) : (
               <button
@@ -327,7 +328,7 @@ export default function DS160Form() {
                   alert("¡Formulario completado! Los datos han sido guardados.");
                 }}
               >
-                ✓ Finalizar
+                Finalizar
               </button>
             )}
           </div>
@@ -337,20 +338,31 @@ export default function DS160Form() {
         <div style={styles.sidebar}>
           {campoConAyuda?.porque && (
             <div style={styles.helpBox}>
-              <h4 style={styles.helpTitle}>❓ ¿Por qué preguntan esto?</h4>
+              <h4 style={styles.helpTitle}>
+                <span style={styles.helpIcon} />
+                ¿Por qué preguntan esto?
+              </h4>
               <p style={styles.helpText}>{campoConAyuda.porque}</p>
             </div>
           )}
 
           {campoConAyuda?.tip && (
             <div style={styles.tipBox}>
-              <h4 style={styles.tipTitle}>💡 Tip del Asesor</h4>
-              <p style={styles.tipText}>✅ {campoConAyuda.tip}</p>
+              <h4 style={styles.tipTitle}>
+                <span style={styles.tipIcon} />
+                Tip del Asesor
+              </h4>
+              {campoConAyuda.tip.split(". ").filter(t => t.trim()).map((linea, i) => (
+                <div key={i} style={styles.tipItem}>
+                  <span style={styles.tipCheck} />
+                  <span style={styles.tipText}>{linea.trim().replace(/\.$/, "")}.</span>
+                </div>
+              ))}
             </div>
           )}
 
-          <div style={styles.helpBox}>
-            <h4 style={styles.helpTitle}>📋 Secciones del formulario</h4>
+          <div style={styles.seccionesBox}>
+            <h4 style={styles.seccionesTitle}>Secciones del formulario</h4>
             <ul style={styles.seccionesList}>
               {secciones.map(s => (
                 <li 
@@ -362,7 +374,7 @@ export default function DS160Form() {
                   }}
                   onClick={() => setSeccionActual(s.id)}
                 >
-                  {s.id < seccionActual ? "✓ " : s.id === seccionActual ? "● " : "○ "}
+                  {s.id < seccionActual ? "" : ""}
                   {s.titulo}
                 </li>
               ))}
@@ -376,246 +388,8 @@ export default function DS160Form() {
         style={styles.volverBtn}
         onClick={() => window.location.href = "/dashboard"}
       >
-        ← Volver al Dashboard
+        Volver al Dashboard
       </button>
     </div>
   );
 }
-
-const styles = {
-  pageContainer: {
-    minHeight: "100vh",
-    background: "#f8fafc",
-    padding: "30px",
-    fontFamily: "'Segoe UI', sans-serif",
-  },
-
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "20px",
-  },
-
-  titulo: {
-    margin: 0,
-    fontSize: "28px",
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-
-  subtitulo: {
-    margin: "5px 0 0 0",
-    fontSize: "14px",
-    color: "#64748b",
-  },
-
-  guardarBtn: {
-    background: "transparent",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "10px 16px",
-    fontSize: "14px",
-    color: "#475569",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-
-  progressContainer: {
-    width: "100%",
-    height: "6px",
-    backgroundColor: "#e2e8f0",
-    borderRadius: "3px",
-    marginBottom: "20px",
-    overflow: "hidden",
-  },
-
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#e11d48",
-    borderRadius: "3px",
-    transition: "width 0.3s ease",
-  },
-
-  mensajeGuardado: {
-    backgroundColor: "#d1fae5",
-    color: "#065f46",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    marginBottom: "20px",
-    fontSize: "14px",
-  },
-
-  mainContent: {
-    display: "flex",
-    gap: "30px",
-  },
-
-  formSection: {
-    flex: "1",
-    backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "30px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-  },
-
-  sidebar: {
-    width: "320px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-
-  campoContainer: {
-    marginBottom: "24px",
-  },
-
-  label: {
-    display: "block",
-    fontSize: "12px",
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: "8px",
-    letterSpacing: "0.5px",
-  },
-
-  input: {
-    width: "100%",
-    padding: "14px 16px",
-    fontSize: "15px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    boxSizing: "border-box",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-
-  radioGroup: {
-    display: "flex",
-    gap: "12px",
-  },
-
-  radioBtn: {
-    flex: 1,
-    padding: "14px 20px",
-    fontSize: "15px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    backgroundColor: "white",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-
-  radioBtnSelected: {
-    backgroundColor: "#1e293b",
-    color: "white",
-    borderColor: "#1e293b",
-  },
-
-  navegacion: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "30px",
-    paddingTop: "20px",
-    borderTop: "1px solid #e2e8f0",
-  },
-
-  navBtn: {
-    padding: "14px 28px",
-    fontSize: "15px",
-    fontWeight: "600",
-    borderRadius: "10px",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-
-  navBtnPrimary: {
-    backgroundColor: "#e11d48",
-    color: "white",
-    border: "none",
-  },
-
-  navBtnSecondary: {
-    backgroundColor: "transparent",
-    color: "#64748b",
-    border: "1px solid #e2e8f0",
-  },
-
-  helpBox: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-  },
-
-  helpTitle: {
-    margin: "0 0 10px 0",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#1e293b",
-  },
-
-  helpText: {
-    margin: 0,
-    fontSize: "14px",
-    color: "#64748b",
-    lineHeight: "1.6",
-  },
-
-  tipBox: {
-    backgroundColor: "#fef9c3",
-    borderRadius: "12px",
-    padding: "20px",
-    border: "1px solid #fde047",
-  },
-
-  tipTitle: {
-    margin: "0 0 10px 0",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#854d0e",
-  },
-
-  tipText: {
-    margin: 0,
-    fontSize: "14px",
-    color: "#713f12",
-    lineHeight: "1.6",
-  },
-
-  seccionesList: {
-    listStyle: "none",
-    padding: 0,
-    margin: 0,
-  },
-
-  seccionItem: {
-    padding: "8px 0",
-    fontSize: "13px",
-    color: "#64748b",
-    cursor: "pointer",
-    transition: "color 0.2s",
-  },
-
-  seccionItemActual: {
-    color: "#e11d48",
-    fontWeight: "600",
-  },
-
-  seccionItemCompletada: {
-    color: "#10b981",
-  },
-
-  volverBtn: {
-    marginTop: "30px",
-    padding: "12px 20px",
-    fontSize: "14px",
-    color: "#64748b",
-    backgroundColor: "transparent",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    cursor: "pointer",
-  },
-};
