@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
 import Documents from "./pages/Documents";
+import DS160Form from "./pages/ds160";
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -67,6 +68,7 @@ function App() {
         <Route path="/perfil" element={<ProfileSelection />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/documents" element={<Documents />} />
+        <Route path="/ds160" element={<DS160Form />} />
       </Routes>
     </BrowserRouter>
   );
@@ -639,6 +641,14 @@ function Dashboard() {
             </div>
           </>
         )}
+
+        {/* Botón para ir al DS-160 */}
+        <button
+          style={styles.secondaryBtn}
+          onClick={() => (window.location.href = "/ds160")}
+        >
+          📝 Formulario DS-160
+        </button>
 
         {/* Botón para ir a Documentos */}
         <button
