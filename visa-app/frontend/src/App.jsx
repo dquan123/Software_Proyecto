@@ -243,7 +243,11 @@ function Login() {
       if (res.ok) {
         SessionManager.saveSession(data.user);
         localStorage.setItem("correoUsuario", correo);
-        window.location.href = "/";
+        if (data.user.perfil) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/perfil";
+        }
       } else {
         if (res.status === 401) {
           setError("Correo o contraseña incorrectos");
