@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./ProfileSelection.css";
+import { buildApiUrl } from "../../config/api";
 
 function ProfileSelection() {
   const [selectedProfile, setSelectedProfile] = useState("");
@@ -59,7 +60,7 @@ function ProfileSelection() {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:3000/guardar-perfil", {
+      const res = await fetch(buildApiUrl("/guardar-perfil"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

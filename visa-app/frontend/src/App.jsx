@@ -4,6 +4,7 @@ import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
 import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
+import { buildApiUrl } from "./config/api";
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -43,7 +44,9 @@ const validateSession = async (session) => {
   if (!session || !session.correo) return false;
   
   try {
-    const res = await fetch(`http://localhost:3000/validar-sesion?correo=${encodeURIComponent(session.correo)}`);
+    const res = await fetch(
+      `${buildApiUrl("/validar-sesion")}?correo=${encodeURIComponent(session.correo)}`
+    );
     if (!res.ok) {
       SessionManager.clearSession();
       return false;
@@ -234,7 +237,7 @@ function Login() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3000/login", {
+      const res = await fetch(buildApiUrl("/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo, contrasena }),
@@ -405,7 +408,7 @@ function Registro() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3000/register", {
+      const res = await fetch(buildApiUrl("/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, correo, contrasena }),
@@ -558,7 +561,9 @@ function Dashboard() {
 
       // Cargar estado del trámite
       try {
-        const res = await fetch(`http://localhost:3000/estado-tramite?correo=${encodeURIComponent(session.correo)}`);
+        const res = await fetch(
+          `${buildApiUrl("/estado-tramite")}?correo=${encodeURIComponent(session.correo)}`
+        );
         if (!res.ok) throw new Error("No se pudo obtener el estado del trámite");
         const data = await res.json();
         setTramite(data);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { buildApiUrl } from "./config/api";
 
 function Upload() {
   const [file, setFile] = useState(null);
@@ -14,7 +15,7 @@ function Upload() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:3000/upload", {
+      const res = await fetch(buildApiUrl("/upload"), {
         method: "POST",
         body: formData,
       });
