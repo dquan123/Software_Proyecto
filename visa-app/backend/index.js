@@ -11,14 +11,15 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Conexión a PostgreSQL
 const pool = new Pool({
-  user: "postgres",
-  host: "db",
-  database: "visa_db",
-  password: "postgres",
-  port: 5432,
+  user: process.env.DB_USER || "postgres",
+  host: process.env.DB_HOST || "db",
+  database: process.env.DB_NAME || "visa_db",
+  password: process.env.DB_PASSWORD || "postgres",
+  port: Number(process.env.DB_PORT) || 5432,
 });
 
 pool
@@ -324,6 +325,6 @@ app.post("/ds160", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
 });
