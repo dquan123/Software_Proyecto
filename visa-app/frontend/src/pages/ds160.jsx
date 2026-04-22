@@ -203,16 +203,46 @@ export default function DS160Form() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const guardarProgreso = () => {
+  const guardarProgreso = async () => {
+    // Obtener correo del usuario desde la sesión
+    const sessionRaw = localStorage.getItem("visaguide_session");
+    const correo = sessionRaw
+      ? JSON.parse(sessionRaw).correo
+      : localStorage.getItem("correoUsuario");
+
+    if (!correo) {
+      alert("Debes iniciar sesión para guardar el formulario");
+      window.location.href = "/login";
+      return;
+    }
+
     setGuardando(true);
-    localStorage.setItem("ds160_datos", JSON.stringify(formData));
-    localStorage.setItem("ds160_seccion", seccionActual.toString());
-    
-    setTimeout(() => {
-      setGuardando(false);
+
+    try {
+      const res = await fetch(buildApiUrl("/ds160"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          correo,
+          datos: formData,
+          seccion_actual: seccionActual,
+          completado: false,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al guardar el formulario");
+      }
+
       setMensajeGuardado("Progreso guardado");
       setTimeout(() => setMensajeGuardado(""), 3000);
-    }, 500);
+    } catch (err) {
+      console.error("Error guardando DS-160:", err);
+      setMensajeGuardado("Error al guardar. Intenta de nuevo.");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const siguienteSeccion = () => {
