@@ -244,6 +244,45 @@ export default function DS160Form() {
       setGuardando(false);
     }
   };
+  const finalizarFormulario = async () => {
+    const sessionRaw = localStorage.getItem("visaguide_session");
+    const correo = sessionRaw
+      ? JSON.parse(sessionRaw).correo
+      : localStorage.getItem("correoUsuario");
+
+    if (!correo) {
+      alert("Debes iniciar sesión para finalizar el formulario");
+      window.location.href = "/login";
+      return;
+    }
+
+    setGuardando(true);
+
+    try {
+      const res = await fetch(buildApiUrl("/ds160"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          correo,
+          datos: formData,
+          seccion_actual: seccionActual,
+          completado: true,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al finalizar el formulario");
+      }
+
+      alert("¡Formulario completado! Los datos han sido guardados.");
+      window.location.href = "/dashboard";
+    } catch (err) {
+      console.error("Error finalizando DS-160:", err);
+      alert("Error al finalizar el formulario. Intenta de nuevo.");
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const siguienteSeccion = () => {
     if (seccionActual < totalSecciones) {
@@ -392,12 +431,10 @@ export default function DS160Form() {
             ) : (
               <button
                 style={{...styles.navBtn, ...styles.navBtnPrimary}}
-                onClick={() => {
-                  guardarProgreso();
-                  alert("¡Formulario completado! Los datos han sido guardados.");
-                }}
+                onClick={finalizarFormulario}
+                disabled={guardando}
               >
-                Finalizar
+                {guardando ? "Finalizando..." : "Finalizar"}
               </button>
             )}
           </div>
