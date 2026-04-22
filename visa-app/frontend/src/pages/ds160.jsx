@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { buildApiUrl } from "../config/api";
 
 // Estructura de las 10 secciones del DS-160
 const secciones = [
@@ -155,21 +156,47 @@ export default function DS160Form() {
   const [formData, setFormData] = useState({});
   const [guardando, setGuardando] = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState("");
+  const [cargando, setCargando] = useState(true);
 
   const seccion = secciones.find(s => s.id === seccionActual);
   const totalSecciones = secciones.length;
   const progreso = (seccionActual / totalSecciones) * 100;
 
   // Cargar datos guardados
+  // Cargar datos del formulario desde el backend
   useEffect(() => {
-    const datosGuardados = localStorage.getItem("ds160_datos");
-    if (datosGuardados) {
-      setFormData(JSON.parse(datosGuardados));
-    }
-    const seccionGuardada = localStorage.getItem("ds160_seccion");
-    if (seccionGuardada) {
-      setSeccionActual(parseInt(seccionGuardada));
-    }
+    const cargarFormulario = async () => {
+      const sessionRaw = localStorage.getItem("visaguide_session");
+      const correo = sessionRaw
+        ? JSON.parse(sessionRaw).correo
+        : localStorage.getItem("correoUsuario");
+
+      if (!correo) {
+        alert("Debes iniciar sesión para acceder al formulario DS-160");
+        window.location.href = "/login";
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`
+        );
+
+        if (!res.ok) {
+          throw new Error("Error al cargar el formulario");
+        }
+
+        const data = await res.json();
+        setFormData(data.datos || {});
+        setSeccionActual(data.seccion_actual || 1);
+      } catch (err) {
+        console.error("Error cargando DS-160:", err);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarFormulario();
   }, []);
 
   const handleChange = (name, value) => {
@@ -269,6 +296,18 @@ export default function DS160Form() {
 
   // Obtener el primer campo con tip o porque para mostrar en el sidebar
   const campoConAyuda = seccion?.campos.find(c => c.tip || c.porque);
+
+  if (cargando) {
+    return (
+      <div style={styles.pageContainer}>
+        <div style={styles.headerCard}>
+          <p style={{ textAlign: "center", color: "#64748b", margin: 0 }}>
+            Cargando formulario...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.pageContainer}>
