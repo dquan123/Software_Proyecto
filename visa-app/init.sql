@@ -17,3 +17,14 @@ CREATE TABLE IF NOT EXISTS tramite (
   siguiente_paso VARCHAR(200) DEFAULT 'Completar formulario DS-160',
   mensaje TEXT DEFAULT 'Tu trámite ha comenzado correctamente'
 );
+
+-- Tabla para guardar el formulario DS-160
+CREATE TABLE IF NOT EXISTS formulario_ds160 (
+  id_formulario SERIAL PRIMARY KEY,
+  id_usuario INT REFERENCES usuario(id_usuario),
+  datos JSONB NOT NULL DEFAULT '{}',
+  seccion_actual INT DEFAULT 1,
+  completado BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

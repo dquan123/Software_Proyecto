@@ -212,6 +212,118 @@ app.post("/upload", upload.single("file"), (req, res) => {
   }
 });
 
+// =====================
+// ENDPOINTS DS-160
+// =====================
+
+// GET: Cargar formulario DS-160 del usuario
+app.get("/ds160", async (req, res) => {
+  const { correo } = req.query;
+
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+
+  try {
+    // Buscar usuario
+    const userResult = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userId = userResult.rows[0].id_usuario;
+
+    // Buscar formulario
+    const formResult = await pool.query(
+      "SELECT * FROM formulario_ds160 WHERE id_usuario = $1",
+      [userId]
+    );
+
+    if (formResult.rows.length === 0) {
+      // No tiene formulario, retornar vacío
+      return res.json({ 
+        datos: {}, 
+        seccion_actual: 1, 
+        completado: false 
+      });
+    }
+
+    const form = formResult.rows[0];
+    res.json({
+      datos: form.datos,
+      seccion_actual: form.seccion_actual,
+      completado: form.completado
+    });
+
+  } catch (error) {
+    console.log("ERROR GET DS160:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST: Guardar formulario DS-160
+app.post("/ds160", async (req, res) => {
+  const { correo, datos, seccion_actual, completado } = req.body;
+
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+
+  try {
+    // Buscar usuario
+    const userResult = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userId = userResult.rows[0].id_usuario;
+
+    // Verificar si ya tiene formulario
+    const existingForm = await pool.query(
+      "SELECT id_formulario FROM formulario_ds160 WHERE id_usuario = $1",
+      [userId]
+    );
+
+    let result;
+
+    if (existingForm.rows.length === 0) {
+      // Crear nuevo formulario
+      result = await pool.query(
+        `INSERT INTO formulario_ds160 (id_usuario, datos, seccion_actual, completado, updated_at) 
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) 
+         RETURNING *`,
+        [userId, JSON.stringify(datos || {}), seccion_actual || 1, completado || false]
+      );
+    } else {
+      // Actualizar formulario existente
+      result = await pool.query(
+        `UPDATE formulario_ds160 
+         SET datos = $1, seccion_actual = $2, completado = $3, updated_at = CURRENT_TIMESTAMP 
+         WHERE id_usuario = $4 
+         RETURNING *`,
+        [JSON.stringify(datos || {}), seccion_actual || 1, completado || false, userId]
+      );
+    }
+
+    res.json({
+      message: "Formulario guardado correctamente",
+      formulario: result.rows[0]
+    });
+
+  } catch (error) {
+    console.log("ERROR POST DS160:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
