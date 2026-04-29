@@ -2,6 +2,16 @@
   box-sizing: border-box;
 }
 
+.layout-with-sidebar {
+  display: flex;
+  min-height: 100vh;
+}
+
+.layout-with-sidebar .profile-page {
+  margin-left: 250px;
+  flex: 1;
+}
+
 html,
 body,
 #root {
