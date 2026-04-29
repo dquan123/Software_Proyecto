@@ -204,14 +204,27 @@ export default function Sidebar({ currentPage }) {
 
         {/* Usuario */}
         <div style={styles.userSection}>
-          <div style={styles.userAvatar}>
+        <div style={styles.userAvatar}>
             {getInitials(usuario?.nombre)}
-          </div>
-          <div style={styles.userInfo}>
+        </div>
+        <div style={styles.userInfo}>
             <p style={styles.userName}>{usuario?.nombre || "Usuario"}</p>
             <p style={styles.userRole}>{getPerfilLabel(usuario?.perfil)}</p>
-          </div>
         </div>
+        </div>
+
+        {/* Cerrar sesión */}
+        <button
+        style={styles.logoutBtn}
+        onClick={() => {
+            localStorage.removeItem("visaguide_session");
+            localStorage.removeItem("correoUsuario");
+            localStorage.removeItem("perfilUsuario");
+            window.location.href = "/";
+        }}
+        >
+        Cerrar sesión
+        </button>
       </div>
     </aside>
   );
@@ -423,4 +436,18 @@ const styles = {
     fontSize: "12px",
     margin: "2px 0 0 0",
   },
+
+  logoutBtn: {
+    width: "100%",
+    padding: "10px",
+    marginTop: "12px",
+    backgroundColor: "transparent",
+    border: "1px solid #334155",
+    borderRadius: "8px",
+    color: "#94a3b8",
+    fontSize: "13px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    fontFamily: "'Segoe UI', sans-serif",
+    },
 };
