@@ -76,10 +76,19 @@ function ProfileSelection() {
 
       if (res.ok) {
         localStorage.setItem("perfilUsuario", selectedProfile);
+        
+        // Actualizar también la sesión con el perfil
+        const session = localStorage.getItem("visaguide_session");
+        if (session) {
+          const sessionData = JSON.parse(session);
+          sessionData.perfil = selectedProfile;
+          localStorage.setItem("visaguide_session", JSON.stringify(sessionData));
+        }
+        
         setSuccessMessage("¡Perfil seleccionado con éxito!");
 
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         }, 1500);
       } else {
         alert(data.error || "No se pudo guardar el perfil");
