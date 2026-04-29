@@ -560,6 +560,12 @@ function Dashboard() {
       setCurrentUser(session);
       setIsValidating(false);
 
+      // Si no tiene perfil, redirigir a selección de perfil
+      if (!session.perfil) {
+        window.location.href = "/perfil";
+        return;
+      }
+
       // Cargar estado del trámite
       try {
         const res = await fetch(
