@@ -1,3 +1,4 @@
+import Sidebar from "../components/Sidebar";
 import DocumentCard from "../components/DocumentCard";
 
 const documents = [
@@ -9,22 +10,31 @@ const documents = [
 
 export default function Documents() {
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Gestor de Documentos</h1>
-      <p style={styles.subtitle}>
-        Sube tus documentos requeridos para continuar el proceso.
-      </p>
+    <div style={styles.layout}>
+      <Sidebar currentPage="documentos" />
+      <main style={styles.mainContent}>
+        <h1 style={styles.title}>Gestor de Documentos</h1>
+        <p style={styles.subtitle}>
+          Sube tus documentos requeridos para continuar el proceso.
+        </p>
 
-      {documents.map((doc) => (
-        <DocumentCard key={doc.id} doc={doc} />
-      ))}
+        {documents.map((doc) => (
+          <DocumentCard key={doc.id} doc={doc} />
+        ))}
+      </main>
     </div>
   );
 }
 
 const styles = {
-  container: {
+  layout: {
+    display: "flex",
     minHeight: "100vh",
+  },
+
+  mainContent: {
+    marginLeft: "250px",
+    flex: 1,
     background: "#f1f5f9",
     padding: "40px",
     fontFamily: "Segoe UI, sans-serif",

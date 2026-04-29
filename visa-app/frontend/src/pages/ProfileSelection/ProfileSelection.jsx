@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./ProfileSelection.css";
 import { buildApiUrl } from "../../config/api";
+import Sidebar from "../../components/Sidebar";
 
 function ProfileSelection() {
   const [selectedProfile, setSelectedProfile] = useState("");
@@ -91,15 +92,9 @@ function ProfileSelection() {
   };
 
   return (
-    <div className="profile-page">
-      <header className="profile-header">
-        <div className="brand">
-          <div className="brand-badge">VG</div>
-          <span className="brand-name">VisaGuide</span>
-        </div>
-        <button className="login-link">Iniciar sesión</button>
-      </header>
-
+    <div className="layout-with-sidebar">
+      <Sidebar currentPage="perfil" />
+      <div className="profile-page">
       <main className="profile-main">
         <h1 className="profile-title">
           Prepara tu solicitud de visa
@@ -146,6 +141,7 @@ function ProfileSelection() {
           </button>
         </div>
       </main>
+    </div>
     </div>
   );
 }

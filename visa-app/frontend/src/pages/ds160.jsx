@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { buildApiUrl } from "../config/api";
+import Sidebar from "../components/Sidebar";
 
 // Estructura de las 10 secciones del DS-160
 const secciones = [
@@ -379,9 +380,11 @@ export default function DS160Form() {
   }
 
   return (
-    <div style={styles.pageContainer}>
-      {/* Header card */}
-      <div style={styles.headerCard}>
+    <div style={styles.layout}>
+      <Sidebar currentPage="ds160" />
+      <div style={styles.pageContainer}>
+        {/* Header card */}
+        <div style={styles.headerCard}>
         <div style={styles.header}>
           <div>
             <h1 style={styles.titulo}>Formulario DS-160</h1>
@@ -489,25 +492,19 @@ export default function DS160Form() {
         </div>
       </div>
 
-      {/* Botón volver */}
-      <button
-        style={styles.volverBtn}
-        onClick={() => window.location.href = "/dashboard"}
-      >
-        Volver al Dashboard
-      </button>
+      </div>
     </div>
   );
 }
 
 const styles = {
   pageContainer: {
+    marginLeft: "250px",
+    flex: 1,
     minHeight: "100vh",
     background: "#f1f3f6",
     padding: "28px 32px",
     fontFamily: "'Segoe UI', sans-serif",
-    maxWidth: "1200px",
-    margin: "0 auto",
     boxSizing: "border-box",
   },
 
@@ -838,5 +835,10 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  layout: {
+    display: "flex",
+    minHeight: "100vh",
   },
 };

@@ -5,6 +5,7 @@ import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
 import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
 import { buildApiUrl } from "./config/api";
+import Sidebar from "./components/Sidebar";
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -588,9 +589,11 @@ function Dashboard() {
   }
 
   return (
-    <div style={styles.dashboardContainer}>
-      <div style={styles.dashboardCard}>
-        <div style={styles.dashboardHeader}>
+    <div style={styles.layoutWithSidebar}>
+      <Sidebar currentPage="inicio" />
+      <div style={styles.dashboardContainer}>
+        <div style={styles.dashboardCard}>
+          <div style={styles.dashboardHeader}>
           <div style={styles.logoSmall}>VG</div>
           <h1 style={styles.dashboardTitle}>Estado del Trámite</h1>
         </div>
@@ -663,13 +666,8 @@ function Dashboard() {
           📄 Gestionar Documentos
         </button>
 
-        <button
-          style={styles.primaryBtn}
-          onClick={() => (window.location.href = "/")}
-        >
-          ← Volver al inicio
-        </button>
       </div>
+    </div>
     </div>
   );
 }
@@ -906,6 +904,8 @@ const styles = {
 
   // Dashboard
   dashboardContainer: {
+    marginLeft: "250px",
+    flex: 1,
     minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
@@ -1019,6 +1019,11 @@ const styles = {
     lineHeight: "28px",
     transition: "width 0.4s ease",
     fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  layoutWithSidebar: {
+    display: "flex",
+    minHeight: "100vh",
   },
 };
 
