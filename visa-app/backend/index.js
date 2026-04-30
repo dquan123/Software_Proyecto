@@ -1,11 +1,12 @@
-require("dotenv").config();
+const path = require("path");
+
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const upload = require("./upload");
+const { uploadBufferToR2, deleteObjectFromR2 } = require("./r2");
 
 const app = express();
 
@@ -188,30 +189,76 @@ app.post("/guardar-perfil", async (req, res) => {
   }
 });
 
-// Guardar documentos
-// crear carpeta uploads si no existe
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
+app.post("/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Archivo requerido" });
+  }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
+  try {
+    const uploadedFile = await uploadBufferToR2(req.file);
+
+    res.json({
+      message: "Archivo subido correctamente",
+      archivo_url: uploadedFile.url,
+      key: uploadedFile.key,
+    });
+  } catch (error) {
+    console.log("ERROR UPLOAD:", error);
+    res.status(502).json({ error: "No se pudo subir el archivo" });
+  }
 });
 
-const upload = multer({ storage });
+app.post("/documentos", upload.single("file"), async (req, res) => {
+  const { nombre, tipo, usuario_id } = req.body;
 
-app.post("/upload", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Archivo requerido" });
+  }
+
+  if (!nombre?.trim()) {
+    return res.status(400).json({ error: "Nombre requerido" });
+  }
+
+  const parsedUsuarioId =
+    usuario_id === undefined || usuario_id === null || usuario_id === ""
+      ? null
+      : Number(usuario_id);
+
+  if (parsedUsuarioId !== null && Number.isNaN(parsedUsuarioId)) {
+    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+  }
+
+  let uploadedFile;
+
   try {
-    console.log("Archivo guardado:", req.file.filename);
-    res.json({ message: "Archivo subido correctamente" });
-  } catch (err) {
-    res.status(500).json({ error: "Error al subir archivo" });
+    uploadedFile = await uploadBufferToR2(req.file);
+  } catch (error) {
+    console.log("ERROR R2 DOCUMENTOS:", error);
+    return res.status(502).json({ error: "No se pudo subir el archivo" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, nombre, tipo, archivo_url, usuario_id, creado_en`,
+      [nombre.trim(), tipo || null, uploadedFile.url, parsedUsuarioId]
+    );
+
+    return res.status(201).json({
+      message: "Documento guardado correctamente",
+      documento: result.rows[0],
+    });
+  } catch (error) {
+    console.log("ERROR DB DOCUMENTOS:", error);
+
+    try {
+      await deleteObjectFromR2(uploadedFile.key);
+    } catch (cleanupError) {
+      console.log("ERROR CLEANUP R2:", cleanupError);
+    }
+
+    return res.status(500).json({ error: "No se pudo guardar el documento" });
   }
 });
 
