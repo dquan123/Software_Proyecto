@@ -167,7 +167,10 @@ export default function Sidebar({ currentPage }) {
                   }}
                 >
                   <span style={styles.menuIcon}>{getIcon(item.icon)}</span>
-                  <span style={styles.menuText}>{item.label}</span>
+                  <span style={{
+                    ...styles.menuText,
+                    fontSize: modoSenior ? "17px" : "14px"
+                  }}>{item.label}</span>
                   {item.badge && (
                     <span style={styles.badge}>{item.badge}</span>
                   )}
@@ -184,7 +187,10 @@ export default function Sidebar({ currentPage }) {
         <div style={styles.modoSenior}>
           <div style={styles.modoSeniorLeft}>
             <span style={styles.modoSeniorIcon}>{getIcon("senior")}</span>
-            <span style={styles.modoSeniorText}>Modo Senior</span>
+            <span style={{
+              ...styles.modoSeniorText,
+              fontSize: modoSenior ? "17px" : "14px"
+            }}>Modo Senior</span>
           </div>
           <button
             style={{
@@ -208,8 +214,14 @@ export default function Sidebar({ currentPage }) {
             {getInitials(usuario?.nombre)}
         </div>
         <div style={styles.userInfo}>
-            <p style={styles.userName}>{usuario?.nombre || "Usuario"}</p>
-            <p style={styles.userRole}>{getPerfilLabel(usuario?.perfil)}</p>
+            <p style={{
+              ...styles.userName,
+              fontSize: modoSenior ? "17px" : "14px"
+            }}>{usuario?.nombre || "Usuario"}</p>
+            <p style={{
+              ...styles.userRole,
+              fontSize: modoSenior ? "15px" : "12px"
+            }}>{getPerfilLabel(usuario?.perfil)}</p>
         </div>
         </div>
 
