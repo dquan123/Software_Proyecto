@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import DocumentCard from "../components/DocumentCard";
+import useModoSenior from "../hooks/useModoSenior";
 
 const documents = [
   { id: 1, title: "Pasaporte vigente", type: "pdf", status: "pending" },
@@ -9,12 +10,19 @@ const documents = [
 ];
 
 export default function Documents() {
+  const modoSenior = useModoSenior();
   return (
     <div style={styles.layout}>
       <Sidebar currentPage="documentos" />
       <main style={styles.mainContent}>
-        <h1 style={styles.title}>Gestor de Documentos</h1>
-        <p style={styles.subtitle}>
+        <h1 style={{
+          ...styles.title,
+          fontSize: modoSenior ? "40px" : "32px"
+        }}>Gestor de Documentos</h1>
+        <p style={{
+          ...styles.subtitle,
+          fontSize: modoSenior ? "18px" : "14px"
+        }}>
           Sube tus documentos requeridos para continuar el proceso.
         </p>
 

@@ -6,6 +6,7 @@ import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
 import { buildApiUrl } from "./config/api";
 import Sidebar from "./components/Sidebar";
+import useModoSenior from "./hooks/useModoSenior";
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -537,6 +538,7 @@ function Registro() {
 
 // Dashboard
 function Dashboard() {
+  const modoSenior = useModoSenior();
   const [tramite, setTramite] = useState(null);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -601,11 +603,17 @@ function Dashboard() {
         <div style={styles.dashboardCard}>
           <div style={styles.dashboardHeader}>
           <div style={styles.logoSmall}>VG</div>
-          <h1 style={styles.dashboardTitle}>Estado del Trámite</h1>
+          <h1 style={{
+            ...styles.dashboardTitle,
+            fontSize: modoSenior ? "28px" : "22px"
+          }}>Estado del Trámite</h1>
         </div>
 
         {currentUser && (
-          <p style={styles.userInfo}>
+          <p style={{
+            ...styles.userInfo,
+            fontSize: modoSenior ? "18px" : "14px"
+          }}>
             Bienvenido, <strong>{currentUser.nombre}</strong>
           </p>
         )}
