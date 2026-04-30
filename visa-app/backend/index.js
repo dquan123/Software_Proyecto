@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
@@ -15,11 +17,11 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 // Conexión a PostgreSQL
 const pool = new Pool({
-  user: process.env.DB_USER || "postgres",
-  host: process.env.DB_HOST || "db",
-  database: process.env.DB_NAME || "visa_db",
-  password: process.env.DB_PASSWORD || "postgres",
-  port: Number(process.env.DB_PORT) || 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
 });
 
 pool
