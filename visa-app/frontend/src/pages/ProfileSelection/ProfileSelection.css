@@ -227,6 +227,32 @@ body,
   cursor: not-allowed;
 }
 
+/* Modo Senior */
+.modo-senior .profile-title {
+  font-size: 4.2rem;
+}
+
+.modo-senior .profile-subtitle {
+  font-size: 1.25rem;
+}
+
+.modo-senior .profile-card h3 {
+  font-size: 1.25rem;
+}
+
+.modo-senior .profile-card p {
+  font-size: 1.1rem;
+}
+
+.modo-senior .save-button {
+  font-size: 1.2rem;
+  padding: 16px 42px;
+}
+
+.modo-senior .card-footer {
+  font-size: 1.1rem;
+}
+
 /* RESPONSIVE */
 @media (max-width: 1050px) {
   .cards-grid {
