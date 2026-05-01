@@ -2,11 +2,13 @@ import { useState } from "react";
 import "./ProfileSelection.css";
 import { buildApiUrl } from "../../config/api";
 import Sidebar from "../../components/Sidebar";
+import useModoSenior from "../../hooks/useModoSenior";
 
 function ProfileSelection() {
   const [selectedProfile, setSelectedProfile] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const modoSenior = useModoSenior();
 
   const profiles = [
     {
@@ -101,7 +103,7 @@ function ProfileSelection() {
   };
 
   return (
-    <div className="layout-with-sidebar">
+    <div className={`layout-with-sidebar ${modoSenior ? "modo-senior" : ""}`}>
       <Sidebar currentPage="perfil" />
       <div className="profile-page">
       <main className="profile-main">

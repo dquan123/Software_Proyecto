@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
+import useModoSenior from "../hooks/useModoSenior";
 
 // Estructura de las 10 secciones del DS-160
 const secciones = [
@@ -158,6 +159,7 @@ export default function DS160Form() {
   const [guardando, setGuardando] = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState("");
   const [cargando, setCargando] = useState(true);
+  const modoSenior = useModoSenior();
 
   const seccion = secciones.find(s => s.id === seccionActual);
   const totalSecciones = secciones.length;
@@ -351,10 +353,17 @@ export default function DS160Form() {
       default:
         return (
           <div key={campo.name} style={styles.campoContainer}>
-            <label style={styles.label}>{campo.label}</label>
+            <label style={{
+              ...styles.label,
+              fontSize: modoSenior ? "14px" : "11px"
+            }}>{campo.label}</label>
             <input
               type={campo.type}
-              style={styles.input}
+              style={{
+                ...styles.input,
+                fontSize: modoSenior ? "18px" : "15px",
+                padding: modoSenior ? "16px 18px" : "13px 16px"
+              }}
               placeholder={campo.placeholder || ""}
               value={formData[campo.name] || ""}
               onChange={(e) => handleChange(campo.name, e.target.value)}
@@ -387,8 +396,14 @@ export default function DS160Form() {
         <div style={styles.headerCard}>
         <div style={styles.header}>
           <div>
-            <h1 style={styles.titulo}>Formulario DS-160</h1>
-            <p style={styles.subtitulo}>Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})</p>
+            <h1 style={{
+              ...styles.titulo,
+              fontSize: modoSenior ? "30px" : "24px"
+            }}>Formulario DS-160</h1>
+            <p style={{
+              ...styles.subtitulo,
+              fontSize: modoSenior ? "16px" : "13px"
+            }}>Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})</p>
           </div>
           <button
             style={styles.guardarBtn}
