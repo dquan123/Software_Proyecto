@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import DocumentCard from "../components/DocumentCard";
+import DocumentList from "../components/DocumentList";
 import useModoSenior from "../hooks/useModoSenior";
 
 const documents = [
@@ -9,8 +10,18 @@ const documents = [
   { id: 4, title: "Estados de Cuenta Bancarios", type: "pdf", status: "pending" },
 ];
 
+function getCurrentSession() {
+  try {
+    return JSON.parse(localStorage.getItem("visaguide_session") || "null");
+  } catch {
+    return null;
+  }
+}
+
 export default function Documents() {
   const modoSenior = useModoSenior();
+  const session = getCurrentSession();
+
   return (
     <div style={styles.layout}>
       <Sidebar currentPage="documentos" />
@@ -29,6 +40,8 @@ export default function Documents() {
         {documents.map((doc) => (
           <DocumentCard key={doc.id} doc={doc} />
         ))}
+
+        <DocumentList usuarioId={session?.id} />
       </main>
     </div>
   );
