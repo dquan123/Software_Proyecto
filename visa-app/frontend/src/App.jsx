@@ -4,9 +4,11 @@ import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
 import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
+import Informacion from "./pages/Informacion";
 import { buildApiUrl } from "./config/api";
 import Sidebar from "./components/Sidebar";
 import useModoSenior from "./hooks/useModoSenior";
+
 
 // Utilidades para manejo de sesión
 const SessionManager = {
@@ -72,6 +74,7 @@ function App() {
         <Route path="/upload" element={<Upload />} />
         <Route path="/perfil" element={<ProfileSelection />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/informacion" element={<Informacion />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ds160" element={<DS160Form />} />
       </Routes>
