@@ -177,8 +177,6 @@ export default function DS160Form() {
         : localStorage.getItem("correoUsuario");
 
       if (!correo) {
-        alert("Debes iniciar sesión para acceder al formulario DS-160");
-        window.location.href = "/login";
         return;
       }
 
@@ -216,8 +214,6 @@ export default function DS160Form() {
       : localStorage.getItem("correoUsuario");
 
     if (!correo) {
-      alert("Debes iniciar sesión para guardar el formulario");
-      window.location.href = "/login";
       return;
     }
 
@@ -256,8 +252,6 @@ export default function DS160Form() {
       : localStorage.getItem("correoUsuario");
 
     if (!correo) {
-      alert("Debes iniciar sesión para finalizar el formulario");
-      window.location.href = "/login";
       return;
     }
 
