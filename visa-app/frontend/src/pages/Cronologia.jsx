@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
+import useRequireAuth from "../hooks/useRequireAuth";
 
 // Datos de la cronología — al hardcodear los estados aquí seguimos el patrón
 // del resto del repo (Documents, Informacion). Cuando exista un endpoint que
@@ -273,7 +274,19 @@ function EtapaItem({ etapa, esUltima, modoSenior }) {
 // ----- Página principal -----
 
 export default function Cronologia() {
+  const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
+
+  if (isValidating) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh" }}>
+        <Sidebar currentPage="cronologia" />
+        <main style={{ marginLeft: "250px", padding: "40px" }}>
+          <p>Verificando sesión...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.layout}>

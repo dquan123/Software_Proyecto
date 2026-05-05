@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
+import useRequireAuth from "../hooks/useRequireAuth";
 
 // Datos de la pantalla — separados del JSX para legibilidad y para
 // facilitar moverlos a i18n más adelante si hace falta.
@@ -116,7 +117,19 @@ function InfoCard({ numero, titulo, descripcion, modoSenior }) {
 // ----- Página principal -----
 
 export default function Informacion() {
+  const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
+
+  if (isValidating) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh" }}>
+        <Sidebar currentPage="informacion" />
+        <main style={{ marginLeft: "250px", padding: "40px" }}>
+          <p>Verificando sesión...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.layout}>

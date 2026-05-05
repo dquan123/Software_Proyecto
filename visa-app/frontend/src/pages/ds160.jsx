@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
+import useRequireAuth from "../hooks/useRequireAuth";
 
 // Estructura de las 10 secciones del DS-160
 const secciones = [
@@ -154,6 +155,7 @@ const secciones = [
 ];
 
 export default function DS160Form() {
+  const { isValidating: authValidating } = useRequireAuth();
   const [seccionActual, setSeccionActual] = useState(1);
   const [formData, setFormData] = useState({});
   const [guardando, setGuardando] = useState(false);
@@ -376,13 +378,16 @@ export default function DS160Form() {
   // Obtener el primer campo con tip o porque para mostrar en el sidebar
   const campoConAyuda = seccion?.campos.find(c => c.tip || c.porque);
 
-  if (cargando) {
+  if (authValidating || cargando) {
     return (
-      <div style={styles.pageContainer}>
+      <div style={styles.layout}>
+        <Sidebar currentPage="ds160" />
+        <div style={styles.pageContainer}>
         <div style={styles.headerCard}>
           <p style={{ textAlign: "center", color: "#64748b", margin: 0 }}>
             Cargando formulario...
           </p>
+        </div>
         </div>
       </div>
     );
