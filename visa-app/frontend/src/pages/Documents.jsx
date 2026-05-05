@@ -2,6 +2,7 @@ import Sidebar from "../components/Sidebar";
 import DocumentCard from "../components/DocumentCard";
 import DocumentList from "../components/DocumentList";
 import useModoSenior from "../hooks/useModoSenior";
+import useRequireAuth from "../hooks/useRequireAuth";
 
 const documents = [
   { id: 1, title: "Pasaporte vigente", type: "pdf", status: "pending" },
@@ -10,17 +11,20 @@ const documents = [
   { id: 4, title: "Estados de Cuenta Bancarios", type: "pdf", status: "pending" },
 ];
 
-function getCurrentSession() {
-  try {
-    return JSON.parse(localStorage.getItem("visaguide_session") || "null");
-  } catch {
-    return null;
-  }
-}
-
 export default function Documents() {
+  const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
-  const session = getCurrentSession();
+
+  if (isValidating) {
+    return (
+      <div style={styles.layout}>
+        <Sidebar currentPage="documentos" />
+        <main style={styles.mainContent}>
+          <p>Verificando sesión...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.layout}>

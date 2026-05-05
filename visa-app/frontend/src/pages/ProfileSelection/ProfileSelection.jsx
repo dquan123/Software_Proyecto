@@ -3,8 +3,10 @@ import "./ProfileSelection.css";
 import { buildApiUrl } from "../../config/api";
 import Sidebar from "../../components/Sidebar";
 import useModoSenior from "../../hooks/useModoSenior";
+import useRequireAuth from "../../hooks/useRequireAuth";
 
 function ProfileSelection() {
+  const { isValidating } = useRequireAuth();
   const [selectedProfile, setSelectedProfile] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -101,6 +103,19 @@ function ProfileSelection() {
       setLoading(false);
     }
   };
+
+  if (isValidating) {
+    return (
+      <div className="layout-with-sidebar">
+        <Sidebar currentPage="perfil" />
+        <div className="profile-page">
+          <main className="profile-main">
+            <p>Verificando sesión...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`layout-with-sidebar ${modoSenior ? "modo-senior" : ""}`}>
