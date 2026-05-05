@@ -6,7 +6,11 @@ const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
 const upload = require("./upload");
-const { uploadBufferToR2, deleteObjectFromR2 } = require("./r2");
+const {
+  uploadBufferToR2,
+  deleteObjectFromR2,
+  validateR2Config,
+} = require("./r2");
 
 const app = express();
 
@@ -29,6 +33,18 @@ pool
   .connect()
   .then(() => console.log("Conectado a PostgreSQL"))
   .catch((err) => console.error("Error conexión:", err));
+
+async function insertDocumento({ nombre, tipo, archivoUrl, usuarioId }) {
+  const result = await pool.query(
+    `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, nombre, tipo, archivo_url, usuario_id, creado_en`,
+    [nombre, tipo, archivoUrl, usuarioId]
+  );
+
+  console.log("DB insert success");
+  return result.rows[0];
+}
 
 // Prueba
 app.get("/", (req, res) => {
@@ -190,21 +206,65 @@ app.post("/guardar-perfil", async (req, res) => {
 });
 
 app.post("/upload", upload.single("file"), async (req, res) => {
+  const { nombre, tipo, usuario_id } = req.body;
+
   if (!req.file) {
     return res.status(400).json({ error: "Archivo requerido" });
   }
 
+  const documentName = nombre?.trim() || req.file.originalname;
+  const documentType = tipo?.trim() || req.file.mimetype || null;
+  const parsedUsuarioId =
+    usuario_id === undefined || usuario_id === null || usuario_id === ""
+      ? null
+      : Number(usuario_id);
+
+  if (parsedUsuarioId !== null && Number.isNaN(parsedUsuarioId)) {
+    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+  }
+
   try {
-    const uploadedFile = await uploadBufferToR2(req.file);
+    validateR2Config();
+  } catch (error) {
+    console.error("UPLOAD ERROR: invalid R2 config", error);
+    return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
+  }
+
+  let uploadedFile;
+
+  try {
+    uploadedFile = await uploadBufferToR2(req.file);
+    const documento = await insertDocumento({
+      nombre: documentName,
+      tipo: documentType,
+      archivoUrl: uploadedFile.url,
+      usuarioId: parsedUsuarioId,
+    });
 
     res.json({
       message: "Archivo subido correctamente",
       archivo_url: uploadedFile.url,
       key: uploadedFile.key,
+      documento,
     });
   } catch (error) {
-    console.log("ERROR UPLOAD:", error);
-    res.status(502).json({ error: "No se pudo subir el archivo" });
+    console.error("UPLOAD ERROR:", error);
+
+    if (error.message?.includes("Missing R2") || error.message?.includes("placeholder")) {
+      return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
+    }
+
+    if (!uploadedFile) {
+      return res.status(500).json({ error: "No se pudo subir el archivo a R2" });
+    }
+
+    try {
+      await deleteObjectFromR2(uploadedFile.key);
+    } catch (cleanupError) {
+      console.error("UPLOAD ERROR: cleanup failed", cleanupError);
+    }
+
+    return res.status(500).json({ error: "No se pudo guardar el documento" });
   }
 });
 
@@ -228,34 +288,41 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
     return res.status(400).json({ error: "usuario_id debe ser numérico" });
   }
 
+  try {
+    validateR2Config();
+  } catch (error) {
+    console.error("UPLOAD ERROR: invalid R2 config", error);
+    return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
+  }
+
   let uploadedFile;
 
   try {
     uploadedFile = await uploadBufferToR2(req.file);
   } catch (error) {
-    console.log("ERROR R2 DOCUMENTOS:", error);
-    return res.status(502).json({ error: "No se pudo subir el archivo" });
+    console.error("UPLOAD ERROR:", error);
+    return res.status(500).json({ error: "No se pudo subir el archivo a R2" });
   }
 
   try {
-    const result = await pool.query(
-      `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, nombre, tipo, archivo_url, usuario_id, creado_en`,
-      [nombre.trim(), tipo || null, uploadedFile.url, parsedUsuarioId]
-    );
+    const documento = await insertDocumento({
+      nombre: nombre.trim(),
+      tipo: tipo || null,
+      archivoUrl: uploadedFile.url,
+      usuarioId: parsedUsuarioId,
+    });
 
     return res.status(201).json({
       message: "Documento guardado correctamente",
-      documento: result.rows[0],
+      documento,
     });
   } catch (error) {
-    console.log("ERROR DB DOCUMENTOS:", error);
+    console.error("UPLOAD ERROR:", error);
 
     try {
       await deleteObjectFromR2(uploadedFile.key);
     } catch (cleanupError) {
-      console.log("ERROR CLEANUP R2:", cleanupError);
+      console.error("UPLOAD ERROR: cleanup failed", cleanupError);
     }
 
     return res.status(500).json({ error: "No se pudo guardar el documento" });
