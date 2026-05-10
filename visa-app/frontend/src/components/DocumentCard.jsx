@@ -20,6 +20,26 @@ const STATUS_CONFIG = {
   },
 };
 
+function UploadIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 16V5m0 0 4 4m-4-4-4 4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 16.5A4.5 4.5 0 0 0 15.5 12h-.7A6 6 0 1 0 5 17.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function DownloadIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
@@ -153,6 +173,53 @@ function getUpdatedLabel(updatedAt, fallback) {
   return fallback || "No subido";
 }
 
+function getPreviewUrl(preview, downloadUrl) {
+  return preview || downloadUrl || "";
+}
+
+function DocumentFilePreview({ doc, preview, file, onOpen }) {
+  const previewUrl = getPreviewUrl(preview, doc.downloadUrl);
+
+  if (!previewUrl) return null;
+
+  const isImage = doc.type === "image" || file?.type?.startsWith("image/");
+  const isPdf = doc.type === "pdf" || file?.type === "application/pdf";
+
+  return (
+    <div className="document-file-preview">
+      <div className="document-file-preview__header">
+        <span>Archivo subido</span>
+        <button type="button" onClick={onOpen}>
+          Ver completo
+        </button>
+      </div>
+
+      {isImage && (
+        <button
+          className="document-file-preview__image"
+          type="button"
+          onClick={onOpen}
+        >
+          <img src={previewUrl} alt={`Vista previa de ${doc.title}`} />
+        </button>
+      )}
+
+      {isPdf && (
+        <div className="document-file-preview__pdf">
+          <iframe src={previewUrl} title={`Vista previa de ${doc.title}`} />
+          <span>PDF cargado</span>
+        </div>
+      )}
+
+      {!isImage && !isPdf && (
+        <div className="document-file-preview__generic">
+          Documento cargado
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DocumentCard({
   doc,
   usuarioId,
@@ -229,6 +296,11 @@ export default function DocumentCard({
       onStatusChange?.(doc.id, "review", "Ahora", data.documento);
       onUploadSuccess?.(doc.id, data.documento);
     } catch (error) {
+      setFile(null);
+      setPreview((currentPreview) => {
+        if (currentPreview) URL.revokeObjectURL(currentPreview);
+        return null;
+      });
       setUploadError(error.message || "No se pudo subir el archivo.");
     } finally {
       setUploading(false);
@@ -296,7 +368,8 @@ export default function DocumentCard({
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const isCorrection = status === "correction";
-  const canEdit = status === "pending" || status === "correction";
+  const canUploadPending = status === "pending";
+  const canManageUploaded = status === "review" || status === "correction";
   const cardClassName = `document-card${
     isCorrection ? " document-card--correction" : ""
   }`;
@@ -336,15 +409,12 @@ export default function DocumentCard({
             </p>
           )}
 
-          {preview && file?.type?.startsWith("image/") && (
-            <button
-              className="document-preview"
-              type="button"
-              onClick={handleOpenPreview}
-            >
-              <img src={preview} alt={`Vista previa de ${doc.title}`} />
-            </button>
-          )}
+          <DocumentFilePreview
+            doc={doc}
+            preview={preview}
+            file={file}
+            onOpen={handleOpenPreview}
+          />
 
           {uploadError && <p className="document-upload-error">{uploadError}</p>}
         </div>
@@ -367,7 +437,20 @@ export default function DocumentCard({
               <DownloadIcon />
             </button>
 
-            {canEdit && (
+            {canUploadPending && (
+              <button
+                className="document-action-button"
+                type="button"
+                onClick={handleAction}
+                disabled={uploading}
+                data-document-upload-action="true"
+              >
+                <UploadIcon />
+                {uploading ? "Subiendo..." : "Subir archivo"}
+              </button>
+            )}
+
+            {canManageUploaded && (
               <button
                 className={`document-action-button${
                   isCorrection ? " document-action-button--danger" : ""
@@ -382,7 +465,7 @@ export default function DocumentCard({
               </button>
             )}
 
-            {canEdit && (
+            {canManageUploaded && (
               <button
                 className="document-delete-button"
                 type="button"

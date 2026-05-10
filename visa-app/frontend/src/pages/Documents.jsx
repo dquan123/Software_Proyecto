@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import DocumentCard from "../components/DocumentCard";
-import DocumentList from "../components/DocumentList";
 import StatusCard from "../components/StatusCard";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
@@ -106,7 +105,6 @@ export default function Documents() {
   const [documents, setDocuments] = useState(getInitialDocuments);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [documentsError, setDocumentsError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchUserDocuments = async () => {
@@ -178,7 +176,6 @@ export default function Documents() {
 
   const handleUploadSuccess = (documentId, savedDocument) => {
     handleDocumentStatusChange(documentId, "review", "Ahora", savedDocument);
-    setRefreshKey((key) => key + 1);
   };
 
   const handleDocumentDelete = (documentId) => {
@@ -196,7 +193,6 @@ export default function Documents() {
           : document
       )
     );
-    setRefreshKey((key) => key + 1);
   };
 
   const handleHeaderUpload = () => {
@@ -292,7 +288,6 @@ export default function Documents() {
               ))}
             </section>
 
-            <DocumentList usuarioId={session?.id} refreshKey={refreshKey} />
           </>
         )}
       </main>
