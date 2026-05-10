@@ -34,12 +34,80 @@ pool
   .then(() => console.log("Conectado a PostgreSQL"))
   .catch((err) => console.error("Error conexión:", err));
 
-async function insertDocumento({ nombre, tipo, archivoUrl, usuarioId }) {
+async function ensureDocumentSchema() {
+  await pool.query(`
+    ALTER TABLE documentos
+      ADD COLUMN IF NOT EXISTS documento_key VARCHAR(80),
+      ADD COLUMN IF NOT EXISTS estado VARCHAR(30) DEFAULT 'review',
+      ADD COLUMN IF NOT EXISTS feedback TEXT,
+      ADD COLUMN IF NOT EXISTS storage_key TEXT,
+      ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS documentos_usuario_documento_key_idx
+    ON documentos(usuario_id, documento_key)
+    WHERE usuario_id IS NOT NULL AND documento_key IS NOT NULL
+  `);
+}
+
+const documentSchemaReady = ensureDocumentSchema().catch((error) => {
+  console.error("ERROR DOCUMENT SCHEMA:", error);
+});
+
+async function insertDocumento({
+  nombre,
+  tipo,
+  archivoUrl,
+  usuarioId,
+  documentoKey,
+  storageKey,
+}) {
+  await documentSchemaReady;
+
+  let existingDocument = null;
+
+  if (usuarioId && documentoKey) {
+    const existing = await pool.query(
+      `SELECT id, storage_key
+       FROM documentos
+       WHERE usuario_id = $1 AND documento_key = $2
+       LIMIT 1`,
+      [usuarioId, documentoKey]
+    );
+    existingDocument = existing.rows[0] || null;
+  }
+
+  if (existingDocument) {
+    const result = await pool.query(
+      `UPDATE documentos
+       SET nombre = $1,
+           tipo = $2,
+           archivo_url = $3,
+           storage_key = $4,
+           estado = 'review',
+           feedback = NULL,
+           actualizado_en = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en`,
+      [nombre, tipo, archivoUrl, storageKey, existingDocument.id]
+    );
+
+    if (existingDocument.storage_key && existingDocument.storage_key !== storageKey) {
+      deleteObjectFromR2(existingDocument.storage_key).catch((cleanupError) => {
+        console.error("UPLOAD CLEANUP ERROR:", cleanupError);
+      });
+    }
+
+    console.log("DB update success");
+    return result.rows[0];
+  }
+
   const result = await pool.query(
-    `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, nombre, tipo, archivo_url, usuario_id, creado_en`,
-    [nombre, tipo, archivoUrl, usuarioId]
+    `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id, documento_key, estado, storage_key, actualizado_en)
+     VALUES ($1, $2, $3, $4, $5, 'review', $6, CURRENT_TIMESTAMP)
+     RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en`,
+    [nombre, tipo, archivoUrl, usuarioId, documentoKey || null, storageKey || null]
   );
 
   console.log("DB insert success");
@@ -206,7 +274,7 @@ app.post("/guardar-perfil", async (req, res) => {
 });
 
 app.post("/upload", upload.single("file"), async (req, res) => {
-  const { nombre, tipo, usuario_id } = req.body;
+  const { nombre, tipo, usuario_id, documento_key } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ error: "Archivo requerido" });
@@ -239,6 +307,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       tipo: documentType,
       archivoUrl: uploadedFile.url,
       usuarioId: parsedUsuarioId,
+      documentoKey: documento_key?.trim() || null,
+      storageKey: uploadedFile.key,
     });
 
     res.json({
@@ -269,7 +339,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 });
 
 app.post("/documentos", upload.single("file"), async (req, res) => {
-  const { nombre, tipo, usuario_id } = req.body;
+  const { nombre, tipo, usuario_id, documento_key } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ error: "Archivo requerido" });
@@ -310,6 +380,8 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
       tipo: tipo || null,
       archivoUrl: uploadedFile.url,
       usuarioId: parsedUsuarioId,
+      documentoKey: documento_key?.trim() || null,
+      storageKey: uploadedFile.key,
     });
 
     return res.status(201).json({
@@ -326,6 +398,72 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
     }
 
     return res.status(500).json({ error: "No se pudo guardar el documento" });
+  }
+});
+
+app.get("/documentos/:usuarioId", async (req, res) => {
+  const usuarioId = Number(req.params.usuarioId);
+
+  if (Number.isNaN(usuarioId)) {
+    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+  }
+
+  try {
+    await documentSchemaReady;
+
+    const result = await pool.query(
+      `SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en
+       FROM documentos
+       WHERE usuario_id = $1
+       ORDER BY actualizado_en DESC, creado_en DESC`,
+      [usuarioId]
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("ERROR GET DOCUMENTOS:", error);
+    return res.status(500).json({ error: "No se pudieron cargar los documentos" });
+  }
+});
+
+app.delete("/documentos/:id", async (req, res) => {
+  const documentId = Number(req.params.id);
+  const usuarioId = Number(req.query.usuario_id);
+
+  if (Number.isNaN(documentId)) {
+    return res.status(400).json({ error: "documento_id debe ser numérico" });
+  }
+
+  if (Number.isNaN(usuarioId)) {
+    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+  }
+
+  try {
+    await documentSchemaReady;
+
+    const result = await pool.query(
+      `DELETE FROM documentos
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING id, storage_key`,
+      [documentId, usuarioId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Documento no encontrado" });
+    }
+
+    const deletedDocument = result.rows[0];
+
+    if (deletedDocument.storage_key) {
+      deleteObjectFromR2(deletedDocument.storage_key).catch((cleanupError) => {
+        console.error("DELETE DOCUMENT CLEANUP ERROR:", cleanupError);
+      });
+    }
+
+    return res.json({ message: "Documento eliminado correctamente" });
+  } catch (error) {
+    console.error("ERROR DELETE DOCUMENTO:", error);
+    return res.status(500).json({ error: "No se pudo eliminar el documento" });
   }
 });
 
