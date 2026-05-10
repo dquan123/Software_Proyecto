@@ -4,6 +4,7 @@ import DocumentCard from "../components/DocumentCard";
 import DocumentList from "../components/DocumentList";
 import StatusCard from "../components/StatusCard";
 import useModoSenior from "../hooks/useModoSenior";
+import useRequireAuth from "../hooks/useRequireAuth";
 import { buildApiUrl } from "../config/api";
 import "../styles/documents.css";
 
@@ -11,20 +12,20 @@ const REQUIRED_DOCUMENTS = [
   {
     id: "passport",
     title: "Pasaporte vigente",
-    category: "Identificación Oficial",
+    category: "Identificacion Oficial",
     type: "pdf",
     required: true,
   },
   {
     id: "photo",
-    title: "Fotografía 5x5 cm (Fondo blanco)",
+    title: "Fotografia 5x5 cm (Fondo blanco)",
     category: "Requisito Consular",
     type: "image",
     required: true,
   },
   {
     id: "ds160",
-    title: "Confirmación DS-160 (CEAC)",
+    title: "Confirmacion DS-160 (CEAC)",
     category: "Formulario",
     type: "pdf",
     required: true,
@@ -40,18 +41,10 @@ const REQUIRED_DOCUMENTS = [
 
 const SUMMARY_CARDS = [
   { status: "approved", label: "APROBADO", tone: "approved" },
-  { status: "review", label: "EN REVISIÓN", tone: "review" },
-  { status: "correction", label: "CORRECCIÓN", tone: "correction" },
+  { status: "review", label: "EN REVISION", tone: "review" },
+  { status: "correction", label: "CORRECCION", tone: "correction" },
   { status: "pending", label: "PENDIENTE", tone: "pending" },
 ];
-
-function getCurrentSession() {
-  try {
-    return JSON.parse(localStorage.getItem("visaguide_session") || "null");
-  } catch {
-    return null;
-  }
-}
 
 function formatDocumentDate(value) {
   if (!value) return "No subido";
@@ -108,8 +101,8 @@ function mergeSavedDocuments(savedDocuments) {
 }
 
 export default function Documents() {
+  const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
-  const session = getCurrentSession();
   const [documents, setDocuments] = useState(getInitialDocuments);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [documentsError, setDocumentsError] = useState("");
@@ -117,6 +110,8 @@ export default function Documents() {
 
   useEffect(() => {
     const fetchUserDocuments = async () => {
+      if (isValidating) return;
+
       if (!session?.id) {
         setDocuments(getInitialDocuments());
         setLoadingDocuments(false);
@@ -144,7 +139,7 @@ export default function Documents() {
     };
 
     fetchUserDocuments();
-  }, [session?.id]);
+  }, [isValidating, session?.id]);
 
   const statusCounts = useMemo(() => {
     return documents.reduce(
@@ -224,74 +219,82 @@ export default function Documents() {
       <main
         className={`documents-main${modoSenior ? " documents-main--senior" : ""}`}
       >
-        <section className="documents-header">
-          <div>
-            <h1 className="documents-title">Gestor de Documentos</h1>
-            <p className="documents-subtitle">
-              Sube y administra los documentos de soporte para tu entrevista. Los
-              archivos requeridos son obligatorios para continuar.
-            </p>
-          </div>
+        {isValidating ? (
+          <p className="documents-message">Verificando sesion...</p>
+        ) : (
+          <>
+            <section className="documents-header">
+              <div>
+                <h1 className="documents-title">Gestor de Documentos</h1>
+                <p className="documents-subtitle">
+                  Sube y administra los documentos de soporte para tu entrevista.
+                  Los archivos requeridos son obligatorios para continuar.
+                </p>
+              </div>
 
-          <button
-            className="documents-header__button"
-            type="button"
-            onClick={handleHeaderUpload}
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 16V5m0 0 4 4m-4-4-4 4"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M20 16.5A4.5 4.5 0 0 0 15.5 12h-.7A6 6 0 1 0 5 17.5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            Subir archivo
-          </button>
-        </section>
+              <button
+                className="documents-header__button"
+                type="button"
+                onClick={handleHeaderUpload}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 16V5m0 0 4 4m-4-4-4 4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M20 16.5A4.5 4.5 0 0 0 15.5 12h-.7A6 6 0 1 0 5 17.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Subir archivo
+              </button>
+            </section>
 
-        <section className="status-grid" aria-label="Resumen de documentos">
-          {SUMMARY_CARDS.map((card) => (
-            <StatusCard
-              key={card.status}
-              count={statusCounts[card.status] || 0}
-              label={card.label}
-              tone={card.tone}
-            />
-          ))}
-        </section>
+            <section className="status-grid" aria-label="Resumen de documentos">
+              {SUMMARY_CARDS.map((card) => (
+                <StatusCard
+                  key={card.status}
+                  count={statusCounts[card.status] || 0}
+                  label={card.label}
+                  tone={card.tone}
+                />
+              ))}
+            </section>
 
-        <section className="documents-list" aria-label="Documentos requeridos">
-          {loadingDocuments && (
-            <p className="documents-message">Cargando estado de documentos...</p>
-          )}
+            <section className="documents-list" aria-label="Documentos requeridos">
+              {loadingDocuments && (
+                <p className="documents-message">
+                  Cargando estado de documentos...
+                </p>
+              )}
 
-          {documentsError && (
-            <p className="documents-message documents-message--error">
-              {documentsError}
-            </p>
-          )}
+              {documentsError && (
+                <p className="documents-message documents-message--error">
+                  {documentsError}
+                </p>
+              )}
 
-          {documents.map((doc) => (
-            <DocumentCard
-              key={doc.id}
-              doc={doc}
-              usuarioId={session?.id}
-              onStatusChange={handleDocumentStatusChange}
-              onUploadSuccess={handleUploadSuccess}
-              onDeleteSuccess={handleDocumentDelete}
-            />
-          ))}
-        </section>
+              {documents.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  doc={doc}
+                  usuarioId={session?.id}
+                  onStatusChange={handleDocumentStatusChange}
+                  onUploadSuccess={handleUploadSuccess}
+                  onDeleteSuccess={handleDocumentDelete}
+                />
+              ))}
+            </section>
 
-        <DocumentList usuarioId={session?.id} refreshKey={refreshKey} />
+            <DocumentList usuarioId={session?.id} refreshKey={refreshKey} />
+          </>
+        )}
       </main>
     </div>
   );
