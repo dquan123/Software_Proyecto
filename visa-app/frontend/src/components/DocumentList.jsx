@@ -15,7 +15,27 @@ function formatDate(value) {
   });
 }
 
-export default function DocumentList({ usuarioId }) {
+function OpenIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M8 17 17 8m0 0H9m8 0v8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export default function DocumentList({ usuarioId, refreshKey = 0 }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,7 +44,7 @@ export default function DocumentList({ usuarioId }) {
     const fetchDocuments = async () => {
       if (!usuarioId) {
         setDocuments([]);
-        setError("No se encontro un usuario para cargar documentos.");
+        setError("No se encontró un usuario para cargar documentos.");
         setLoading(false);
         return;
       }
@@ -48,44 +68,61 @@ export default function DocumentList({ usuarioId }) {
     };
 
     fetchDocuments();
-  }, [usuarioId]);
+  }, [usuarioId, refreshKey]);
 
   const handleOpenDocument = (url) => {
     if (!url) return;
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   if (loading) {
-    return <p style={styles.message}>Cargando...</p>;
+    return (
+      <section className="saved-documents-section">
+        <p className="documents-message">Cargando documentos guardados...</p>
+      </section>
+    );
   }
 
   if (error) {
-    return <p style={{ ...styles.message, ...styles.error }}>{error}</p>;
+    return (
+      <section className="saved-documents-section">
+        <p className="documents-message documents-message--error">{error}</p>
+      </section>
+    );
   }
 
   if (documents.length === 0) {
-    return <p style={styles.message}>Todavia no hay documentos guardados.</p>;
+    return (
+      <section className="saved-documents-section">
+        <p className="documents-message">Todavía no hay documentos guardados.</p>
+      </section>
+    );
   }
 
   return (
-    <section style={styles.section}>
-      <h2 style={styles.heading}>Documentos guardados</h2>
+    <section className="saved-documents-section">
+      <div className="saved-documents-header">
+        <span>Archivo histórico</span>
+        <h2>Documentos guardados</h2>
+      </div>
 
-      <div style={styles.list}>
+      <div className="saved-documents-list">
         {documents.map((document) => (
-          <article key={document.id} style={styles.card}>
+          <article key={document.id} className="saved-document-card">
             <div>
-              <h3 style={styles.name}>{document.nombre}</h3>
-              <p style={styles.meta}>
-                {document.tipo || "Sin tipo"} - {formatDate(document.creado_en)}
+              <h3>{document.nombre}</h3>
+              <p>
+                {document.tipo || "Sin tipo"} • Guardado:{" "}
+                {formatDate(document.creado_en)}
               </p>
             </div>
 
             <button
               type="button"
-              style={styles.button}
+              className="saved-document-card__button"
               onClick={() => handleOpenDocument(document.archivo_url)}
             >
+              <OpenIcon />
               Ver documento
             </button>
           </article>
@@ -94,67 +131,3 @@ export default function DocumentList({ usuarioId }) {
     </section>
   );
 }
-
-const styles = {
-  section: {
-    marginTop: "34px",
-  },
-
-  heading: {
-    margin: "0 0 16px 0",
-    color: "#0f172a",
-    fontSize: "22px",
-    fontWeight: "700",
-  },
-
-  list: {
-    display: "grid",
-    gap: "14px",
-  },
-
-  card: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    padding: "18px 20px",
-    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06)",
-  },
-
-  name: {
-    margin: "0 0 6px 0",
-    color: "#0f172a",
-    fontSize: "16px",
-    fontWeight: "700",
-  },
-
-  meta: {
-    margin: 0,
-    color: "#64748b",
-    fontSize: "14px",
-  },
-
-  button: {
-    border: "none",
-    borderRadius: "8px",
-    background: "#1e3a5f",
-    color: "#ffffff",
-    cursor: "pointer",
-    fontWeight: "700",
-    padding: "10px 14px",
-    whiteSpace: "nowrap",
-  },
-
-  message: {
-    marginTop: "28px",
-    color: "#475569",
-    fontSize: "14px",
-  },
-
-  error: {
-    color: "#dc2626",
-  },
-};

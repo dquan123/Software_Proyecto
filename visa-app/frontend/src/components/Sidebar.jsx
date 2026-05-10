@@ -1,27 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Sidebar({ currentPage }) {
-  const [modoSenior, setModoSenior] = useState(false);
-  const [usuario, setUsuario] = useState(null);
-
-  useEffect(() => {
-    // Cargar datos del usuario desde localStorage
+  const [modoSenior, setModoSenior] = useState(() => {
+    return localStorage.getItem("modoSenior") === "true";
+  });
+  const [usuario] = useState(() => {
     const session = localStorage.getItem("visaguide_session");
     if (session) {
       try {
-        const userData = JSON.parse(session);
-        setUsuario(userData);
+        return JSON.parse(session);
       } catch (e) {
         console.error("Error parsing session:", e);
       }
     }
 
-    // Cargar preferencia de modo senior
-    const seniorPref = localStorage.getItem("modoSenior");
-    if (seniorPref === "true") {
-      setModoSenior(true);
-    }
-  }, []);
+    return null;
+  });
 
   const toggleModoSenior = () => {
     const newValue = !modoSenior;
@@ -38,7 +32,7 @@ export default function Sidebar({ currentPage }) {
     { id: "cronologia", label: "Cronología", icon: "clock", path: "/cronologia" },
     { id: "documentos", label: "Documentos", icon: "folder", path: "/documents" },
     { id: "entrevista", label: "Entrevista", icon: "users", path: "/entrevista" },
-    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones", badge: 3 },
+    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones" },
     { id: "perfil", label: "Perfil", icon: "user", path: "/perfil" },
     { id: "chat", label: "Chat con asesor", icon: "message", path: "/chat" },
   ];

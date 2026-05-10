@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS documentos (
   nombre VARCHAR(255) NOT NULL,
   tipo VARCHAR(100),
   archivo_url TEXT NOT NULL,
+  documento_key VARCHAR(80),
+  estado VARCHAR(30) DEFAULT 'review',
+  feedback TEXT,
+  storage_key TEXT,
   usuario_id INT REFERENCES usuario(id_usuario),
-  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS documentos_usuario_documento_key_idx
+ON documentos(usuario_id, documento_key)
+WHERE usuario_id IS NOT NULL AND documento_key IS NOT NULL;
