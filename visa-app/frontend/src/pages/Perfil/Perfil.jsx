@@ -1,0 +1,1039 @@
+import { useEffect, useState } from "react";
+import { buildApiUrl } from "../../config/api";
+import Sidebar from "../../components/Sidebar";
+import useModoSenior from "../../hooks/useModoSenior";
+import useRequireAuth from "../../hooks/useRequireAuth";
+
+// ---------------------------------------------------------------------
+// Utilidades
+// ---------------------------------------------------------------------
+
+function getInitials(nombre) {
+  if (!nombre) return "?";
+  const partes = nombre.trim().split(/\s+/);
+  if (partes.length === 1) return partes[0][0].toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+function truncar(texto, max = 18) {
+  if (!texto) return "";
+  return texto.length > max ? texto.slice(0, max - 1) + "…" : texto;
+}
+
+// ---------------------------------------------------------------------
+// Iconos (inline SVG, sin dependencias externas)
+// ---------------------------------------------------------------------
+
+const Icon = {
+  mail: (props) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  ),
+  phone: (props) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07
+               19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0
+               1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0
+               0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0
+               0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  pin: (props) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  ),
+  pencil: (props) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  ),
+  camera: (props) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="white" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1
+               2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  ),
+  shield: (props) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="#dc2649" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  info: (props) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="#d97706" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8"  x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ),
+  help: (props) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="#dc2649" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9.1 9.1a3 3 0 1 1 4.9 2.3c-.9.5-1.5 1.3-1.5 2.3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+};
+
+// ---------------------------------------------------------------------
+// Página principal
+// ---------------------------------------------------------------------
+
+export default function Perfil() {
+  const { isValidating, session } = useRequireAuth();
+  const modoSenior = useModoSenior();
+
+  // Estado del servidor
+  const [usuario, setUsuario] = useState(null);
+  const [tramite, setTramite] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+
+  // Estado del formulario en modo edición
+  const [editando, setEditando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [mensajeOk, setMensajeOk] = useState("");
+  const [form, setForm] = useState({
+    nombre: "",
+    telefono: "",
+    ciudad: "",
+    pais: "",
+  });
+
+  // -----------------------------------------------------------------
+  // Carga inicial desde /usuario-perfil
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    if (isValidating || !session?.correo) return;
+
+    const cargar = async () => {
+      try {
+        setCargando(true);
+        setErrorCarga("");
+
+        const res = await fetch(
+          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`
+        );
+
+        if (!res.ok) throw new Error("No se pudo cargar tu perfil.");
+
+        const data = await res.json();
+        setUsuario(data.usuario);
+        setTramite(data.tramite);
+        setForm({
+          nombre:   data.usuario.nombre   || "",
+          telefono: data.usuario.telefono || "",
+          ciudad:   data.usuario.ciudad   || "",
+          pais:     data.usuario.pais     || "",
+        });
+      } catch (err) {
+        console.error(err);
+        setErrorCarga(err.message || "Error al cargar el perfil.");
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargar();
+  }, [isValidating, session?.correo]);
+
+  // Auto-dismiss del mensaje de éxito
+  useEffect(() => {
+    if (!mensajeOk) return;
+    const t = setTimeout(() => setMensajeOk(""), 3000);
+    return () => clearTimeout(t);
+  }, [mensajeOk]);
+
+  // -----------------------------------------------------------------
+  // Helpers de actualización
+  // -----------------------------------------------------------------
+  const actualizarServidor = async (cambios) => {
+    if (!session?.correo) return null;
+
+    const res = await fetch(buildApiUrl("/usuario-perfil"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: session.correo, ...cambios }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "No se pudo guardar.");
+    }
+
+    const data = await res.json();
+    return data.usuario;
+  };
+
+  // Guardar cambios del modo edición (nombre, teléfono, ciudad, país)
+  const handleGuardarEdicion = async () => {
+    try {
+      setGuardando(true);
+      const actualizado = await actualizarServidor(form);
+      if (actualizado) {
+        setUsuario(actualizado);
+        // También refrescar la sesión local con el nuevo nombre
+        const raw = localStorage.getItem("visaguide_session");
+        if (raw) {
+          try {
+            const s = JSON.parse(raw);
+            s.nombre = actualizado.nombre;
+            localStorage.setItem("visaguide_session", JSON.stringify(s));
+          } catch { /* no-op */ }
+        }
+      }
+      setEditando(false);
+      setMensajeOk("Cambios guardados correctamente.");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleCancelarEdicion = () => {
+    if (!usuario) return;
+    setForm({
+      nombre:   usuario.nombre   || "",
+      telefono: usuario.telefono || "",
+      ciudad:   usuario.ciudad   || "",
+      pais:     usuario.pais     || "",
+    });
+    setEditando(false);
+  };
+
+  // Toggle de notificaciones (siempre en vivo, sin modo edición)
+  const handleToggleNotificaciones = async () => {
+    if (!usuario) return;
+    const nuevoValor = !usuario.preferencias.notificacionesEmail;
+    // Optimista
+    setUsuario({
+      ...usuario,
+      preferencias: { ...usuario.preferencias, notificacionesEmail: nuevoValor },
+    });
+    try {
+      await actualizarServidor({ notificacionesEmail: nuevoValor });
+    } catch (err) {
+      // Revertir si falla
+      setUsuario((u) => u && ({
+        ...u,
+        preferencias: { ...u.preferencias, notificacionesEmail: !nuevoValor },
+      }));
+      alert(err.message);
+    }
+  };
+
+  // Cambio de idioma (siempre en vivo)
+  const handleCambiarIdioma = async (nuevoIdioma) => {
+    if (!usuario) return;
+    setUsuario({
+      ...usuario,
+      preferencias: { ...usuario.preferencias, idioma: nuevoIdioma },
+    });
+    try {
+      await actualizarServidor({ idioma: nuevoIdioma });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // -----------------------------------------------------------------
+  // Estados de carga
+  // -----------------------------------------------------------------
+  if (isValidating || cargando) {
+    return (
+      <div style={s.layout}>
+        <Sidebar currentPage="perfil" />
+        <main style={s.main}>
+          <p style={s.loading}>Cargando perfil…</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (errorCarga || !usuario) {
+    return (
+      <div style={s.layout}>
+        <Sidebar currentPage="perfil" />
+        <main style={s.main}>
+          <p style={s.error}>{errorCarga || "No se pudo cargar el perfil."}</p>
+        </main>
+      </div>
+    );
+  }
+
+  // Tamaños condicionales por Modo Senior
+  const fz = (base, senior) => (modoSenior ? senior : base);
+
+  return (
+    <div style={s.layout}>
+      <Sidebar currentPage="perfil" />
+
+      <main style={s.main}>
+        {/* ====================== HEADER ====================== */}
+        <header style={s.header}>
+          <div>
+            <h1 style={{ ...s.title, fontSize: fz("36px", "44px") }}>
+              Perfil de Usuario
+            </h1>
+            <p style={{ ...s.subtitle, fontSize: fz("15px", "18px") }}>
+              Gestiona tu información personal y los detalles de tu trámite.
+            </p>
+          </div>
+
+          {!editando ? (
+            <button
+              type="button"
+              style={s.editBtn}
+              onClick={() => setEditando(true)}
+            >
+              <Icon.pencil />
+              <span>Editar perfil</span>
+            </button>
+          ) : (
+            <div style={s.editActions}>
+              <button
+                type="button"
+                style={s.cancelBtn}
+                onClick={handleCancelarEdicion}
+                disabled={guardando}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...s.saveBtn,
+                  opacity: guardando ? 0.6 : 1,
+                  cursor: guardando ? "not-allowed" : "pointer",
+                }}
+                onClick={handleGuardarEdicion}
+                disabled={guardando}
+              >
+                {guardando ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </div>
+          )}
+        </header>
+
+        <hr style={s.divider} />
+
+        {mensajeOk && <div style={s.toastOk}>{mensajeOk}</div>}
+
+        {/* ====================== GRID PRINCIPAL ====================== */}
+        <section style={s.grid}>
+          {/* ------------ Columna izquierda: Avatar + Contacto ------------ */}
+          <article style={s.userCard}>
+            {/* Top navy con avatar */}
+            <div style={s.userCardTop}>
+              <div style={s.avatarRing}>
+                <div style={s.avatarCircle}>
+                  <span style={s.avatarInitials}>
+                    {getInitials(usuario.nombre)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  style={s.avatarCameraBtn}
+                  aria-label="Cambiar foto de perfil"
+                  onClick={() =>
+                    alert("Próximamente podrás subir una foto de perfil.")
+                  }
+                >
+                  <Icon.camera />
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom blanco con info */}
+            <div style={s.userCardBody}>
+              {editando ? (
+                <input
+                  type="text"
+                  style={s.nameInput}
+                  value={form.nombre}
+                  onChange={(e) =>
+                    setForm({ ...form, nombre: e.target.value })
+                  }
+                  placeholder="Tu nombre completo"
+                />
+              ) : (
+                <h2 style={{ ...s.userName, fontSize: fz("22px", "26px") }}>
+                  {usuario.nombre}
+                </h2>
+              )}
+
+              <p style={{ ...s.userRole, fontSize: fz("14px", "16px") }}>
+                Solicitante Principal
+              </p>
+
+              <hr style={s.softDivider} />
+
+              {/* Email — siempre solo-lectura */}
+              <div style={s.contactRow}>
+                <span style={s.contactIcon}><Icon.mail /></span>
+                <span
+                  style={{ ...s.contactText, fontSize: fz("14px", "16px") }}
+                  title={usuario.correo}
+                >
+                  {truncar(usuario.correo, 22)}
+                </span>
+              </div>
+
+              {/* Teléfono */}
+              <div style={s.contactRow}>
+                <span style={s.contactIcon}><Icon.phone /></span>
+                {editando ? (
+                  <input
+                    type="tel"
+                    style={s.contactInput}
+                    value={form.telefono}
+                    onChange={(e) =>
+                      setForm({ ...form, telefono: e.target.value })
+                    }
+                    placeholder="+57 300 000 0000"
+                  />
+                ) : (
+                  <span style={{ ...s.contactText, fontSize: fz("14px", "16px") }}>
+                    {usuario.telefono || (
+                      <span style={s.placeholderText}>Sin registrar</span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* Ciudad / País */}
+              <div style={s.contactRow}>
+                <span style={s.contactIcon}><Icon.pin /></span>
+                {editando ? (
+                  <div style={s.locInputs}>
+                    <input
+                      type="text"
+                      style={s.contactInput}
+                      value={form.ciudad}
+                      onChange={(e) =>
+                        setForm({ ...form, ciudad: e.target.value })
+                      }
+                      placeholder="Ciudad"
+                    />
+                    <input
+                      type="text"
+                      style={s.contactInput}
+                      value={form.pais}
+                      onChange={(e) =>
+                        setForm({ ...form, pais: e.target.value })
+                      }
+                      placeholder="País"
+                    />
+                  </div>
+                ) : (
+                  <span style={{ ...s.contactText, fontSize: fz("14px", "16px") }}>
+                    {[usuario.ciudad, usuario.pais].filter(Boolean).join(", ") || (
+                      <span style={s.placeholderText}>Sin registrar</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          </article>
+
+          {/* ------------ Columna derecha: Datos del trámite + Preferencias ------------ */}
+          <div style={s.rightCol}>
+            {/* ----- Datos del trámite ----- */}
+            <article style={s.tramiteCard}>
+              <header style={s.tramiteHeader}>
+                <div style={s.tramiteTitleWrap}>
+                  <Icon.shield />
+                  <h2 style={{ ...s.tramiteTitle, fontSize: fz("18px", "21px") }}>
+                    Datos del trámite
+                  </h2>
+                </div>
+                {tramite?.activo && (
+                  <span style={s.activoPill}>
+                    <span style={s.activoDot} aria-hidden="true" />
+                    ACTIVO
+                  </span>
+                )}
+              </header>
+
+              <div style={s.tramiteGrid}>
+                <DatoCard label="TIPO DE VISA" valor={tramite?.tipoVisa} />
+                <DatoCard label="CONSULADO"    valor={tramite?.consulado} />
+              </div>
+
+              <div style={s.estadoCard}>
+                <div>
+                  <div style={s.datoLabel}>ESTADO ACTUAL</div>
+                  <div style={{ ...s.datoValor, fontSize: fz("16px", "19px") }}>
+                    {tramite?.etapaActual}
+                  </div>
+                </div>
+                <div style={s.etapaText}>
+                  Etapa {tramite?.etapa} de {tramite?.totalEtapas}
+                </div>
+              </div>
+            </article>
+
+            {/* ----- Preferencias de cuenta ----- */}
+            <article style={s.prefCard}>
+              <h2 style={{ ...s.prefTitle, fontSize: fz("18px", "21px") }}>
+                Preferencias de cuenta
+              </h2>
+
+              {/* Notificaciones por Email */}
+              <div style={s.prefRow}>
+                <div style={s.prefText}>
+                  <div style={{ ...s.prefRowTitle, fontSize: fz("15px", "17px") }}>
+                    Notificaciones por Email
+                  </div>
+                  <div style={{ ...s.prefRowDesc, fontSize: fz("13px", "15px") }}>
+                    Recibir alertas de actualizaciones y mensajes del asesor.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={usuario.preferencias.notificacionesEmail}
+                  style={{
+                    ...s.toggle,
+                    backgroundColor: usuario.preferencias.notificacionesEmail
+                      ? "#10b981"
+                      : "#cbd5e1",
+                  }}
+                  onClick={handleToggleNotificaciones}
+                >
+                  <span
+                    style={{
+                      ...s.toggleKnob,
+                      transform: usuario.preferencias.notificacionesEmail
+                        ? "translateX(22px)"
+                        : "translateX(2px)",
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Idioma de la interfaz */}
+              <div style={s.prefRow}>
+                <div style={s.prefText}>
+                  <div style={{ ...s.prefRowTitle, fontSize: fz("15px", "17px") }}>
+                    Idioma de la interfaz
+                  </div>
+                  <div style={{ ...s.prefRowDesc, fontSize: fz("13px", "15px") }}>
+                    Idioma preferido para la plataforma VisaGuide.
+                  </div>
+                </div>
+                <select
+                  style={s.select}
+                  value={usuario.preferencias.idioma}
+                  onChange={(e) => handleCambiarIdioma(e.target.value)}
+                >
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </article>
+
+            {/* ----- Aviso amarillo ----- */}
+            <div style={s.notice}>
+              <span style={s.noticeIcon}><Icon.info /></span>
+              <p style={{ ...s.noticeText, fontSize: fz("14px", "16px") }}>
+                Si necesitas cambiar el tipo de trámite o el país de solicitud,
+                por favor comunícate con tu asesor a través del chat.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ----- Floating: Ayuda rápida ----- */}
+        <button
+          type="button"
+          style={s.helpFab}
+          onClick={() => (window.location.href = "/chat")}
+        >
+          <Icon.help />
+          <span>Ayuda rápida</span>
+        </button>
+      </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Sub-componentes
+// ---------------------------------------------------------------------
+
+function DatoCard({ label, valor }) {
+  return (
+    <div style={s.datoCard}>
+      <div style={s.datoLabel}>{label}</div>
+      <div style={s.datoValor}>{valor || "—"}</div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Estilos
+// ---------------------------------------------------------------------
+
+const s = {
+  layout: {
+    display: "flex",
+    minHeight: "100vh",
+    backgroundColor: "#f4f5f7",
+    fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+  },
+
+  main: {
+    marginLeft: "250px",
+    flex: 1,
+    padding: "40px 48px 80px",
+    color: "#0f172a",
+    position: "relative",
+  },
+
+  loading: { color: "#64748b", paddingTop: "40px" },
+  error:   { color: "#dc2649", paddingTop: "40px" },
+
+  // -------- Header --------
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "20px",
+    marginBottom: "16px",
+  },
+  title: {
+    margin: 0,
+    fontWeight: 800,
+    color: "#0f172a",
+    lineHeight: 1.1,
+  },
+  subtitle: {
+    margin: "8px 0 0 0",
+    color: "#64748b",
+    lineHeight: 1.5,
+    maxWidth: "560px",
+  },
+  editBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    backgroundColor: "white",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "10px 18px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#0f172a",
+    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+    flexShrink: 0,
+  },
+  editActions: {
+    display: "flex",
+    gap: "10px",
+    flexShrink: 0,
+  },
+  cancelBtn: {
+    backgroundColor: "white",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "10px 18px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#475569",
+  },
+  saveBtn: {
+    backgroundColor: "#dc2649",
+    border: "1px solid #dc2649",
+    borderRadius: "10px",
+    padding: "10px 18px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "white",
+    boxShadow: "0 2px 6px rgba(220,38,73,0.25)",
+  },
+
+  divider: {
+    border: "none",
+    borderTop: "1px solid #e2e8f0",
+    margin: "20px 0 28px",
+  },
+
+  toastOk: {
+    backgroundColor: "#ecfdf5",
+    color: "#047857",
+    border: "1px solid #a7f3d0",
+    padding: "10px 16px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontWeight: 600,
+    marginBottom: "20px",
+    display: "inline-block",
+  },
+
+  // -------- Grid principal --------
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "300px 1fr",
+    gap: "24px",
+    alignItems: "start",
+  },
+
+  // -------- Tarjeta usuario (izquierda) --------
+  userCard: {
+    backgroundColor: "white",
+    borderRadius: "18px",
+    border: "1px solid #e2e8f0",
+    overflow: "hidden",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+  },
+  userCardTop: {
+    backgroundColor: "#0f172a",
+    height: "120px",
+    position: "relative",
+  },
+  avatarRing: {
+    position: "absolute",
+    bottom: "-50px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "120px",
+    height: "120px",
+  },
+  avatarCircle: {
+    width: "120px",
+    height: "120px",
+    borderRadius: "50%",
+    backgroundColor: "#cbd5e1",
+    border: "4px solid white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 10px rgba(15,23,42,0.10)",
+  },
+  avatarInitials: {
+    fontSize: "36px",
+    fontWeight: 700,
+    color: "#94a3b8",
+    letterSpacing: "1px",
+  },
+  avatarCameraBtn: {
+    position: "absolute",
+    bottom: "4px",
+    right: "4px",
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "#dc2649",
+    border: "2px solid white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    boxShadow: "0 2px 6px rgba(220,38,73,0.3)",
+  },
+  userCardBody: {
+    padding: "62px 24px 24px",
+    textAlign: "left",
+  },
+  userName: {
+    margin: 0,
+    fontWeight: 800,
+    color: "#0f172a",
+    lineHeight: 1.2,
+    textAlign: "center",
+    wordBreak: "break-word",
+  },
+  userRole: {
+    margin: "6px 0 0 0",
+    color: "#64748b",
+    textAlign: "center",
+  },
+  nameInput: {
+    width: "100%",
+    fontSize: "20px",
+    fontWeight: 800,
+    color: "#0f172a",
+    textAlign: "center",
+    border: "1px solid #cbd5e1",
+    borderRadius: "8px",
+    padding: "8px 10px",
+    outline: "none",
+    fontFamily: "inherit",
+  },
+  softDivider: {
+    border: "none",
+    borderTop: "1px solid #e2e8f0",
+    margin: "20px 0 14px",
+  },
+  contactRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "8px 0",
+    color: "#0f172a",
+  },
+  contactIcon: {
+    color: "#64748b",
+    flexShrink: 0,
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  contactText: {
+    color: "#0f172a",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  contactInput: {
+    flex: 1,
+    minWidth: 0,
+    border: "1px solid #cbd5e1",
+    borderRadius: "8px",
+    padding: "6px 10px",
+    fontSize: "14px",
+    color: "#0f172a",
+    fontFamily: "inherit",
+    outline: "none",
+  },
+  locInputs: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    flex: 1,
+    minWidth: 0,
+  },
+  placeholderText: {
+    color: "#94a3b8",
+    fontStyle: "italic",
+  },
+
+  // -------- Columna derecha --------
+  rightCol: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    minWidth: 0,
+  },
+
+  // -------- Datos del trámite --------
+  tramiteCard: {
+    backgroundColor: "white",
+    borderRadius: "18px",
+    border: "1px solid #e2e8f0",
+    padding: "24px 26px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+  },
+  tramiteHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+  tramiteTitleWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  tramiteTitle: {
+    margin: 0,
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+  activoPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    backgroundColor: "#d1fae5",
+    color: "#047857",
+    padding: "5px 12px",
+    borderRadius: "999px",
+    fontSize: "11px",
+    fontWeight: 700,
+    letterSpacing: "0.5px",
+  },
+  activoDot: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "#10b981",
+    borderRadius: "50%",
+  },
+  tramiteGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "14px",
+    marginBottom: "14px",
+  },
+  datoCard: {
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    padding: "14px 16px",
+  },
+  datoLabel: {
+    fontSize: "11px",
+    fontWeight: 700,
+    color: "#94a3b8",
+    letterSpacing: "0.6px",
+    marginBottom: "6px",
+  },
+  datoValor: {
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#0f172a",
+    lineHeight: 1.3,
+  },
+  estadoCard: {
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    padding: "14px 16px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+  },
+  etapaText: {
+    color: "#e11d48",
+    fontWeight: 700,
+    fontSize: "14px",
+    whiteSpace: "nowrap",
+  },
+
+  // -------- Preferencias --------
+  prefCard: {
+    backgroundColor: "white",
+    borderRadius: "18px",
+    border: "1px solid #e2e8f0",
+    padding: "24px 26px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+  },
+  prefTitle: {
+    margin: "0 0 18px 0",
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+  prefRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "20px",
+    padding: "16px 18px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    marginBottom: "12px",
+  },
+  prefText: { flex: 1, minWidth: 0 },
+  prefRowTitle: {
+    fontWeight: 700,
+    color: "#0f172a",
+    marginBottom: "4px",
+  },
+  prefRowDesc: {
+    color: "#64748b",
+    lineHeight: 1.4,
+  },
+
+  // -------- Toggle --------
+  toggle: {
+    width: "46px",
+    height: "26px",
+    borderRadius: "999px",
+    border: "none",
+    position: "relative",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    flexShrink: 0,
+    padding: 0,
+  },
+  toggleKnob: {
+    position: "absolute",
+    top: "2px",
+    width: "22px",
+    height: "22px",
+    borderRadius: "50%",
+    backgroundColor: "white",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+    transition: "transform 0.2s",
+  },
+
+  // -------- Select --------
+  select: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "8px 14px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#0f172a",
+    backgroundColor: "white",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    minWidth: "110px",
+  },
+
+  // -------- Aviso amarillo --------
+  notice: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "flex-start",
+    backgroundColor: "#fef9e7",
+    border: "1px solid #fde68a",
+    borderRadius: "12px",
+    padding: "14px 18px",
+  },
+  noticeIcon: {
+    flexShrink: 0,
+    paddingTop: "1px",
+  },
+  noticeText: {
+    margin: 0,
+    color: "#92400e",
+    lineHeight: 1.5,
+  },
+
+  // -------- FAB Ayuda rápida --------
+  helpFab: {
+    position: "fixed",
+    bottom: "24px",
+    right: "24px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    backgroundColor: "#0f172a",
+    color: "white",
+    border: "none",
+    borderRadius: "999px",
+    padding: "12px 20px",
+    fontSize: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 6px 20px rgba(15,23,42,0.25)",
+    zIndex: 1000,
+    fontFamily: "inherit",
+  },
+};
