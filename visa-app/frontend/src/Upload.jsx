@@ -20,7 +20,7 @@ function Upload() {
         body: formData,
       });
 
-      const data = await res.json();
+      await res.json();
       setMessage("Archivo subido correctamente");
     } catch {
       setMessage("Error al subir archivo");
