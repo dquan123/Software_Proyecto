@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Upload from "./Upload";
 import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
+import Perfil from "./pages/Perfil/Perfil";
 import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
 import Informacion from "./pages/Informacion";
@@ -74,7 +75,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/upload" element={<Upload />} />
-        <Route path="/perfil" element={<ProfileSelection />} />
+        <Route path="/perfil"           element={<Perfil />} />
+        <Route path="/seleccion-perfil" element={<ProfileSelection />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/informacion" element={<Informacion />} />
         <Route path="/cronologia" element={<Cronologia />} />
@@ -143,7 +145,7 @@ function Onboarding() {
 
           <button
             style={styles.secondaryBtn}
-            onClick={() => (window.location.href = "/perfil")}
+            onClick={() => (window.location.href = "/seleccion-perfil")}
           >
             Seleccionar Perfil
           </button>
@@ -261,7 +263,7 @@ function Login() {
         if (data.user.perfil) {
           window.location.href = "/dashboard";
         } else {
-          window.location.href = "/perfil";
+          window.location.href = "/seleccion-perfil";
         }
       } else {
         if (res.status === 401) {

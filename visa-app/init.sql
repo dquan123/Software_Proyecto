@@ -8,6 +8,14 @@ CREATE TABLE IF NOT EXISTS usuario (
 ALTER TABLE usuario
 ADD COLUMN IF NOT EXISTS perfil VARCHAR(100);
 
+-- Columnas extra para la pantalla "Perfil de Usuario"
+ALTER TABLE usuario
+  ADD COLUMN IF NOT EXISTS telefono            VARCHAR(40),
+  ADD COLUMN IF NOT EXISTS ciudad              VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS pais                VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS idioma              VARCHAR(10)  DEFAULT 'es';
+
 CREATE TABLE IF NOT EXISTS tramite (
   id_tramite SERIAL PRIMARY KEY,
   id_usuario INT REFERENCES usuario(id_usuario),
