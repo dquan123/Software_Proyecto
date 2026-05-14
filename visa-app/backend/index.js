@@ -14,7 +14,20 @@ const {
 
 const app = express();
 
+//app.use(cors());
+//app.options("/{*splat}", cors());
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 app.use(cors());
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -53,6 +66,21 @@ async function ensureDocumentSchema() {
 
 const documentSchemaReady = ensureDocumentSchema().catch((error) => {
   console.error("ERROR DOCUMENT SCHEMA:", error);
+});
+
+async function ensureUserSchema() {
+  await pool.query(`
+    ALTER TABLE usuario
+      ADD COLUMN IF NOT EXISTS telefono             VARCHAR(40),
+      ADD COLUMN IF NOT EXISTS ciudad               VARCHAR(120),
+      ADD COLUMN IF NOT EXISTS pais                 VARCHAR(120),
+      ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS idioma               VARCHAR(10)  DEFAULT 'es'
+  `);
+}
+ 
+const userSchemaReady = ensureUserSchema().catch((error) => {
+  console.error("ERROR USER SCHEMA:", error);
 });
 
 async function insertDocumento({
@@ -335,6 +363,174 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     return res.status(500).json({ error: "No se pudo guardar el documento" });
+  }
+});
+// Mapa para presentar el tipo de visa según el perfil guardado.
+const PERFIL_A_VISA = {
+  turismo_negocios: "B1/B2 (Turismo / Negocios)",
+  estudiante:       "F/M (Estudiante)",
+  renovacion:       "Renovación",
+  grupo_familiar:   "Grupo Familiar",
+  adulto_mayor:     "Adulto Mayor (Senior)",
+};
+ 
+// Calcula la etapa actual (1..6) a partir del progreso del trámite,
+// con la misma regla que ya usa el Dashboard.
+function calcularEtapa(progreso, perfil) {
+  let etapa = Math.ceil((Number(progreso) || 10) / 16.66);
+  if (perfil && etapa < 2) etapa = 2;
+  if (etapa < 1) etapa = 1;
+  if (etapa > 6) etapa = 6;
+  return etapa;
+}
+ 
+// GET /usuario-perfil?correo=...
+// Devuelve TODO lo que la pantalla "Perfil de Usuario" necesita en un
+// solo request: datos personales, datos del trámite y preferencias.
+app.get("/usuario-perfil", async (req, res) => {
+  const { correo } = req.query;
+ 
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+ 
+  try {
+    await userSchemaReady;
+ 
+    const userResult = await pool.query(
+      `SELECT id_usuario, nombre, correo, perfil,
+              telefono, ciudad, pais,
+              notificaciones_email, idioma
+       FROM usuario
+       WHERE correo = $1`,
+      [correo]
+    );
+ 
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+ 
+    const usuario = userResult.rows[0];
+ 
+    // Trámite asociado (puede no existir todavía).
+    const tramiteResult = await pool.query(
+      "SELECT estado, etapa_actual, progreso FROM tramite WHERE id_usuario = $1",
+      [usuario.id_usuario]
+    );
+ 
+    const tramite = tramiteResult.rows[0] || {
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      progreso: 10,
+    };
+ 
+    const etapa = calcularEtapa(tramite.progreso, usuario.perfil);
+ 
+    res.json({
+      usuario: {
+        id:        usuario.id_usuario,
+        nombre:    usuario.nombre,
+        correo:    usuario.correo,
+        telefono:  usuario.telefono  || "",
+        ciudad:    usuario.ciudad    || "",
+        pais:      usuario.pais      || "",
+        perfil:    usuario.perfil    || null,
+        preferencias: {
+          notificacionesEmail: usuario.notificaciones_email !== false,
+          idioma:              usuario.idioma || "es",
+        },
+      },
+      tramite: {
+        tipoVisa:    PERFIL_A_VISA[usuario.perfil] || "Sin definir",
+        consulado:   [usuario.ciudad, usuario.pais].filter(Boolean).join(", ") || "Sin definir",
+        estado:      tramite.estado,
+        etapaActual: tramite.etapa_actual,
+        etapa,
+        totalEtapas: 6,
+        activo:      tramite.estado === "En proceso",
+      },
+    });
+  } catch (error) {
+    console.log("ERROR GET USUARIO-PERFIL:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+ 
+// PUT /usuario-perfil
+// Body: { correo, nombre?, telefono?, ciudad?, pais?,
+//         notificacionesEmail?, idioma? }
+// Solo actualiza los campos que vengan en el body (parcial).
+app.put("/usuario-perfil", async (req, res) => {
+  const {
+    correo,
+    nombre,
+    telefono,
+    ciudad,
+    pais,
+    notificacionesEmail,
+    idioma,
+  } = req.body;
+ 
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+ 
+  try {
+    await userSchemaReady;
+ 
+    // Armado dinámico del SET para hacer un update parcial limpio.
+    const sets = [];
+    const valores = [];
+    let i = 1;
+ 
+    if (nombre              !== undefined) { sets.push(`nombre = $${i++}`);               valores.push(nombre); }
+    if (telefono            !== undefined) { sets.push(`telefono = $${i++}`);             valores.push(telefono); }
+    if (ciudad              !== undefined) { sets.push(`ciudad = $${i++}`);               valores.push(ciudad); }
+    if (pais                !== undefined) { sets.push(`pais = $${i++}`);                 valores.push(pais); }
+    if (notificacionesEmail !== undefined) { sets.push(`notificaciones_email = $${i++}`); valores.push(!!notificacionesEmail); }
+    if (idioma              !== undefined) { sets.push(`idioma = $${i++}`);               valores.push(idioma); }
+ 
+    if (sets.length === 0) {
+      return res.status(400).json({ error: "Nada que actualizar" });
+    }
+ 
+    valores.push(correo);
+ 
+    const result = await pool.query(
+      `UPDATE usuario
+       SET ${sets.join(", ")}
+       WHERE correo = $${i}
+       RETURNING id_usuario, nombre, correo, perfil,
+                 telefono, ciudad, pais,
+                 notificaciones_email, idioma`,
+      valores
+    );
+ 
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+ 
+    const u = result.rows[0];
+ 
+    res.json({
+      message: "Perfil actualizado correctamente",
+      usuario: {
+        id:        u.id_usuario,
+        nombre:    u.nombre,
+        correo:    u.correo,
+        telefono:  u.telefono || "",
+        ciudad:    u.ciudad   || "",
+        pais:      u.pais     || "",
+        perfil:    u.perfil   || null,
+        preferencias: {
+          notificacionesEmail: u.notificaciones_email !== false,
+          idioma:              u.idioma || "es",
+        },
+      },
+    });
+  } catch (error) {
+    console.log("ERROR PUT USUARIO-PERFIL:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
