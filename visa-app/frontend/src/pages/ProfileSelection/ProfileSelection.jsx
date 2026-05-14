@@ -97,7 +97,7 @@ function ProfileSelection() {
       } else {
         alert(data.error || "No se pudo guardar el perfil");
       }
-    } catch (error) {
+    } catch {
       alert("Error de conexión con el servidor");
     } finally {
       setLoading(false);

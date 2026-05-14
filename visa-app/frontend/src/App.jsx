@@ -6,6 +6,8 @@ import Documents from "./pages/Documents";
 import DS160Form from "./pages/ds160";
 import Informacion from "./pages/Informacion";
 import Cronologia from "./pages/Cronologia";
+import Entrevista from "./pages/Entrevista";
+import InterviewSimulator from "./pages/InterviewSimulator";
 import { buildApiUrl } from "./config/api";
 import Dashboard from "./pages/Dashboard";
 
@@ -57,7 +59,7 @@ const validateSession = async (session) => {
     }
     const data = await res.json();
     return data.valid;
-  } catch (err) {
+  } catch {
     // Si hay error de conexión, asumimos que la sesión no es válida
     SessionManager.clearSession();
     return false;
@@ -76,6 +78,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/informacion" element={<Informacion />} />
         <Route path="/cronologia" element={<Cronologia />} />
+        <Route path="/entrevista" element={<Entrevista />} />
+        <Route path="/entrevista/simulador" element={<InterviewSimulator />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ds160" element={<DS160Form />} />
       </Routes>
@@ -266,7 +270,7 @@ function Login() {
           setError(data.error || "Error al iniciar sesión");
         }
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión. Verifica que el servidor esté corriendo.");
     } finally {
       setIsLoading(false);
@@ -434,7 +438,7 @@ function Registro() {
           setError(data.error || "Error al registrar");
         }
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión. Verifica que el servidor esté corriendo.");
     } finally {
       setIsLoading(false);
