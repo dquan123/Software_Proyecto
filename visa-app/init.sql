@@ -54,3 +54,34 @@ CREATE TABLE IF NOT EXISTS documentos (
 CREATE UNIQUE INDEX IF NOT EXISTS documentos_usuario_documento_key_idx
 ON documentos(usuario_id, documento_key)
 WHERE usuario_id IS NOT NULL AND documento_key IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS question_bank (
+  id SERIAL PRIMARY KEY,
+  question TEXT NOT NULL,
+  category VARCHAR(100),
+  difficulty VARCHAR(20),
+  is_required BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO question_bank (question, category, difficulty, is_required)
+SELECT seed.question, seed.category, seed.difficulty, seed.is_required
+FROM (
+  VALUES
+    ('¿Cuál es el propósito principal de su viaje?', 'Viaje', 'Fácil', true),
+    ('¿Cuánto tiempo planea permanecer en el país?', 'Viaje', 'Fácil', true),
+    ('¿Quién financiará su viaje y estadía?', 'Finanzas', 'Media', true),
+    ('¿Tiene familiares o conocidos viviendo en el país destino?', 'Relaciones', 'Media', false),
+    ('¿Cuál es su ocupación actual?', 'Laboral', 'Fácil', true),
+    ('¿Desde cuándo trabaja en su empleo actual?', 'Laboral', 'Media', false),
+    ('¿Ha viajado anteriormente a este país?', 'Historial', 'Media', false),
+    ('¿Ha visitado otros países en los últimos cinco años?', 'Historial', 'Media', false),
+    ('¿Cuenta con reservación de hospedaje o dirección de estadía?', 'Viaje', 'Media', true),
+    ('¿Cuál es su salario o ingreso mensual aproximado?', 'Finanzas', 'Alta', false),
+    ('¿Tiene propiedades, negocios o activos en su país de origen?', 'Finanzas', 'Alta', false),
+    ('¿Cuál es su estado civil?', 'Personal', 'Fácil', false),
+    ('¿Viajará solo o acompañado?', 'Relaciones', 'Fácil', false),
+    ('¿Qué actividades realizará durante su estadía?', 'Viaje', 'Media', true),
+    ('¿Tiene intención de trabajar o estudiar durante su visita?', 'Migración', 'Alta', true)
+) AS seed(question, category, difficulty, is_required)
+WHERE NOT EXISTS (SELECT 1 FROM question_bank);
