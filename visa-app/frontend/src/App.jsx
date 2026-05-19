@@ -9,6 +9,7 @@ import Informacion from "./pages/Informacion";
 import Cronologia from "./pages/Cronologia";
 import Entrevista from "./pages/Entrevista";
 import InterviewSimulator from "./pages/InterviewSimulator";
+import QuestionBank from "./pages/QuestionBank";
 import { buildApiUrl } from "./config/api";
 import Dashboard from "./pages/Dashboard";
 
@@ -82,6 +83,7 @@ function App() {
         <Route path="/cronologia" element={<Cronologia />} />
         <Route path="/entrevista" element={<Entrevista />} />
         <Route path="/entrevista/simulador" element={<InterviewSimulator />} />
+        <Route path="/questions" element={<QuestionBank />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ds160" element={<DS160Form />} />
       </Routes>

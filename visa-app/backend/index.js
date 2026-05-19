@@ -6,6 +6,8 @@ const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
 const upload = require("./upload");
+const createQuestionBankRoutes = require("./routes/questionBankRoutes");
+const { createQuestionBankService } = require("./services/questionBankService");
 const {
   uploadBufferToR2,
   deleteObjectFromR2,
@@ -83,6 +85,11 @@ const userSchemaReady = ensureUserSchema().catch((error) => {
   console.error("ERROR USER SCHEMA:", error);
 });
 
+const questionBankService = createQuestionBankService(pool);
+questionBankService.seedInitialQuestions().catch((error) => {
+  console.error("ERROR QUESTION BANK SCHEMA:", error);
+});
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -146,6 +153,8 @@ async function insertDocumento({
 app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
+
+app.use("/questions", createQuestionBankRoutes(pool));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", async (req, res) => {

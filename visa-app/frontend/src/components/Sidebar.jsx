@@ -32,6 +32,7 @@ export default function Sidebar({ currentPage }) {
     { id: "cronologia", label: "Cronología", icon: "clock", path: "/cronologia" },
     { id: "documentos", label: "Documentos", icon: "folder", path: "/documents" },
     { id: "entrevista", label: "Entrevista", icon: "users", path: "/entrevista" },
+    { id: "question-bank", label: "Banco Preguntas", icon: "questions", path: "/questions" },
     { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones" },
     { id: "perfil", label: "Perfil", icon: "user", path: "/perfil" },
     { id: "chat", label: "Chat con asesor", icon: "message", path: "/chat" },
@@ -96,6 +97,13 @@ export default function Sidebar({ currentPage }) {
       message: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      ),
+      questions: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" />
+          <path d="M9 9a3 3 0 0 1 5.2-2 2.8 2.8 0 0 1-.4 4.1l-1.1.8c-.7.5-.9.9-.9 1.7" />
+          <path d="M12 17h.01" />
         </svg>
       ),
       senior: (
