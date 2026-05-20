@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { createInterviewFeedbackSession } from "../utils/interviewFeedbackStorage";
 import "../styles/interview.css";
 
 const QUESTIONS = [
@@ -224,7 +225,7 @@ function AnalysisCard({ type, title, subtitle, quote, notes }) {
 }
 
 export default function InterviewSimulator() {
-  const { isValidating } = useRequireAuth();
+  const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [recordings, setRecordings] = useState({});
@@ -241,6 +242,7 @@ export default function InterviewSimulator() {
   const currentQuestion = QUESTIONS[currentIndex];
   const remaining = QUESTIONS.length - currentIndex - 1;
   const recordedCount = Object.keys(recordings).length;
+  const isLastQuestion = currentIndex === QUESTIONS.length - 1;
 
   useEffect(() => {
     recordingsRef.current = recordings;
@@ -347,6 +349,27 @@ export default function InterviewSimulator() {
     setError("");
   };
 
+  const handleFinishSession = () => {
+    if (isRecording) return;
+
+    if (recordedCount < QUESTIONS.length) {
+      setError(
+        "Graba las 5 respuestas para finalizar la entrevista y enviarla a retroalimentación."
+      );
+      return;
+    }
+
+    const feedbackSession = createInterviewFeedbackSession({
+      questions: QUESTIONS,
+      recordings,
+      user: session,
+    });
+
+    window.location.href = `/entrevista/retroalimentacion?session=${encodeURIComponent(
+      feedbackSession.id
+    )}`;
+  };
+
   const handlePrevious = () => {
     if (isRecording) return;
 
@@ -451,10 +474,10 @@ export default function InterviewSimulator() {
             <button
               className="next-button"
               type="button"
-              onClick={handleNext}
-              disabled={currentIndex === QUESTIONS.length - 1 || isRecording}
+              onClick={isLastQuestion ? handleFinishSession : handleNext}
+              disabled={isRecording}
             >
-              Siguiente pregunta
+              {isLastQuestion ? "Finalizar entrevista" : "Siguiente pregunta"}
               <span aria-hidden="true">&rsaquo;</span>
             </button>
 
@@ -473,6 +496,12 @@ export default function InterviewSimulator() {
           <div>
             <span>{recordedCount} de {QUESTIONS.length}</span>
             <strong>respuestas grabadas</strong>
+            {isLastQuestion && recordedCount < QUESTIONS.length && (
+              <small className="session-summary__hint">
+                Completa las 5 respuestas para enviar la entrevista a
+                retroalimentación.
+              </small>
+            )}
           </div>
           <button
             type="button"

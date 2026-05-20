@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { getLatestInterviewFeedbackSession } from "../utils/interviewFeedbackStorage";
 import "../styles/interview.css";
 
 const PREP_CARDS = [
@@ -123,8 +124,11 @@ function TipIcon({ tone }) {
 }
 
 export default function Entrevista() {
-  const { isValidating } = useRequireAuth();
+  const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const latestFeedback = isValidating
+    ? null
+    : getLatestInterviewFeedbackSession(session?.id);
 
   if (isValidating) {
     return (
@@ -174,6 +178,63 @@ export default function Entrevista() {
             <ChatIcon />
             <span />
           </div>
+        </section>
+
+        <section className="feedback-entry-section">
+          <div>
+            <span className="feedback-entry-section__label">
+              RetroalimentaciÃ³n
+            </span>
+            <h2>Resultado de tu prÃ¡ctica</h2>
+            <p>
+              Revisa el estado de tu Ãºltima entrevista enviada y consulta las
+              observaciones cuando estÃ©n listas.
+            </p>
+          </div>
+
+          <article className="feedback-entry-card">
+            {latestFeedback ? (
+              <>
+                <span className="feedback-entry-card__status">
+                  Pendiente de retroalimentaciÃ³n
+                </span>
+                <strong>
+                  {latestFeedback.recordedCount} de{" "}
+                  {latestFeedback.questionCount} respuestas grabadas
+                </strong>
+                <p>
+                  La entrevista fue enviada y todavÃ­a no ha sido procesada.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    (window.location.href = `/entrevista/retroalimentacion?session=${encodeURIComponent(
+                      latestFeedback.id
+                    )}`)
+                  }
+                >
+                  Ver retroalimentaciÃ³n
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="feedback-entry-card__status feedback-entry-card__status--empty">
+                  Sin entrevistas enviadas
+                </span>
+                <strong>AÃºn no hay retroalimentaciÃ³n pendiente</strong>
+                <p>
+                  Completa el simulador para crear una sesiÃ³n de prÃ¡ctica
+                  pendiente de revisiÃ³n.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => (window.location.href = "/entrevista/simulador")}
+                >
+                  Practicar ahora
+                </button>
+              </>
+            )}
+          </article>
         </section>
 
         <section className="emotional-section">

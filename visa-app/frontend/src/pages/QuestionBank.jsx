@@ -7,6 +7,7 @@ import QuestionBankToast from "../components/QuestionBankToast";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { getPendingInterviewFeedbackSessions } from "../utils/interviewFeedbackStorage";
 import "../styles/questionBank.css";
 
 const CATEGORIES = [
@@ -80,6 +81,7 @@ export default function QuestionBank() {
   });
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const pendingFeedbackSessions = getPendingInterviewFeedbackSessions();
 
   const showToast = useCallback((toast) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -316,6 +318,34 @@ export default function QuestionBank() {
                 <strong>{stats.high}</strong>
                 <small>preguntas sensibles</small>
               </article>
+            </section>
+
+            <section className="question-feedback-reference">
+              <div>
+                <span>RetroalimentaciÃ³n pendiente</span>
+                <strong>{pendingFeedbackSessions.length}</strong>
+                <p>
+                  Sesiones de entrevista que faltan por retroalimentar. Esta
+                  lista es solo una referencia temporal.
+                </p>
+              </div>
+
+              <div className="question-feedback-reference__list">
+                {pendingFeedbackSessions.length === 0 ? (
+                  <p>No hay entrevistas pendientes por retroalimentar.</p>
+                ) : (
+                  pendingFeedbackSessions.slice(0, 5).map((item) => (
+                    <article key={item.id}>
+                      <strong>{item.userName || "Usuario"}</strong>
+                      <span>{item.userEmail || "Sin correo"}</span>
+                      <small>
+                        {item.recordedCount} de {item.questionCount} respuestas
+                        grabadas
+                      </small>
+                    </article>
+                  ))
+                )}
+              </div>
             </section>
 
             <section className="question-bank-toolbar" aria-label="Filtros">

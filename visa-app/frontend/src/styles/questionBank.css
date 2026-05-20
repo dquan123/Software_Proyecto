@@ -157,6 +157,77 @@
   font-weight: 700;
 }
 
+.question-feedback-reference {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+  border: 1px solid #ffd4de;
+  border-radius: 18px;
+  background: #fff7f9;
+  padding: 18px;
+}
+
+.question-feedback-reference span,
+.question-feedback-reference strong,
+.question-feedback-reference p,
+.question-feedback-reference small {
+  display: block;
+}
+
+.question-feedback-reference span {
+  color: #be123c;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.question-feedback-reference > div > strong {
+  margin: 8px 0;
+  color: #0f172a;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.question-feedback-reference p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.question-feedback-reference__list {
+  display: grid;
+  gap: 10px;
+}
+
+.question-feedback-reference__list article {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #ffd4de;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.question-feedback-reference__list article strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.question-feedback-reference__list article span,
+.question-feedback-reference__list article small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: none;
+}
+
 .question-bank-toolbar {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) 190px 190px 160px;
@@ -765,7 +836,9 @@
 
 @media (max-width: 1180px) {
   .question-bank-stats,
-  .question-bank-grid {
+  .question-bank-grid,
+  .question-feedback-reference,
+  .question-feedback-reference__list article {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -797,6 +870,8 @@
   .question-bank-stats,
   .question-bank-grid,
   .question-bank-toolbar,
+  .question-feedback-reference,
+  .question-feedback-reference__list article,
   .question-modal__grid,
   .question-confirm__actions {
     grid-template-columns: 1fr;
