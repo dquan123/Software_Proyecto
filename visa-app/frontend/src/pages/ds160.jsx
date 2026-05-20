@@ -9,72 +9,212 @@ const secciones = [
     id: 1,
     titulo: "Datos Personales",
     campos: [
-      { name: "apellidos", label: "APELLIDOS (TAL COMO APARECEN EN TU PASAPORTE)", type: "text", placeholder: "Ej: C\u00e1rdenas", tip: "Si tu pasaporte tiene un solo apellido, ingresa solo ese apellido. No agregues el apellido de soltera si no est\u00e1 en el pasaporte.", porque: "El consulado utiliza estos nombres exactos para verificar tus antecedentes penales y migratorios. Deben coincidir exactamente con los de tu pasaporte actual, letra por letra." },
-      { name: "nombres", label: "NOMBRES (TAL COMO APARECEN EN TU PASAPORTE)", type: "text", placeholder: "Ej: Mar\u00eda", tip: "No uses tildes ni la letra '\u00f1'. El sistema oficial las transformar\u00e1 autom\u00e1ticamente (ej: N\u00fa\u00f1ez \u2192 Nunez).", porque: "El consulado utiliza estos nombres exactos para verificar tus antecedentes penales y migratorios." },
-      { name: "otrosNombres", label: "\u00bfHAS USADO OTROS NOMBRES? (DE SOLTERA, RELIGIOSO, ETC.)", type: "radio", opciones: ["S\u00ed", "No"] },
-      { name: "otrosNombresDetalle", label: "ESPECIFICA LOS OTROS NOMBRES", type: "text", placeholder: "Ej: Mar\u00eda Garc\u00eda (nombre de soltera)", dependeDe: { campo: "otrosNombres", valor: "S\u00ed" } },
-      { name: "fechaNacimiento", label: "FECHA DE NACIMIENTO", type: "date", porque: "Se usa para verificar tu identidad y calcular tu edad al momento de la solicitud." },
-      { name: "lugarNacimiento", label: "CIUDAD DE NACIMIENTO", type: "text", placeholder: "Ej: Ciudad de Guatemala" },
-      { name: "paisNacimiento", label: "PA\u00cdS DE NACIMIENTO", type: "text", placeholder: "Ej: Guatemala" },
+      { 
+        name: "apellidos", 
+        label: "APELLIDOS (TAL COMO APARECEN EN TU PASAPORTE)", 
+        type: "text", 
+        placeholder: "Ej: Cárdenas", 
+        required: true,
+        validation: { minLength: 2, maxLength: 50, pattern: "letras" },
+        tip: "Si tu pasaporte tiene un solo apellido, ingresa solo ese apellido. No agregues el apellido de soltera si no está en el pasaporte.", 
+        porque: "El consulado utiliza estos nombres exactos para verificar tus antecedentes penales y migratorios. Deben coincidir exactamente con los de tu pasaporte actual, letra por letra." 
+      },
+      { 
+        name: "nombres", 
+        label: "NOMBRES (TAL COMO APARECEN EN TU PASAPORTE)", 
+        type: "text", 
+        placeholder: "Ej: María", 
+        required: true,
+        validation: { minLength: 2, maxLength: 50, pattern: "letras" },
+        tip: "No uses tildes ni la letra 'ñ'. El sistema oficial las transformará automáticamente (ej: Núñez → Nunez).", 
+        porque: "El consulado utiliza estos nombres exactos para verificar tus antecedentes penales y migratorios." 
+      },
+      { name: "otrosNombres", label: "¿HAS USADO OTROS NOMBRES? (DE SOLTERA, RELIGIOSO, ETC.)", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "otrosNombresDetalle", label: "ESPECIFICA LOS OTROS NOMBRES", type: "text", placeholder: "Ej: María García (nombre de soltera)", dependeDe: { campo: "otrosNombres", valor: "Sí" } },
+      { 
+        name: "fechaNacimiento", 
+        label: "FECHA DE NACIMIENTO", 
+        type: "date", 
+        required: true,
+        validation: { tipo: "fechaPasada" },
+        porque: "Se usa para verificar tu identidad y calcular tu edad al momento de la solicitud." 
+      },
+      { name: "lugarNacimiento", label: "CIUDAD DE NACIMIENTO", type: "text", placeholder: "Ej: Ciudad de Guatemala", required: true },
+      { name: "paisNacimiento", label: "PAÍS DE NACIMIENTO", type: "text", placeholder: "Ej: Guatemala", required: true },
     ],
   },
-  { id: 2, titulo: "Informaci\u00f3n de Contacto", campos: [
-    { name: "direccion", label: "DIRECCI\u00d3N DE RESIDENCIA", type: "text", placeholder: "Calle, n\u00famero, zona" },
-    { name: "ciudad", label: "CIUDAD", type: "text", placeholder: "Ej: Ciudad de Guatemala" },
-    { name: "codigoPostal", label: "C\u00d3DIGO POSTAL", type: "text", placeholder: "Ej: 01010" },
-    { name: "telefono", label: "N\u00daMERO DE TEL\u00c9FONO", type: "tel", placeholder: "Ej: +502 1234 5678" },
-    { name: "email", label: "CORREO ELECTR\u00d3NICO", type: "email", placeholder: "tu@correo.com" },
-  ]},
-  { id: 3, titulo: "Informaci\u00f3n del Pasaporte", campos: [
-    { name: "numeroPasaporte", label: "N\u00daMERO DE PASAPORTE", type: "text", placeholder: "Ej: A12345678" },
-    { name: "paisEmision", label: "PA\u00cdS DE EMISI\u00d3N", type: "text", placeholder: "Ej: Guatemala" },
-    { name: "fechaEmision", label: "FECHA DE EMISI\u00d3N", type: "date" },
-    { name: "fechaExpiracion", label: "FECHA DE EXPIRACI\u00d3N", type: "date", tip: "Tu pasaporte debe tener al menos 6 meses de vigencia al momento del viaje." },
-  ]},
-  { id: 4, titulo: "Informaci\u00f3n del Viaje", campos: [
-    { name: "proposito", label: "PROP\u00d3SITO DEL VIAJE", type: "select", opciones: ["Turismo", "Negocios", "Estudio", "Trabajo", "Tr\u00e1nsito", "Tratamiento m\u00e9dico", "Otro"] },
-    { name: "fechaViaje", label: "FECHA TENTATIVA DE VIAJE", type: "date" },
-    { name: "duracionEstancia", label: "DURACI\u00d3N DE LA ESTANCIA (D\u00cdAS)", type: "number", placeholder: "Ej: 15" },
-    { name: "direccionEEUU", label: "DIRECCI\u00d3N DONDE TE HOSPEDAR\u00c1S EN EE.UU.", type: "text", placeholder: "Hotel, direcci\u00f3n de familiar, etc." },
-  ]},
-  { id: 5, titulo: "Acompa\u00f1antes de Viaje", campos: [
-    { name: "viajaAcompanado", label: "\u00bfVIAJAS CON ALGUIEN M\u00c1S?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "acompanantes", label: "NOMBRES DE LOS ACOMPA\u00d1ANTES", type: "text", placeholder: "Ej: Juan P\u00e9rez (esposo)", dependeDe: { campo: "viajaAcompanado", valor: "S\u00ed" } },
-    { name: "relacionAcompanantes", label: "RELACI\u00d3N CON LOS ACOMPA\u00d1ANTES", type: "text", placeholder: "Ej: Familiar, amigo, colega", dependeDe: { campo: "viajaAcompanado", valor: "S\u00ed" } },
-  ]},
-  { id: 6, titulo: "Viajes Anteriores a EE.UU.", campos: [
-    { name: "visitadoEEUU", label: "\u00bfHAS VISITADO EE.UU. ANTES?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "fechasVisitas", label: "FECHAS DE VISITAS ANTERIORES", type: "text", placeholder: "Ej: Junio 2019, Diciembre 2021", dependeDe: { campo: "visitadoEEUU", valor: "S\u00ed" } },
-    { name: "visaAnterior", label: "\u00bfHAS TENIDO VISA AMERICANA ANTES?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "visaRechazada", label: "\u00bfTE HAN RECHAZADO UNA VISA ANTES?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "motivoRechazo", label: "MOTIVO DEL RECHAZO", type: "text", placeholder: "Explica brevemente", dependeDe: { campo: "visaRechazada", valor: "S\u00ed" } },
-  ]},
-  { id: 7, titulo: "Informaci\u00f3n Laboral", campos: [
-    { name: "ocupacion", label: "OCUPACI\u00d3N ACTUAL", type: "text", placeholder: "Ej: Ingeniero, Estudiante, Empresario" },
-    { name: "empleador", label: "NOMBRE DEL EMPLEADOR O INSTITUCI\u00d3N", type: "text", placeholder: "Ej: Empresa S.A." },
-    { name: "direccionTrabajo", label: "DIRECCI\u00d3N DEL TRABAJO", type: "text", placeholder: "Direcci\u00f3n completa" },
-    { name: "telefonoTrabajo", label: "TEL\u00c9FONO DEL TRABAJO", type: "tel", placeholder: "Ej: +502 2222 3333" },
-    { name: "ingresoMensual", label: "INGRESO MENSUAL APROXIMADO (USD)", type: "number", placeholder: "Ej: 1500" },
-  ]},
-  { id: 8, titulo: "Informaci\u00f3n Educativa", campos: [
-    { name: "nivelEducativo", label: "NIVEL EDUCATIVO M\u00c1S ALTO", type: "select", opciones: ["Primaria", "Secundaria", "Diversificado", "Universidad (incompleta)", "Universidad (completa)", "Maestr\u00eda", "Doctorado"] },
-    { name: "institucion", label: "NOMBRE DE LA INSTITUCI\u00d3N", type: "text", placeholder: "Ej: Universidad del Valle de Guatemala" },
-    { name: "carrera", label: "CARRERA O \u00c1REA DE ESTUDIO", type: "text", placeholder: "Ej: Ingenier\u00eda en Sistemas" },
-  ]},
-  { id: 9, titulo: "Informaci\u00f3n Familiar", campos: [
-    { name: "estadoCivil", label: "ESTADO CIVIL", type: "select", opciones: ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a", "Uni\u00f3n libre"] },
-    { name: "nombreConyuge", label: "NOMBRE DEL C\u00d3NYUGE", type: "text", placeholder: "Nombre completo", dependeDe: { campo: "estadoCivil", valor: "Casado/a" } },
-    { name: "nombrePadre", label: "NOMBRE COMPLETO DEL PADRE", type: "text", placeholder: "Nombre completo" },
-    { name: "nombreMadre", label: "NOMBRE COMPLETO DE LA MADRE", type: "text", placeholder: "Nombre completo" },
-    { name: "familiaresEEUU", label: "\u00bfTIENES FAMILIARES EN EE.UU.?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "detallesFamiliares", label: "DETALLE DE FAMILIARES EN EE.UU.", type: "text", placeholder: "Nombre, relaci\u00f3n, estatus migratorio", dependeDe: { campo: "familiaresEEUU", valor: "S\u00ed" } },
-  ]},
-  { id: 10, titulo: "Seguridad y Antecedentes", campos: [
-    { name: "enfermedadContagiosa", label: "\u00bfTIENES ALGUNA ENFERMEDAD CONTAGIOSA?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "arrestos", label: "\u00bfHAS SIDO ARRESTADO O CONDENADO POR ALG\u00daN DELITO?", type: "radio", opciones: ["S\u00ed", "No"] },
-    { name: "detalleArrestos", label: "DETALLE DE ARRESTOS", type: "text", placeholder: "Explica brevemente", dependeDe: { campo: "arrestos", valor: "S\u00ed" } },
-    { name: "deportado", label: "\u00bfHAS SIDO DEPORTADO DE ALG\u00daN PA\u00cdS?", type: "radio", opciones: ["S\u00ed", "No"] },
-  ]},
+  { 
+    id: 2, 
+    titulo: "Información de Contacto", 
+    campos: [
+      { 
+        name: "direccion", 
+        label: "DIRECCIÓN DE RESIDENCIA", 
+        type: "text", 
+        placeholder: "Calle, número, zona", 
+        required: true,
+        validation: { minLength: 10, maxLength: 200 }
+      },
+      { name: "ciudad", label: "CIUDAD", type: "text", placeholder: "Ej: Ciudad de Guatemala", required: true },
+      { name: "codigoPostal", label: "CÓDIGO POSTAL", type: "text", placeholder: "Ej: 01010" },
+      { 
+        name: "telefono", 
+        label: "NÚMERO DE TELÉFONO", 
+        type: "tel", 
+        placeholder: "Ej: +502 1234 5678", 
+        required: true,
+        validation: { minLength: 8, pattern: "telefono" }
+      },
+      { 
+        name: "email", 
+        label: "CORREO ELECTRÓNICO", 
+        type: "email", 
+        placeholder: "tu@correo.com", 
+        required: true,
+        validation: { pattern: "email" }
+      },
+    ]
+  },
+  { 
+    id: 3, 
+    titulo: "Información del Pasaporte", 
+    campos: [
+      { 
+        name: "numeroPasaporte", 
+        label: "NÚMERO DE PASAPORTE", 
+        type: "text", 
+        placeholder: "Ej: A12345678", 
+        required: true,
+        validation: { minLength: 6, maxLength: 20 }
+      },
+      { name: "paisEmision", label: "PAÍS DE EMISIÓN", type: "text", placeholder: "Ej: Guatemala", required: true },
+      { 
+        name: "fechaEmision", 
+        label: "FECHA DE EMISIÓN", 
+        type: "date", 
+        required: true,
+        validation: { tipo: "fechaPasada" }
+      },
+      { 
+        name: "fechaExpiracion", 
+        label: "FECHA DE EXPIRACIÓN", 
+        type: "date", 
+        required: true,
+        validation: { tipo: "fechaFutura" },
+        tip: "Tu pasaporte debe tener al menos 6 meses de vigencia al momento del viaje." 
+      },
+    ]
+  },
+  { 
+    id: 4, 
+    titulo: "Información del Viaje", 
+    campos: [
+      { name: "proposito", label: "PROPÓSITO DEL VIAJE", type: "select", opciones: ["Turismo", "Negocios", "Estudio", "Trabajo", "Tránsito", "Tratamiento médico", "Otro"], required: true },
+      { 
+        name: "fechaViaje", 
+        label: "FECHA TENTATIVA DE VIAJE", 
+        type: "date", 
+        required: true,
+        validation: { tipo: "fechaFutura" }
+      },
+      { 
+        name: "duracionEstancia", 
+        label: "DURACIÓN DE LA ESTANCIA (DÍAS)", 
+        type: "number", 
+        placeholder: "Ej: 15", 
+        required: true,
+        validation: { min: 1, max: 180 }
+      },
+      { 
+        name: "direccionEEUU", 
+        label: "DIRECCIÓN DONDE TE HOSPEDARÁS EN EE.UU.", 
+        type: "text", 
+        placeholder: "Hotel, dirección de familiar, etc.", 
+        required: true,
+        validation: { minLength: 10 }
+      },
+    ]
+  },
+  { 
+    id: 5, 
+    titulo: "Acompañantes de Viaje", 
+    campos: [
+      { name: "viajaAcompanado", label: "¿VIAJAS CON ALGUIEN MÁS?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "acompanantes", label: "NOMBRES DE LOS ACOMPAÑANTES", type: "text", placeholder: "Ej: Juan Pérez (esposo)", dependeDe: { campo: "viajaAcompanado", valor: "Sí" }, required: true },
+      { name: "relacionAcompanantes", label: "RELACIÓN CON LOS ACOMPAÑANTES", type: "text", placeholder: "Ej: Familiar, amigo, colega", dependeDe: { campo: "viajaAcompanado", valor: "Sí" }, required: true },
+    ]
+  },
+  { 
+    id: 6, 
+    titulo: "Viajes Anteriores a EE.UU.", 
+    campos: [
+      { name: "visitadoEEUU", label: "¿HAS VISITADO EE.UU. ANTES?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "fechasVisitas", label: "FECHAS DE VISITAS ANTERIORES", type: "text", placeholder: "Ej: Junio 2019, Diciembre 2021", dependeDe: { campo: "visitadoEEUU", valor: "Sí" } },
+      { name: "visaAnterior", label: "¿HAS TENIDO VISA AMERICANA ANTES?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "visaRechazada", label: "¿TE HAN RECHAZADO UNA VISA ANTES?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "motivoRechazo", label: "MOTIVO DEL RECHAZO", type: "text", placeholder: "Explica brevemente", dependeDe: { campo: "visaRechazada", valor: "Sí" }, required: true },
+    ]
+  },
+  { 
+    id: 7, 
+    titulo: "Información Laboral", 
+    campos: [
+      { name: "ocupacion", label: "OCUPACIÓN ACTUAL", type: "text", placeholder: "Ej: Ingeniero, Estudiante, Empresario", required: true },
+      { name: "empleador", label: "NOMBRE DEL EMPLEADOR O INSTITUCIÓN", type: "text", placeholder: "Ej: Empresa S.A.", required: true },
+      { 
+        name: "direccionTrabajo", 
+        label: "DIRECCIÓN DEL TRABAJO", 
+        type: "text", 
+        placeholder: "Dirección completa",
+        validation: { minLength: 10 }
+      },
+      { 
+        name: "telefonoTrabajo", 
+        label: "TELÉFONO DEL TRABAJO", 
+        type: "tel", 
+        placeholder: "Ej: +502 2222 3333",
+        validation: { pattern: "telefono" }
+      },
+      { 
+        name: "ingresoMensual", 
+        label: "INGRESO MENSUAL APROXIMADO (USD)", 
+        type: "number", 
+        placeholder: "Ej: 1500",
+        validation: { min: 0 }
+      },
+    ]
+  },
+  { 
+    id: 8, 
+    titulo: "Información Educativa", 
+    campos: [
+      { name: "nivelEducativo", label: "NIVEL EDUCATIVO MÁS ALTO", type: "select", opciones: ["Primaria", "Secundaria", "Diversificado", "Universidad (incompleta)", "Universidad (completa)", "Maestría", "Doctorado"], required: true },
+      { name: "institucion", label: "NOMBRE DE LA INSTITUCIÓN", type: "text", placeholder: "Ej: Universidad del Valle de Guatemala", required: true },
+      { name: "carrera", label: "CARRERA O ÁREA DE ESTUDIO", type: "text", placeholder: "Ej: Ingeniería en Sistemas" },
+    ]
+  },
+  { 
+    id: 9, 
+    titulo: "Información Familiar", 
+    campos: [
+      { name: "estadoCivil", label: "ESTADO CIVIL", type: "select", opciones: ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a", "Unión libre"], required: true },
+      { name: "nombreConyuge", label: "NOMBRE DEL CÓNYUGE", type: "text", placeholder: "Nombre completo", dependeDe: { campo: "estadoCivil", valor: "Casado/a" }, required: true },
+      { name: "nombrePadre", label: "NOMBRE COMPLETO DEL PADRE", type: "text", placeholder: "Nombre completo", required: true },
+      { name: "nombreMadre", label: "NOMBRE COMPLETO DE LA MADRE", type: "text", placeholder: "Nombre completo", required: true },
+      { name: "familiaresEEUU", label: "¿TIENES FAMILIARES EN EE.UU.?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "detallesFamiliares", label: "DETALLE DE FAMILIARES EN EE.UU.", type: "text", placeholder: "Nombre, relación, estatus migratorio", dependeDe: { campo: "familiaresEEUU", valor: "Sí" }, required: true },
+    ]
+  },
+  { 
+    id: 10, 
+    titulo: "Seguridad y Antecedentes", 
+    campos: [
+      { name: "enfermedadContagiosa", label: "¿TIENES ALGUNA ENFERMEDAD CONTAGIOSA?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "arrestos", label: "¿HAS SIDO ARRESTADO O CONDENADO POR ALGÚN DELITO?", type: "radio", opciones: ["Sí", "No"], required: true },
+      { name: "detalleArrestos", label: "DETALLE DE ARRESTOS", type: "text", placeholder: "Explica brevemente", dependeDe: { campo: "arrestos", valor: "Sí" }, required: true },
+      { name: "deportado", label: "¿HAS SIDO DEPORTADO DE ALGÚN PAÍS?", type: "radio", opciones: ["Sí", "No"], required: true },
+    ]
+  },
 ];
 
 function CheckCircleIcon() {
@@ -116,6 +256,7 @@ export default function DS160Form() {
   const { isValidating: authValidating } = useRequireAuth();
   const [seccionActual,   setSeccionActual]   = useState(1);
   const [formData,        setFormData]        = useState({});
+  const [errores,         setErrores]         = useState({});
   const [guardando,       setGuardando]       = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState("");
   const [cargando,        setCargando]        = useState(true);
@@ -124,6 +265,10 @@ export default function DS160Form() {
   const seccion        = secciones.find(s => s.id === seccionActual);
   const totalSecciones = secciones.length;
   const progreso       = (seccionActual / totalSecciones) * 100;
+
+  // IMPORTANTE: debeMostrar debe estar definido ANTES de las funciones que lo usan
+  const debeMostrar = (campo) =>
+    !campo.dependeDe || formData[campo.dependeDe.campo] === campo.dependeDe.valor;
 
   useEffect(() => {
     const cargar = async () => {
@@ -143,13 +288,137 @@ export default function DS160Form() {
     cargar();
   }, []);
 
-  const handleChange = (name, value) => setFormData(p => ({ ...p, [name]: value }));
-
   const getCorreo = () => {
     const sessionRaw = localStorage.getItem("visaguide_session");
     return sessionRaw
       ? JSON.parse(sessionRaw).correo
       : localStorage.getItem("correoUsuario");
+  };
+
+  // Funciones de validación
+  const validarCampo = (campo, valor) => {
+    // Si el campo depende de otro y ese otro no cumple la condición, no validar
+    if (campo.dependeDe && formData[campo.dependeDe.campo] !== campo.dependeDe.valor) {
+      return null;
+    }
+
+    // Si no es requerido y está vacío, no hay error
+    if (!campo.required && (!valor || String(valor).trim() === "")) {
+      return null;
+    }
+
+    // Si es requerido y está vacío
+    if (campo.required && (!valor || String(valor).trim() === "")) {
+      return "Este campo es obligatorio";
+    }
+
+    // Validaciones específicas
+    if (campo.validation) {
+      const v = campo.validation;
+      const valorStr = String(valor);
+
+      // Longitud mínima
+      if (v.minLength && valorStr.length < v.minLength) {
+        return `Debe tener al menos ${v.minLength} caracteres`;
+      }
+
+      // Longitud máxima
+      if (v.maxLength && valorStr.length > v.maxLength) {
+        return `No puede exceder ${v.maxLength} caracteres`;
+      }
+
+      // Valores numéricos
+      if (v.min !== undefined && Number(valor) < v.min) {
+        return `El valor mínimo es ${v.min}`;
+      }
+
+      if (v.max !== undefined && Number(valor) > v.max) {
+        return `El valor máximo es ${v.max}`;
+      }
+
+      // Patrones
+      if (v.pattern === "email") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(valorStr)) {
+          return "Ingresa un correo electrónico válido";
+        }
+      }
+
+      if (v.pattern === "telefono") {
+        const telRegex = /^[\d\s\+\-\(\)]{8,20}$/;
+        if (!telRegex.test(valorStr)) {
+          return "Ingresa un número de teléfono válido";
+        }
+      }
+
+      if (v.pattern === "letras") {
+        const letrasRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']+$/;
+        if (!letrasRegex.test(valorStr)) {
+          return "Solo se permiten letras";
+        }
+      }
+
+      // Fechas
+      if (v.tipo === "fechaPasada") {
+        const fecha = new Date(valor);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        if (fecha >= hoy) {
+          return "La fecha debe ser anterior a hoy";
+        }
+      }
+
+      if (v.tipo === "fechaFutura") {
+        const fecha = new Date(valor);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        if (fecha <= hoy) {
+          return "La fecha debe ser posterior a hoy";
+        }
+      }
+    }
+
+    return null; // Sin errores
+  };
+
+  const validarSeccionActual = () => {
+    const camposSeccion = seccion?.campos || [];
+    const nuevosErrores = {};
+    let hayErrores = false;
+
+    camposSeccion.forEach(campo => {
+      // Solo validar campos visibles
+      if (!debeMostrar(campo)) return;
+
+      const error = validarCampo(campo, formData[campo.name]);
+      if (error) {
+        nuevosErrores[campo.name] = error;
+        hayErrores = true;
+      }
+    });
+
+    // Limpiar errores anteriores de esta sección y agregar los nuevos
+    setErrores(nuevosErrores);
+    return !hayErrores;
+  };
+
+  const handleChange = (name, value) => {
+    setFormData(p => ({ ...p, [name]: value }));
+    
+    // Validar en tiempo real
+    const campo = seccion?.campos.find(c => c.name === name);
+    if (campo) {
+      const error = validarCampo(campo, value);
+      setErrores(prev => {
+        const nuevos = { ...prev };
+        if (error) {
+          nuevos[name] = error;
+        } else {
+          delete nuevos[name];
+        }
+        return nuevos;
+      });
+    }
   };
 
   const guardarProgreso = async () => {
@@ -163,7 +432,7 @@ export default function DS160Form() {
         body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
       });
       if (!res.ok) throw new Error();
-      setMensajeGuardado("\u2713 Progreso guardado");
+      setMensajeGuardado("✓ Progreso guardado");
       setTimeout(() => setMensajeGuardado(""), 3000);
     } catch {
       setMensajeGuardado("Error al guardar. Intenta de nuevo.");
@@ -172,6 +441,14 @@ export default function DS160Form() {
   };
 
   const finalizarFormulario = async () => {
+    // Validar sección actual antes de finalizar
+    const esValida = validarSeccionActual();
+    if (!esValida) {
+      setMensajeGuardado("Completa los campos obligatorios antes de finalizar");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+      return;
+    }
+
     const correo = getCorreo();
     if (!correo) return;
     setGuardando(true);
@@ -181,61 +458,99 @@ export default function DS160Form() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: true }),
       });
-      alert("\u00a1Formulario completado! Los datos han sido guardados.");
+      alert("¡Formulario completado! Los datos han sido guardados.");
       window.location.href = "/dashboard";
     } catch { alert("Error al finalizar el formulario. Intenta de nuevo."); }
     finally { setGuardando(false); }
   };
 
-  const siguienteSeccion = () => {
-    if (seccionActual < totalSecciones) {
-      setSeccionActual(s => s + 1);
-      guardarProgreso();
-      window.scrollTo(0, 0);
+const siguienteSeccion = () => {
+  if (seccionActual < totalSecciones) {
+    const esValida = validarSeccionActual();
+    if (!esValida) {
+      setMensajeGuardado("Completa los campos obligatorios antes de continuar");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+      return;
+    }
+    setErrores({});
+    setSeccionActual(s => s + 1);
+    guardarProgreso();
+    window.scrollTo(0, 0);
+  }
+};
+
+  const anteriorSeccion = () => {
+    if (seccionActual > 1) { 
+      setErrores({}); // Limpiar errores al cambiar de sección
+      setSeccionActual(s => s - 1); 
+      window.scrollTo(0, 0); 
     }
   };
 
-  const anteriorSeccion = () => {
-    if (seccionActual > 1) { setSeccionActual(s => s - 1); window.scrollTo(0, 0); }
-  };
-
-  const debeMostrar = (campo) =>
-    !campo.dependeDe || formData[campo.dependeDe.campo] === campo.dependeDe.valor;
-
   const renderCampo = (campo) => {
     if (!debeMostrar(campo)) return null;
+    const tieneError = errores[campo.name];
 
     if (campo.type === "radio") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>{campo.label}</label>
+        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+          {campo.label}
+          {campo.required && <span style={st.required}>*</span>}
+        </label>
         <div style={st.radioGroup}>
           {campo.opciones.map(op => (
             <button key={op} type="button"
-              style={{ ...st.radioBtn, ...(formData[campo.name] === op ? st.radioBtnSel : {}), fontSize: modoSenior ? "16px" : "14px" }}
+              style={{ 
+                ...st.radioBtn, 
+                ...(formData[campo.name] === op ? st.radioBtnSel : {}), 
+                ...(tieneError && !formData[campo.name] ? st.radioBtnError : {}),
+                fontSize: modoSenior ? "16px" : "14px" 
+              }}
               onClick={() => handleChange(campo.name, op)}>{op}</button>
           ))}
         </div>
+        {tieneError && <span style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     if (campo.type === "select") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>{campo.label}</label>
-        <select style={{ ...st.input, fontSize: modoSenior ? "17px" : "15px" }}
-          value={formData[campo.name] || ""} onChange={e => handleChange(campo.name, e.target.value)}>
-          <option value="">Selecciona una opci\u00f3n</option>
+        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+          {campo.label}
+          {campo.required && <span style={st.required}>*</span>}
+        </label>
+        <select 
+          style={{ 
+            ...st.input, 
+            fontSize: modoSenior ? "17px" : "15px",
+            ...(tieneError ? st.inputError : {})
+          }}
+          value={formData[campo.name] || ""} 
+          onChange={e => handleChange(campo.name, e.target.value)}>
+          <option value="">Selecciona una opción</option>
           {campo.opciones.map(op => <option key={op} value={op}>{op}</option>)}
         </select>
+        {tieneError && <span style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>{campo.label}</label>
+        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+          {campo.label}
+          {campo.required && <span style={st.required}>*</span>}
+        </label>
         <input type={campo.type}
-          style={{ ...st.input, fontSize: modoSenior ? "17px" : "15px", padding: modoSenior ? "15px 18px" : "12px 16px" }}
-          placeholder={campo.placeholder || ""} value={formData[campo.name] || ""}
+          style={{ 
+            ...st.input, 
+            fontSize: modoSenior ? "17px" : "15px", 
+            padding: modoSenior ? "15px 18px" : "12px 16px",
+            ...(tieneError ? st.inputError : {})
+          }}
+          placeholder={campo.placeholder || ""} 
+          value={formData[campo.name] || ""}
           onChange={e => handleChange(campo.name, e.target.value)} />
+        {tieneError && <span style={st.errorText}>{tieneError}</span>}
       </div>
     );
   };
@@ -264,7 +579,7 @@ export default function DS160Form() {
             <div>
               <h1 style={{ ...st.titulo, fontSize: modoSenior ? "28px" : "22px" }}>Formulario DS-160</h1>
               <p style={{ ...st.subtitulo, fontSize: modoSenior ? "15px" : "13px" }}>
-                Secci\u00f3n {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
+                Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
               </p>
             </div>
             <button style={st.guardarBtn} onClick={guardarProgreso} disabled={guardando} aria-label="Guardar progreso">
@@ -278,7 +593,7 @@ export default function DS160Form() {
         </div>
 
         {mensajeGuardado && (
-          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("\u2713") ? "#f0fdf4" : "#fef2f2", borderColor: mensajeGuardado.startsWith("\u2713") ? "#bbf7d0" : "#fecaca", color: mensajeGuardado.startsWith("\u2713") ? "#15803d" : "#dc2626" }}>
+          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("✓") ? "#f0fdf4" : "#fef2f2", borderColor: mensajeGuardado.startsWith("✓") ? "#bbf7d0" : "#fecaca", color: mensajeGuardado.startsWith("✓") ? "#15803d" : "#dc2626" }}>
             {mensajeGuardado}
           </div>
         )}
@@ -291,13 +606,13 @@ export default function DS160Form() {
             {seccion?.campos.map(c => renderCampo(c))}
             <div style={st.navegacion}>
               <button style={{ ...st.navBtn, ...st.navBack, fontSize: modoSenior ? "15px" : "13px", opacity: seccionActual === 1 ? 0.4 : 1 }}
-                onClick={anteriorSeccion} disabled={seccionActual === 1}>&larr; Anterior</button>
+                onClick={anteriorSeccion} disabled={seccionActual === 1}>← Anterior</button>
               {seccionActual < totalSecciones ? (
-                <button style={{ ...st.navBtn, ...st.navNext, fontSize: modoSenior ? "16px" : "14px" }} onClick={siguienteSeccion}>Siguiente &rarr;</button>
+                <button style={{ ...st.navBtn, ...st.navNext, fontSize: modoSenior ? "16px" : "14px" }} onClick={siguienteSeccion}>Siguiente →</button>
               ) : (
                 <button style={{ ...st.navBtn, ...st.navNext, fontSize: modoSenior ? "16px" : "14px", opacity: guardando ? 0.7 : 1 }}
                   onClick={finalizarFormulario} disabled={guardando}>
-                  {guardando ? "Finalizando..." : "Finalizar \u2713"}
+                  {guardando ? "Finalizando..." : "Finalizar ✓"}
                 </button>
               )}
             </div>
@@ -311,7 +626,7 @@ export default function DS160Form() {
                 <div style={st.helpTitleRow}>
                   <InfoCircleIcon />
                   <h4 style={{ ...st.helpTitle, fontSize: modoSenior ? "15px" : "13px" }}>
-                    \u00bfPor qu\u00e9 preguntan esto?
+                    ¿Por qué preguntan esto?
                   </h4>
                 </div>
                 <p style={{ ...st.helpText, fontSize: modoSenior ? "15px" : "13px" }}>
@@ -323,7 +638,6 @@ export default function DS160Form() {
             {campoConAyuda?.tip && (
               <div style={st.tipBox}>
                 <div style={st.tipTitleRow}>
-                  {/* espacio para ícono de tip */}
                   <h4 style={{ ...st.tipTitle, fontSize: modoSenior ? "15px" : "13px" }}>Tip del Asesor</h4>
                 </div>
                 {campoConAyuda.tip.split(". ").filter(t => t.trim()).map((linea, i) => (
@@ -345,7 +659,10 @@ export default function DS160Form() {
                 {secciones.map(sc => (
                   <li key={sc.id}
                     style={{ ...st.seccionItem, ...(sc.id === seccionActual ? st.seccionActual : {}), ...(sc.id < seccionActual ? st.seccionDone : {}), fontSize: modoSenior ? "14px" : "13px" }}
-                    onClick={() => setSeccionActual(sc.id)}>
+                    onClick={() => {
+                      setErrores({});
+                      setSeccionActual(sc.id);
+                    }}>
                     {sc.id < seccionActual && (
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
                         stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
@@ -452,6 +769,11 @@ const st = {
     textTransform: "uppercase",
   },
 
+  required: {
+    color: "#e11d48",
+    marginLeft: "4px",
+  },
+
   input: {
     width: "100%",
     padding: "12px 16px",
@@ -464,6 +786,19 @@ const st = {
     fontFamily: "'Segoe UI', sans-serif",
     color: "#0f172a",
     background: "#ffffff",
+  },
+
+  inputError: {
+    borderColor: "#e11d48",
+    background: "#fef2f2",
+  },
+
+  errorText: {
+    display: "block",
+    marginTop: "6px",
+    fontSize: "12px",
+    color: "#dc2626",
+    fontWeight: 500,
   },
 
   radioGroup: { display: "flex", gap: "10px" },
@@ -483,6 +818,8 @@ const st = {
   },
 
   radioBtnSel: { background: "#0f172a", color: "#ffffff", borderColor: "#0f172a" },
+
+  radioBtnError: { borderColor: "#e11d48" },
 
   navegacion: {
     display: "flex",
