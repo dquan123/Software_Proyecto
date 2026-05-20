@@ -288,6 +288,31 @@ export default function DS160Form() {
     cargar();
   }, []);
 
+  // Auto-guardado cada 30 segundos
+useEffect(() => {
+  // No iniciar el auto-guardado hasta que termine de cargar
+  if (cargando) return;
+  
+  const intervalo = setInterval(() => {
+    const correo = getCorreo();
+    if (correo && Object.keys(formData).length > 0) {
+      // Guardar silenciosamente (sin mostrar mensaje)
+      fetch(buildApiUrl("/ds160"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          correo, 
+          datos: formData, 
+          seccion_actual: seccionActual, 
+          completado: false 
+        }),
+      }).catch(() => {}); // Ignorar errores silenciosamente
+    }
+  }, 30000); // 30 segundos
+
+  return () => clearInterval(intervalo);
+}, [formData, seccionActual, cargando]);
+
   const getCorreo = () => {
     const sessionRaw = localStorage.getItem("visaguide_session");
     return sessionRaw
