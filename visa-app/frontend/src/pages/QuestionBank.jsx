@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Sidebar from "../components/Sidebar";
 import QuestionBankCard from "../components/QuestionBankCard";
 import QuestionBankConfirmDialog from "../components/QuestionBankConfirmDialog";
 import QuestionBankModal from "../components/QuestionBankModal";
@@ -7,7 +6,6 @@ import QuestionBankToast from "../components/QuestionBankToast";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import { getPendingInterviewFeedbackSessions } from "../utils/interviewFeedbackStorage";
 import "../styles/questionBank.css";
 
 const CATEGORIES = [
@@ -61,6 +59,26 @@ function getErrorMessage(data, fallback) {
   return data?.error || data?.message || fallback;
 }
 
+function getSessionResponses(session) {
+  return Array.isArray(session?.responses) ? session.responses : [];
+}
+
+function getRecordedCount(session) {
+  return getSessionResponses(session).filter((response) => response.recorded)
+    .length;
+}
+
+function formatSessionDate(value) {
+  if (!value) return "Sin fecha";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+
+  return new Intl.DateTimeFormat("es-GT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export default function QuestionBank() {
   const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
@@ -81,7 +99,14 @@ export default function QuestionBank() {
   });
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const pendingFeedbackSessions = getPendingInterviewFeedbackSessions();
+  const [interviewSessions, setInterviewSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState("");
+  const [selectedInterviewSession, setSelectedInterviewSession] =
+    useState(null);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const [ratingDraft, setRatingDraft] = useState("");
+  const [savingFeedback, setSavingFeedback] = useState(false);
 
   const showToast = useCallback((toast) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -113,10 +138,48 @@ export default function QuestionBank() {
     }
   }, []);
 
+  const fetchInterviewSessions = useCallback(async () => {
+    try {
+      setSessionsLoading(true);
+      setSessionsError("");
+
+      const response = await fetch(buildApiUrl("/interview-sessions"));
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          getErrorMessage(data, "No se pudieron cargar las entrevistas.")
+        );
+      }
+
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      setInterviewSessions(sessions);
+      setSelectedInterviewSession((current) => {
+        if (sessions.length === 0) return null;
+        if (!current) return sessions[0];
+        return sessions.find((item) => item.id === current.id) || sessions[0];
+      });
+    } catch (fetchError) {
+      setSessionsError(
+        fetchError.message || "No se pudieron cargar las entrevistas."
+      );
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isValidating) return;
     fetchQuestions();
-  }, [fetchQuestions, isValidating]);
+    fetchInterviewSessions();
+  }, [fetchInterviewSessions, fetchQuestions, isValidating]);
+
+  useEffect(() => {
+    setFeedbackDraft(selectedInterviewSession?.feedback || "");
+    setRatingDraft(
+      selectedInterviewSession?.rating ? String(selectedInterviewSession.rating) : ""
+    );
+  }, [selectedInterviewSession]);
 
   useEffect(() => {
     setPage(1);
@@ -130,6 +193,17 @@ export default function QuestionBank() {
       high: questions.filter((question) => question.difficulty === "Alta").length,
     };
   }, [questions]);
+  const pendingInterviewSessions = useMemo(
+    () => interviewSessions.filter((item) => item.status !== "reviewed"),
+    [interviewSessions]
+  );
+  const selectedResponses = useMemo(
+    () => getSessionResponses(selectedInterviewSession),
+    [selectedInterviewSession]
+  );
+  const selectedRecordedCount = selectedResponses.filter(
+    (response) => response.recorded
+  ).length;
 
   const filteredQuestions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -267,10 +341,57 @@ export default function QuestionBank() {
     }
   };
 
+  const handleSaveFeedback = async () => {
+    if (!selectedInterviewSession) return;
+
+    try {
+      setSavingFeedback(true);
+
+      const response = await fetch(
+        buildApiUrl(`/interview-sessions/${selectedInterviewSession.id}/feedback`),
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            feedback: feedbackDraft,
+            rating: ratingDraft || null,
+          }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          getErrorMessage(data, "No se pudo guardar la retroalimentación.")
+        );
+      }
+
+      setInterviewSessions((current) =>
+        current.map((item) =>
+          item.id === data.session.id ? data.session : item
+        )
+      );
+      setSelectedInterviewSession(data.session);
+      showToast({
+        type: "success",
+        title: "Retroalimentacion guardada",
+        message: "El usuario ya puede consultar las observaciones.",
+      });
+    } catch (feedbackError) {
+      showToast({
+        type: "error",
+        title: "No se pudo guardar",
+        message:
+          feedbackError.message ||
+          "Revisa el contenido de la retroalimentación e inténtalo de nuevo.",
+      });
+    } finally {
+      setSavingFeedback(false);
+    }
+  };
+
   return (
     <div className="question-bank-shell">
-      <Sidebar currentPage="question-bank" />
-
       <main
         className={`question-bank-main${
           modoSenior ? " question-bank-main--senior" : ""
@@ -321,31 +442,132 @@ export default function QuestionBank() {
             </section>
 
             <section className="question-feedback-reference">
-              <div>
-                <span>RetroalimentaciÃ³n pendiente</span>
-                <strong>{pendingFeedbackSessions.length}</strong>
+              <div className="question-feedback-reference__summary">
+                <span>Historial de entrevistas</span>
+                <strong>{interviewSessions.length}</strong>
                 <p>
-                  Sesiones de entrevista que faltan por retroalimentar. Esta
-                  lista es solo una referencia temporal.
+                  {pendingInterviewSessions.length} sesiones pendientes por
+                  retroalimentar desde el simulador.
                 </p>
               </div>
 
               <div className="question-feedback-reference__list">
-                {pendingFeedbackSessions.length === 0 ? (
-                  <p>No hay entrevistas pendientes por retroalimentar.</p>
+                {sessionsLoading ? (
+                  <p>Cargando historial de entrevistas...</p>
+                ) : sessionsError ? (
+                  <p>{sessionsError}</p>
+                ) : interviewSessions.length === 0 ? (
+                  <p>No hay sesiones de entrevista registradas.</p>
                 ) : (
-                  pendingFeedbackSessions.slice(0, 5).map((item) => (
-                    <article key={item.id}>
-                      <strong>{item.userName || "Usuario"}</strong>
-                      <span>{item.userEmail || "Sin correo"}</span>
+                  interviewSessions.slice(0, 8).map((item) => (
+                    <button
+                      className={
+                        selectedInterviewSession?.id === item.id
+                          ? "is-active"
+                          : ""
+                      }
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedInterviewSession(item)}
+                    >
+                      <strong>{item.user_name || "Usuario"}</strong>
+                      <span>{item.user_email || "Sin correo"}</span>
                       <small>
-                        {item.recordedCount} de {item.questionCount} respuestas
-                        grabadas
+                        {item.status === "reviewed"
+                          ? "Retroalimentada"
+                          : "Pendiente"}{" "}
+                        - {getRecordedCount(item)} de{" "}
+                        {getSessionResponses(item).length} respuestas
                       </small>
-                    </article>
+                    </button>
                   ))
                 )}
               </div>
+
+              {selectedInterviewSession && (
+                <div className="question-feedback-reference__detail">
+                  <div className="question-feedback-reference__detail-heading">
+                    <div>
+                      <span>Sesión seleccionada</span>
+                      <strong>
+                        {selectedInterviewSession.user_name || "Usuario"}
+                      </strong>
+                      <p>
+                        {selectedInterviewSession.user_email || "Sin correo"} -{" "}
+                        {formatSessionDate(selectedInterviewSession.created_at)}
+                      </p>
+                    </div>
+                    <em
+                      className={
+                        selectedInterviewSession.status === "reviewed"
+                          ? "is-reviewed"
+                          : ""
+                      }
+                    >
+                      {selectedInterviewSession.status === "reviewed"
+                        ? "Retroalimentada"
+                        : "Pendiente"}
+                    </em>
+                  </div>
+
+                  <div className="question-feedback-reference__responses">
+                    <strong>
+                      Respuestas grabadas ({selectedRecordedCount} de{" "}
+                      {selectedResponses.length})
+                    </strong>
+                    {selectedResponses.map((response, index) => (
+                      <article key={`${selectedInterviewSession.id}-${response.id}`}>
+                        <div>
+                          <span>Pregunta {index + 1}</span>
+                          <p>{response.text}</p>
+                        </div>
+                        {response.audio?.url ? (
+                          <audio controls src={response.audio.url}>
+                            Tu navegador no puede reproducir este audio.
+                          </audio>
+                        ) : (
+                          <small>Sin audio grabado</small>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+
+                  <label>
+                    Retroalimentación del administrador
+                    <textarea
+                      value={feedbackDraft}
+                      onChange={(event) => setFeedbackDraft(event.target.value)}
+                      placeholder="Escribe observaciones claras para el usuario..."
+                    />
+                  </label>
+
+                  <div className="question-feedback-reference__actions">
+                    <label>
+                      Calificación
+                      <select
+                        value={ratingDraft}
+                        onChange={(event) => setRatingDraft(event.target.value)}
+                      >
+                        <option value="">Sin calificación</option>
+                        <option value="1">1 - Necesita mejorar</option>
+                        <option value="2">2 - Básica</option>
+                        <option value="3">3 - Aceptable</option>
+                        <option value="4">4 - Buena</option>
+                        <option value="5">5 - Excelente</option>
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={savingFeedback || !feedbackDraft.trim()}
+                      onClick={handleSaveFeedback}
+                    >
+                      {savingFeedback
+                        ? "Guardando..."
+                        : "Guardar retroalimentación"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="question-bank-toolbar" aria-label="Filtros">

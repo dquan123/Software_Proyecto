@@ -345,6 +345,11 @@
   color: #64748b;
 }
 
+.feedback-entry-card__status--ready {
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .feedback-entry-card strong {
   color: #0f172a;
   font-size: 19px;

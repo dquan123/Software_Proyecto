@@ -62,14 +62,14 @@ export default function Dashboard() {
     { n: 3, label: "Pago",       done: etapaActual >= 4, active: etapaActual === 3 },
     { n: 4, label: "Cita",       done: etapaActual >= 5, active: etapaActual === 4 },
     { n: 5, label: "Entrevista", done: etapaActual >= 6, active: etapaActual === 5 },
-    { n: 6, label: "Decisi\u00f3n", done: false,         active: etapaActual === 6 },
+    { n: 6, label: "Decisión", done: false,         active: etapaActual === 6 },
   ];
 
   const tipoVisa = () => {
     const p = session?.perfil;
     if (p === "turismo_negocios") return "B1/B2";
     if (p === "estudiante")       return "F/M";
-    if (p === "renovacion")       return "Renovaci\u00f3n";
+    if (p === "renovacion")       return "Renovación";
     return "B1/B2";
   };
 
@@ -122,7 +122,7 @@ export default function Dashboard() {
         {/* SALUDO */}
         <header style={s.header}>
           <h1 style={{ ...s.greeting, fontSize: modoSenior ? "36px" : "28px" }}>
-            {"\u00a1"}Hola, {firstName}!
+            ¡Hola, {firstName}!
           </h1>
           <p style={{ ...s.subgreeting, fontSize: modoSenior ? "17px" : "14px" }}>
             Continuemos con tu solicitud de visa {tipoVisa()}.
@@ -176,7 +176,7 @@ export default function Dashboard() {
           <div style={s.actionSectionLabel}>
             <span aria-hidden="true" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#94a3b8", display: "inline-block", flexShrink: 0 }} />
             <span style={{ ...s.actionSectionText, fontSize: modoSenior ? "13px" : "11px" }}>
-              SIGUIENTE ACCI\u00d3N REQUERIDA
+              SIGUIENTE ACCIÓN REQUERIDA
             </span>
           </div>
 
@@ -193,15 +193,15 @@ export default function Dashboard() {
                 Completar formulario DS-160
               </h3>
               <p style={{ ...s.actionDesc, fontSize: modoSenior ? "15px" : "13px" }}>
-                El formulario oficial del gobierno requiere tu informaci\u00f3n personal,
-                laboral y de viaje. Recomendamos hacerlo en una sola sesi\u00f3n.
+                El formulario oficial del gobierno requiere tu información personal,
+                laboral y de viaje. Recomendamos hacerlo en una sola sesión.
               </p>
             </div>
             <button
               style={s.actionBtn}
               onClick={() => (window.location.href = "/ds160")}
             >
-              Iniciar secci\u00f3n &rarr;
+              Iniciar sección &rarr;
             </button>
           </div>
         </section>
@@ -219,12 +219,12 @@ export default function Dashboard() {
             <span style={s.importantBadge}>IMPORTANTE</span>
             <div style={s.iconPlaceholder} aria-hidden="true" />
             <h4 style={{ ...s.cardTitleDark, fontSize: modoSenior ? "19px" : "16px" }}>
-              Revisi\u00f3n de documentos
+              Revisión de documentos
             </h4>
             <p style={{ ...s.cardDescDark, fontSize: modoSenior ? "14px" : "13px" }}>
               Tienes{" "}
               <strong style={{ color: "#d97706" }}>1 documento</strong>{" "}
-              que requiere correcci\u00f3n antes de continuar.
+              que requiere corrección antes de continuar.
             </p>
             <span style={{ ...s.cardCta, color: "#d97706", fontSize: modoSenior ? "14px" : "13px" }}>
               Corregir ahora &rarr;
@@ -240,10 +240,10 @@ export default function Dashboard() {
           >
             <div style={s.iconPlaceholder} aria-hidden="true" />
             <h4 style={{ ...s.cardTitleDark, fontSize: modoSenior ? "19px" : "16px" }}>
-              Ver cronolog\u00eda completa
+              Ver cronología completa
             </h4>
             <p style={{ ...s.cardDescMuted, fontSize: modoSenior ? "14px" : "13px" }}>
-              Revisa todos los pasos de tu proceso y qu\u00e9 esperar en cada uno.
+              Revisa todos los pasos de tu proceso y qué esperar en cada uno.
             </p>
             <span style={{ ...s.cardCta, color: "#475569", fontSize: modoSenior ? "14px" : "13px" }}>
               Explorar &rarr;
