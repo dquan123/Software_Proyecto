@@ -32,7 +32,6 @@ export default function Sidebar({ currentPage }) {
     { id: "cronologia", label: "Cronología", icon: "clock", path: "/cronologia" },
     { id: "documentos", label: "Documentos", icon: "folder", path: "/documents" },
     { id: "entrevista", label: "Entrevista", icon: "users", path: "/entrevista" },
-    { id: "question-bank", label: "Banco Preguntas", icon: "questions", path: "/questions" },
     { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones" },
     { id: "perfil", label: "Perfil", icon: "user", path: "/perfil" },
     { id: "chat", label: "Chat con asesor", icon: "message", path: "/chat" },

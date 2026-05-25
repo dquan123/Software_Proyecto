@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import { getLatestInterviewFeedbackSession } from "../utils/interviewFeedbackStorage";
 import "../styles/interview.css";
 
 const PREP_CARDS = [
@@ -126,9 +127,51 @@ function TipIcon({ tone }) {
 export default function Entrevista() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
-  const latestFeedback = isValidating
-    ? null
-    : getLatestInterviewFeedbackSession(session?.id);
+  const [latestFeedback, setLatestFeedback] = useState(null);
+  const latestResponses = Array.isArray(latestFeedback?.responses)
+    ? latestFeedback.responses
+    : [];
+  const latestRecordedCount = latestResponses.filter(
+    (response) => response.recorded
+  ).length;
+  const latestQuestionCount = latestResponses.length;
+  const latestFeedbackIsReviewed = latestFeedback?.status === "reviewed";
+
+  useEffect(() => {
+    if (isValidating || !session?.id) {
+      setLatestFeedback(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function fetchLatestFeedback() {
+      try {
+        const response = await fetch(
+          buildApiUrl(`/interview-sessions/user/${session.id}`)
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.error || "No se pudo cargar la entrevista.");
+        }
+
+        if (isMounted) {
+          setLatestFeedback(Array.isArray(data.sessions) ? data.sessions[0] : null);
+        }
+      } catch {
+        if (isMounted) {
+          setLatestFeedback(null);
+        }
+      }
+    }
+
+    fetchLatestFeedback();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isValidating, session?.id]);
 
   if (isValidating) {
     return (
@@ -183,27 +226,37 @@ export default function Entrevista() {
         <section className="feedback-entry-section">
           <div>
             <span className="feedback-entry-section__label">
-              RetroalimentaciÃ³n
+              Retroalimentación
             </span>
-            <h2>Resultado de tu prÃ¡ctica</h2>
+            <h2>Resultado de tu práctica</h2>
             <p>
-              Revisa el estado de tu Ãºltima entrevista enviada y consulta las
-              observaciones cuando estÃ©n listas.
+              Revisa el estado de tu última entrevista enviada y consulta las
+              observaciones cuando estén listas.
             </p>
           </div>
 
           <article className="feedback-entry-card">
             {latestFeedback ? (
               <>
-                <span className="feedback-entry-card__status">
-                  Pendiente de retroalimentaciÃ³n
+                <span
+                  className={`feedback-entry-card__status${
+                    latestFeedbackIsReviewed
+                      ? " feedback-entry-card__status--ready"
+                      : ""
+                  }`}
+                >
+                  {latestFeedbackIsReviewed
+                    ? "Retroalimentación lista"
+                    : "Pendiente de retroalimentación"}
                 </span>
                 <strong>
-                  {latestFeedback.recordedCount} de{" "}
-                  {latestFeedback.questionCount} respuestas grabadas
+                  {latestRecordedCount} de {latestQuestionCount} respuestas
+                  grabadas
                 </strong>
                 <p>
-                  La entrevista fue enviada y todavÃ­a no ha sido procesada.
+                  {latestFeedbackIsReviewed
+                    ? "Tu entrevista ya fue revisada por el equipo."
+                    : "La entrevista fue enviada y todavía no ha sido procesada."}
                 </p>
                 <button
                   type="button"
@@ -213,7 +266,7 @@ export default function Entrevista() {
                     )}`)
                   }
                 >
-                  Ver retroalimentaciÃ³n
+                  Ver retroalimentación
                 </button>
               </>
             ) : (
@@ -221,10 +274,10 @@ export default function Entrevista() {
                 <span className="feedback-entry-card__status feedback-entry-card__status--empty">
                   Sin entrevistas enviadas
                 </span>
-                <strong>AÃºn no hay retroalimentaciÃ³n pendiente</strong>
+                <strong>Aún no hay retroalimentación pendiente</strong>
                 <p>
-                  Completa el simulador para crear una sesiÃ³n de prÃ¡ctica
-                  pendiente de revisiÃ³n.
+                  Completa el simulador para crear una sesión de práctica
+                  pendiente de revisión.
                 </p>
                 <button
                   type="button"

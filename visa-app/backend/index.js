@@ -6,7 +6,9 @@ const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
 const upload = require("./upload");
+const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
+const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const {
   uploadBufferToR2,
@@ -90,6 +92,11 @@ questionBankService.seedInitialQuestions().catch((error) => {
   console.error("ERROR QUESTION BANK SCHEMA:", error);
 });
 
+const interviewSessionService = createInterviewSessionService(pool);
+interviewSessionService.ensureSchema().catch((error) => {
+  console.error("ERROR INTERVIEW SESSION SCHEMA:", error);
+});
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -154,6 +161,7 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
+app.use("/interview-sessions", createInterviewSessionRoutes(pool));
 app.use("/questions", createQuestionBankRoutes(pool));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)

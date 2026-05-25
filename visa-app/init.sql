@@ -85,3 +85,16 @@ FROM (
     ('¿Tiene intención de trabajar o estudiar durante su visita?', 'Migración', 'Alta', true)
 ) AS seed(question, category, difficulty, is_required)
 WHERE NOT EXISTS (SELECT 1 FROM question_bank);
+
+CREATE TABLE IF NOT EXISTS interview_sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES usuario(id_usuario),
+  user_name VARCHAR(200),
+  user_email VARCHAR(200),
+  status VARCHAR(30) DEFAULT 'pending',
+  responses JSONB NOT NULL DEFAULT '[]',
+  feedback TEXT,
+  rating INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TIMESTAMP
+);

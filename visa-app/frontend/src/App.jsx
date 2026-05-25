@@ -85,6 +85,7 @@ function App() {
         <Route path="/entrevista" element={<Entrevista />} />
         <Route path="/entrevista/simulador" element={<InterviewSimulator />} />
         <Route path="/entrevista/retroalimentacion" element={<InterviewFeedback />} />
+        <Route path="/admin/questions" element={<QuestionBank />} />
         <Route path="/questions" element={<QuestionBank />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ds160" element={<DS160Form />} />
