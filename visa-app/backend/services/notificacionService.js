@@ -143,6 +143,23 @@ function createNotificacionService(pool) {
     return result.rows[0];
   }
 
+  async function existeNotificacionEtapa(userId, etapaRelacionada) {
+    await ensureSchema();
+    const uid = parseUserId(userId);
+
+    const result = await pool.query(
+      `SELECT id FROM notificaciones
+       WHERE id_usuario = $1
+         AND tipo = 'etapa'
+         AND etapa_relacionada = $2
+         AND created_at > NOW() - INTERVAL '24 hours'
+       LIMIT 1`,
+      [uid, etapaRelacionada]
+    );
+
+    return result.rows.length > 0;
+  }
+
   return {
     ensureSchema,
     listarPorUsuario,
@@ -150,6 +167,7 @@ function createNotificacionService(pool) {
     marcarLeida,
     marcarTodasLeidas,
     crearNotificacion,
+    existeNotificacionEtapa,
   };
 }
 
