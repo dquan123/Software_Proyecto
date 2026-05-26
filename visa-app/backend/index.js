@@ -8,6 +8,7 @@ const cors = require("cors");
 const upload = require("./upload");
 const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
+const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
@@ -169,6 +170,7 @@ app.get("/", (req, res) => {
 
 app.use("/interview-sessions", createInterviewSessionRoutes(pool));
 app.use("/questions", createQuestionBankRoutes(pool));
+app.use("/notificaciones", createNotificacionRoutes(pool));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", async (req, res) => {
