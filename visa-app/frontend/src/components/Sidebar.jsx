@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { buildApiUrl } from "../config/api";
 
 export default function Sidebar({ currentPage }) {
   const [modoSenior, setModoSenior] = useState(() => {
@@ -16,6 +17,28 @@ export default function Sidebar({ currentPage }) {
 
     return null;
   });
+  const [noLeidas, setNoLeidas] = useState(0);
+
+  useEffect(() => {
+    if (!usuario?.id) return;
+
+    const fetchNoLeidas = async () => {
+      try {
+        const res = await fetch(buildApiUrl(`/notificaciones/${usuario.id}/no-leidas`));
+        if (!res.ok) return;
+        const data = await res.json();
+        setNoLeidas(data.total || 0);
+      } catch {
+        // silencioso: el badge simplemente no aparece si falla
+      }
+    };
+
+    fetchNoLeidas();
+
+    const handleActualizar = () => fetchNoLeidas();
+    window.addEventListener("notificacionesLeidas", handleActualizar);
+    return () => window.removeEventListener("notificacionesLeidas", handleActualizar);
+  }, [usuario?.id]);
 
   const toggleModoSenior = () => {
     const newValue = !modoSenior;
@@ -32,7 +55,7 @@ export default function Sidebar({ currentPage }) {
     { id: "cronologia", label: "Cronología", icon: "clock", path: "/cronologia" },
     { id: "documentos", label: "Documentos", icon: "folder", path: "/documents" },
     { id: "entrevista", label: "Entrevista", icon: "users", path: "/entrevista" },
-    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones" },
+    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones", badge: noLeidas > 0 ? noLeidas : null },
     { id: "perfil", label: "Perfil", icon: "user", path: "/perfil" },
     { id: "chat", label: "Chat con asesor", icon: "message", path: "/chat" },
   ];

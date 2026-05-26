@@ -65,6 +65,7 @@ export default function Notificaciones() {
       setNotificaciones((prev) =>
         prev.map((n) => (n.id === id ? { ...n, leido: true } : n))
       );
+      window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
     } catch (e) {
       console.error(e);
     }
@@ -78,6 +79,7 @@ export default function Notificaciones() {
       });
       if (!res.ok) throw new Error("Error al marcar todas");
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+      window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
     } catch (e) {
       console.error(e);
     } finally {
