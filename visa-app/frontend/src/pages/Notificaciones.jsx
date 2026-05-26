@@ -14,7 +14,7 @@ const TIPO_CONFIG = {
 
 function formatFecha(dateStr) {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("es-MX", {
+  return date.toLocaleString("es-MX", {
     day: "2-digit",
     month: "short",
     year: "numeric",
