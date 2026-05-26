@@ -11,6 +11,7 @@ import Entrevista from "./pages/Entrevista";
 import InterviewFeedback from "./pages/InterviewFeedback";
 import InterviewSimulator from "./pages/InterviewSimulator";
 import QuestionBank from "./pages/QuestionBank";
+import Notificaciones from "./pages/Notificaciones";
 import { buildApiUrl } from "./config/api";
 import Dashboard from "./pages/Dashboard";
 
@@ -89,6 +90,7 @@ function App() {
         <Route path="/questions" element={<QuestionBank />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ds160" element={<DS160Form />} />
+        <Route path="/notificaciones" element={<Notificaciones />} />
       </Routes>
     </BrowserRouter>
   );
