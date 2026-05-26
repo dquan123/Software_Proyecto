@@ -55,7 +55,7 @@ export default function Sidebar({ currentPage }) {
     { id: "cronologia", label: "Cronología", icon: "clock", path: "/cronologia" },
     { id: "documentos", label: "Documentos", icon: "folder", path: "/documents" },
     { id: "entrevista", label: "Entrevista", icon: "users", path: "/entrevista" },
-    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones", badge: noLeidas > 0 ? noLeidas : null },
+    { id: "notificaciones", label: "Notificaciones", icon: "bell", path: "/notificaciones", badge: noLeidas > 0 ? (noLeidas > 99 ? "99+" : noLeidas) : null },
     { id: "perfil", label: "Perfil", icon: "user", path: "/perfil" },
     { id: "chat", label: "Chat con asesor", icon: "message", path: "/chat" },
   ];
