@@ -104,6 +104,22 @@ notificacionService.ensureSchema().catch((error) => {
   console.error("ERROR NOTIFICACIONES SCHEMA:", error);
 });
 
+async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
+  try {
+    const yaExiste = await notificacionService.existeNotificacionEtapa(userId, etapa);
+    if (yaExiste) return;
+    await notificacionService.crearNotificacion({
+      userId,
+      titulo,
+      mensaje,
+      tipo: "etapa",
+      etapaRelacionada: etapa,
+    });
+  } catch (err) {
+    console.error("ERROR NOTIFICAR ETAPA:", err);
+  }
+}
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -316,9 +332,35 @@ app.post("/guardar-perfil", async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
+    const usuario = result.rows[0];
+
+    // Avanzar tramite a etapa 2 si el progreso es menor a 17
+    const tramiteResult = await pool.query(
+      "SELECT id_tramite, progreso FROM tramite WHERE id_usuario = $1",
+      [usuario.id_usuario]
+    );
+
+    if (tramiteResult.rows.length > 0 && tramiteResult.rows[0].progreso < 17) {
+      await pool.query(
+        `UPDATE tramite
+         SET etapa_actual = 'Formulario DS-160',
+             progreso = 17,
+             siguiente_paso = 'Completar el formulario DS-160',
+             mensaje = 'Perfil de visa configurado. Ahora completa el formulario DS-160.'
+         WHERE id_usuario = $1`,
+        [usuario.id_usuario]
+      );
+      notificarCambioEtapa(
+        usuario.id_usuario,
+        "Formulario DS-160",
+        "¡Perfil configurado!",
+        "Tu perfil de visa ha sido guardado. El siguiente paso es completar el formulario DS-160."
+      );
+    }
+
     res.json({
       message: "Perfil guardado correctamente",
-      user: result.rows[0],
+      user: usuario,
     });
   } catch (error) {
     console.log("ERROR GUARDAR PERFIL:", error);
@@ -789,6 +831,32 @@ app.post("/ds160", async (req, res) => {
       );
     }
 
+    // Si el DS-160 se marcó como completado, avanzar tramite a etapa 3
+    if (completado) {
+      const tramiteDs = await pool.query(
+        "SELECT id_tramite, progreso FROM tramite WHERE id_usuario = $1",
+        [userId]
+      );
+
+      if (tramiteDs.rows.length > 0 && tramiteDs.rows[0].progreso < 34) {
+        await pool.query(
+          `UPDATE tramite
+           SET etapa_actual = 'Pago de visa',
+               progreso = 34,
+               siguiente_paso = 'Realizar el pago de la tarifa de visa',
+               mensaje = 'Formulario DS-160 completado. El siguiente paso es realizar el pago.'
+           WHERE id_usuario = $1`,
+          [userId]
+        );
+        notificarCambioEtapa(
+          userId,
+          "Pago de visa",
+          "DS-160 completado",
+          "Has completado el formulario DS-160 exitosamente. Ahora debes realizar el pago de la tarifa de visa."
+        );
+      }
+    }
+
     res.json({
       message: "Formulario guardado correctamente",
       formulario: result.rows[0]
@@ -797,6 +865,104 @@ app.post("/ds160", async (req, res) => {
   } catch (error) {
     console.log("ERROR POST DS160:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /tramite — actualizar etapa del trámite y generar notificación automática
+const ETAPAS_VALIDAS = {
+  "Formulario DS-160": { progreso: 17, siguientePaso: "Completar el formulario DS-160" },
+  "Pago de visa":      { progreso: 34, siguientePaso: "Realizar el pago de la tarifa de visa" },
+  "Cita consular":     { progreso: 51, siguientePaso: "Programar tu cita consular" },
+  "Entrevista":        { progreso: 67, siguientePaso: "Prepararte para la entrevista consular" },
+  "Decisión final":    { progreso: 84, siguientePaso: "Esperar la decisión final del consulado" },
+};
+
+const MENSAJES_ETAPA = {
+  "Formulario DS-160": "Tu perfil fue configurado. El siguiente paso es completar el formulario DS-160.",
+  "Pago de visa":      "Formulario DS-160 completado. Ahora debes realizar el pago de la tarifa de visa.",
+  "Cita consular":     "Pago de visa confirmado. El siguiente paso es programar tu cita consular.",
+  "Entrevista":        "Cita consular agendada. Prepárate para tu entrevista.",
+  "Decisión final":    "Entrevista completada. Tu solicitud está en proceso de revisión final.",
+};
+
+app.put("/tramite", async (req, res) => {
+  const { correo, etapa_actual, progreso, siguiente_paso, mensaje, estado } = req.body;
+
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+
+  if (!etapa_actual) {
+    return res.status(400).json({ error: "etapa_actual requerida" });
+  }
+
+  try {
+    const userResult = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userId = userResult.rows[0].id_usuario;
+
+    const defaults = ETAPAS_VALIDAS[etapa_actual] || {};
+    const nuevoProgreso    = progreso      ?? defaults.progreso    ?? 10;
+    const nuevoSiguiente   = siguiente_paso ?? defaults.siguientePaso ?? "";
+    const nuevoMensaje     = mensaje        ?? MENSAJES_ETAPA[etapa_actual] ?? "";
+    const nuevoEstado      = estado         ?? "En proceso";
+
+    const tramiteResult = await pool.query(
+      "SELECT id_tramite, etapa_actual FROM tramite WHERE id_usuario = $1",
+      [userId]
+    );
+
+    let tramite;
+    if (tramiteResult.rows.length === 0) {
+      const nuevo = await pool.query(
+        `INSERT INTO tramite (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [userId, nuevoEstado, etapa_actual, nuevoProgreso, nuevoSiguiente, nuevoMensaje]
+      );
+      tramite = nuevo.rows[0];
+    } else {
+      const etapaAnterior = tramiteResult.rows[0].etapa_actual;
+      const updated = await pool.query(
+        `UPDATE tramite
+         SET estado = $1, etapa_actual = $2, progreso = $3,
+             siguiente_paso = $4, mensaje = $5
+         WHERE id_usuario = $6
+         RETURNING *`,
+        [nuevoEstado, etapa_actual, nuevoProgreso, nuevoSiguiente, nuevoMensaje, userId]
+      );
+      tramite = updated.rows[0];
+
+      if (etapaAnterior !== etapa_actual) {
+        notificarCambioEtapa(
+          userId,
+          etapa_actual,
+          `Nueva etapa: ${etapa_actual}`,
+          nuevoMensaje || `Tu trámite ha avanzado a la etapa: ${etapa_actual}.`
+        );
+      }
+    }
+
+    return res.json({
+      message: "Trámite actualizado correctamente",
+      tramite: {
+        estado:       tramite.estado,
+        etapaActual:  tramite.etapa_actual,
+        progreso:     tramite.progreso,
+        siguientePaso: tramite.siguiente_paso,
+        mensaje:      tramite.mensaje,
+      },
+    });
+  } catch (error) {
+    console.error("ERROR PUT TRAMITE:", error);
+    return res.status(500).json({ error: error.message });
   }
 });
 
