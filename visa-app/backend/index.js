@@ -10,6 +10,7 @@ const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
+const createNotificacionService = require("./services/notificacionService");
 const {
   uploadBufferToR2,
   deleteObjectFromR2,
@@ -95,6 +96,11 @@ questionBankService.seedInitialQuestions().catch((error) => {
 const interviewSessionService = createInterviewSessionService(pool);
 interviewSessionService.ensureSchema().catch((error) => {
   console.error("ERROR INTERVIEW SESSION SCHEMA:", error);
+});
+
+const notificacionService = createNotificacionService(pool);
+notificacionService.ensureSchema().catch((error) => {
+  console.error("ERROR NOTIFICACIONES SCHEMA:", error);
 });
 
 async function insertDocumento({
