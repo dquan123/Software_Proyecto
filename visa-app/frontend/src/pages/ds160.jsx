@@ -3,6 +3,7 @@ import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import useTheme from "../hooks/useTheme";
 
 const secciones = [
   {
@@ -254,6 +255,8 @@ function SaveIcon() {
 
 export default function DS160Form() {
   const { isValidating: authValidating } = useRequireAuth();
+  const { isDark } = useTheme();
+  const st = getSt(isDark);
   const [seccionActual,   setSeccionActual]   = useState(1);
   const [formData,        setFormData]        = useState({});
   const [errores,         setErrores]         = useState({});
@@ -708,26 +711,33 @@ const siguienteSeccion = () => {
   );
 }
 
-const st = {
+function getSt(isDark) {
+  const bg      = isDark ? "#0b1120"  : "#f1f3f6";
+  const card    = isDark ? "#1e293b"  : "#ffffff";
+  const border  = isDark ? "#334155"  : "#e2e8f0";
+  const text    = isDark ? "#f1f5f9"  : "#0f172a";
+  const muted   = isDark ? "#94a3b8"  : "#64748b";
+
+  return {
   layout: { display: "flex", minHeight: "100vh" },
 
   page: {
-    marginLeft: "250px",
+    marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
     minHeight: "100vh",
-    background: "#f1f3f6",
+    background: bg,
     padding: "28px 32px",
     fontFamily: "'Segoe UI', sans-serif",
     boxSizing: "border-box",
   },
 
   headerCard: {
-    background: "#ffffff",
+    background: card,
     borderRadius: "14px",
     padding: "20px 26px 16px",
-    boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
+    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(15,23,42,0.08)",
     marginBottom: "20px",
-    border: "1px solid #e2e8f0",
+    border: `1px solid ${border}`,
   },
 
   headerRow: {
@@ -737,27 +747,27 @@ const st = {
     marginBottom: "14px",
   },
 
-  titulo:   { margin: 0, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" },
-  subtitulo:{ margin: "3px 0 0 0", color: "#64748b" },
+  titulo:   { margin: 0, fontWeight: 700, color: text, letterSpacing: "-0.3px" },
+  subtitulo:{ margin: "3px 0 0 0", color: muted },
 
   guardarBtn: {
     display: "flex",
     alignItems: "center",
     gap: "7px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
+    background: card,
+    border: `1px solid ${border}`,
     borderRadius: "10px",
     padding: "9px 16px",
     fontSize: "13px",
     fontWeight: 500,
-    color: "#475569",
+    color: muted,
     cursor: "pointer",
     boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
     fontFamily: "'Segoe UI', sans-serif",
     flexShrink: 0,
   },
 
-  barTrack: { width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "99px", overflow: "hidden" },
+  barTrack: { width: "100%", height: "5px", background: border, borderRadius: "99px", overflow: "hidden" },
   barFill:  { height: "100%", background: "#e11d48", borderRadius: "99px", transition: "width 0.4s ease" },
 
   toast: {
@@ -773,11 +783,11 @@ const st = {
 
   formCard: {
     flex: 1,
-    background: "#ffffff",
+    background: card,
     borderRadius: "14px",
     padding: "28px 28px 24px",
-    boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
-    border: "1px solid #e2e8f0",
+    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(15,23,42,0.08)",
+    border: `1px solid ${border}`,
   },
 
   helpSidebar: { width: "300px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px" },
@@ -788,34 +798,31 @@ const st = {
     display: "block",
     fontSize: "11px",
     fontWeight: 600,
-    color: "#64748b",
+    color: muted,
     marginBottom: "7px",
     letterSpacing: "0.5px",
     textTransform: "uppercase",
   },
 
-  required: {
-    color: "#e11d48",
-    marginLeft: "4px",
-  },
+  required: { color: "#e11d48", marginLeft: "4px" },
 
   input: {
     width: "100%",
     padding: "12px 16px",
     fontSize: "15px",
-    border: "1.5px solid #e2e8f0",
+    border: `1.5px solid ${border}`,
     borderRadius: "10px",
     boxSizing: "border-box",
     outline: "none",
     transition: "border-color 0.2s",
     fontFamily: "'Segoe UI', sans-serif",
-    color: "#0f172a",
-    background: "#ffffff",
+    color: text,
+    background: isDark ? "#0f172a" : "#ffffff",
   },
 
   inputError: {
     borderColor: "#e11d48",
-    background: "#fef2f2",
+    background: isDark ? "#2d0a0a" : "#fef2f2",
   },
 
   errorText: {
@@ -832,18 +839,17 @@ const st = {
     flex: 1,
     padding: "12px 20px",
     fontSize: "14px",
-    border: "1.5px solid #e2e8f0",
+    border: `1.5px solid ${border}`,
     borderRadius: "10px",
-    background: "#ffffff",
+    background: isDark ? "#0f172a" : "#ffffff",
     cursor: "pointer",
     transition: "all 0.15s",
     fontFamily: "'Segoe UI', sans-serif",
-    color: "#0f172a",
+    color: text,
     fontWeight: 500,
   },
 
-  radioBtnSel: { background: "#0f172a", color: "#ffffff", borderColor: "#0f172a" },
-
+  radioBtnSel: { background: isDark ? "#e11d48" : "#0f172a", color: "#ffffff", borderColor: isDark ? "#e11d48" : "#0f172a" },
   radioBtnError: { borderColor: "#e11d48" },
 
   navegacion: {
@@ -852,7 +858,7 @@ const st = {
     alignItems: "center",
     marginTop: "28px",
     paddingTop: "18px",
-    borderTop: "1px solid #f1f5f9",
+    borderTop: `1px solid ${border}`,
   },
 
   navBtn: {
@@ -866,21 +872,19 @@ const st = {
   },
 
   navNext: { background: "linear-gradient(135deg,#e11d48 0%,#f43f5e 100%)", color: "#fff", boxShadow: "0 4px 14px rgba(225,29,72,0.28)" },
-  navBack: { background: "transparent", color: "#64748b", padding: "12px 4px", fontWeight: 400 },
+  navBack: { background: "transparent", color: muted, padding: "12px 4px", fontWeight: 400 },
 
-  /* Caja amarilla */
   helpBox: {
-    background: "#fffbeb",
+    background: isDark ? "#1c1a0f" : "#fffbeb",
     borderRadius: "12px",
     padding: "16px 18px",
-    border: "1px solid #fde68a",
+    border: isDark ? "1px solid #92400e" : "1px solid #fde68a",
   },
 
   helpTitleRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
-  helpTitle:    { margin: 0, fontWeight: 700, color: "#92400e" },
-  helpText:     { margin: 0, color: "#78350f", lineHeight: 1.65 },
+  helpTitle:    { margin: 0, fontWeight: 700, color: isDark ? "#fde68a" : "#92400e" },
+  helpText:     { margin: 0, color: isDark ? "#fcd34d" : "#78350f", lineHeight: 1.65 },
 
-  /* Caja navy con borde rojo */
   tipBox: {
     background: "#0f172a",
     borderRadius: "12px",
@@ -893,7 +897,6 @@ const st = {
   tipItem:     { display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "10px" },
   tipText:     { margin: 0, color: "#94a3b8", lineHeight: 1.6 },
 
-  /* Lista de secciones */
   seccionesBox: { background: "#1e3a5f", borderRadius: "12px", padding: "18px 20px" },
 
   seccionesTitle: {
@@ -918,4 +921,5 @@ const st = {
 
   seccionActual: { color: "#ffffff", fontWeight: 700 },
   seccionDone:   { color: "#34d399" },
-};
+  };
+}

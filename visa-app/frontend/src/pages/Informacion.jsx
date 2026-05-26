@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import useTheme from "../hooks/useTheme";
 
 // Datos de la pantalla — separados del JSX para legibilidad y para
 // facilitar moverlos a i18n más adelante si hace falta.
@@ -119,12 +120,14 @@ function InfoCard({ numero, titulo, descripcion, modoSenior }) {
 export default function Informacion() {
   const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const { isDark } = useTheme();
+  const styles = getStyles(isDark);
 
   if (isValidating) {
     return (
       <div style={{ display: "flex", minHeight: "100vh" }}>
         <Sidebar currentPage="informacion" />
-        <main style={{ marginLeft: "250px", padding: "40px" }}>
+        <main style={{ marginLeft: "var(--vg-sidebar-w)", padding: "40px" }}>
           <p>Verificando sesión...</p>
         </main>
       </div>
@@ -177,18 +180,19 @@ export default function Informacion() {
   );
 }
 
-// ----- Estilos (mismo patrón que el resto del repo) -----
+// ----- Estilos dinámicos con soporte para dark mode -----
 
-const styles = {
+function getStyles(isDark) {
+  return {
   layout: {
     display: "flex",
     minHeight: "100vh",
   },
 
   mainContent: {
-    marginLeft: "250px",
+    marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
-    background: "#f1f5f9",
+    background: isDark ? "#0b1120" : "#f1f5f9",
     padding: "40px",
     fontFamily: "'Segoe UI', sans-serif",
     minHeight: "100vh",
@@ -202,19 +206,17 @@ const styles = {
   title: {
     margin: "0 0 10px 0",
     fontWeight: 700,
-    color: "#0f172a",
+    color: isDark ? "#f1f5f9" : "#0f172a",
     lineHeight: 1.15,
   },
 
   subtitle: {
     margin: 0,
-    color: "#64748b",
+    color: isDark ? "#94a3b8" : "#64748b",
     lineHeight: 1.5,
     maxWidth: "640px",
   },
 
-  // Tarjeta destacada (DS-160) — gradiente azul oscuro con acento fucsia,
-  // misma familia de tonos que el sidebar y el header del DS-160.
   highlightCard: {
     display: "flex",
     gap: "18px",
@@ -240,7 +242,7 @@ const styles = {
   },
 
   highlightBody: {
-    minWidth: 0, // permite que el texto haga wrap correctamente en mobile
+    minWidth: 0,
   },
 
   highlightTitle: {
@@ -256,9 +258,6 @@ const styles = {
     lineHeight: 1.6,
   },
 
-  // Grid responsive sin necesidad de media queries:
-  // auto-fit + minmax hace que las tarjetas pasen de 3-4 columnas en desktop
-  // a 2 en tablets y 1 en mobile automáticamente.
   cardsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -266,12 +265,13 @@ const styles = {
   },
 
   card: {
-    background: "#ffffff",
+    background: isDark ? "#1e293b" : "#ffffff",
     borderRadius: "16px",
     padding: "22px 22px 24px",
-    border: "1px solid #e2e8f0",
-    boxShadow:
-      "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+    border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+    boxShadow: isDark
+      ? "0 1px 3px rgba(0,0,0,0.3)"
+      : "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
   },
 
   cardHeader: {
@@ -298,14 +298,15 @@ const styles = {
 
   cardTitle: {
     margin: 0,
-    color: "#0f172a",
+    color: isDark ? "#f1f5f9" : "#0f172a",
     fontWeight: 700,
     lineHeight: 1.3,
   },
 
   cardText: {
     margin: 0,
-    color: "#64748b",
+    color: isDark ? "#94a3b8" : "#64748b",
     lineHeight: 1.6,
   },
-};
+  };
+}
