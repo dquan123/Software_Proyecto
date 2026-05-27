@@ -1,238 +1,211 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import "../styles/notificaciones.css";
-
-const NOTIFICACIONES_INICIALES = [
-  {
-    id: 1,
-    tipo: "urgente",
-    titulo: "Pasaporte próximo a expirar",
-    descripcion:
-      "Tu pasaporte vence en 4 meses. Las autoridades estadounidenses exigen al menos 6 meses de vigencia para tu viaje. Renueva tu pasaporte antes de programar la entrevista consular.",
-    hora: "Hace 2 horas",
-    badge: "REQUIERE ATENCIÓN",
-    accion: { label: "Renovar documento", href: "/documents" },
-    leida: false,
-  },
-  {
-    id: 2,
-    tipo: "advertencia",
-    titulo: "Documento rechazado",
-    descripcion:
-      "Tu fotografía 5×5 cm no cumple con los requisitos del fondo blanco. Por favor, sube una nueva imagen.",
-    hora: "Ayer, 14:30",
-    badge: "ACCIÓN NECESARIA",
-    accion: { label: "Corregir documento", href: "/documents" },
-    leida: false,
-  },
-  {
-    id: 3,
-    tipo: "info",
-    titulo: "Tarifa MRV pendiente",
-    descripcion:
-      "Recuerda que debes pagar la tarifa consular de $185 USD antes de agendar tu cita. El pago se realiza en los bancos autorizados.",
-    hora: "Ayer, 09:15",
-    badge: "RECORDATORIO",
-    accion: { label: "Ver instrucciones", href: "/informacion" },
-    leida: false,
-  },
-  {
-    id: 4,
-    tipo: "exito",
-    titulo: "Fotografía aprobada",
-    descripcion:
-      "Tu fotografía 5×5 cm fue revisada y cumple con todos los requisitos consulares. ¡Excelente!",
-    hora: "Hace 3 días",
-    badge: "APROBADO",
-    accion: null,
-    leida: true,
-  },
-];
 
 const TIPO_CONFIG = {
-  urgente:    { iconBg: "#fce7f3", iconColor: "#e11d48", badgeBg: "#fee2e2",  badgeColor: "#b91c1c",  borderColor: "#fca5a5", cardBg: "#fff5f5" },
-  advertencia:{ iconBg: "#fffbeb", iconColor: "#d97706", badgeBg: "#fef3c7",  badgeColor: "#92400e",  borderColor: "#fcd34d", cardBg: "#fffdf0" },
-  info:       { iconBg: "#eff6ff", iconColor: "#2563eb", badgeBg: "#dbeafe",  badgeColor: "#1d4ed8",  borderColor: "#93c5fd", cardBg: "#f8faff" },
-  exito:      { iconBg: "#ecfdf5", iconColor: "#059669", badgeBg: "#d1fae5",  badgeColor: "#047857",  borderColor: "#6ee7b7", cardBg: "#f0fdf9" },
+  etapa:       { label: "Etapa",       bg: "#ede9fe", color: "#7c3aed" },
+  documento:   { label: "Documento",   bg: "#ffedd5", color: "#ea580c" },
+  entrevista:  { label: "Entrevista",  bg: "#dcfce7", color: "#16a34a" },
+  alerta:      { label: "Alerta",      bg: "#fee2e2", color: "#dc2626" },
+  info:        { label: "Info",        bg: "#dbeafe", color: "#2563eb" },
 };
 
-function AlertIcon({ tipo }) {
-  const color = TIPO_CONFIG[tipo]?.iconColor || "#64748b";
-  if (tipo === "urgente") return (
-    <svg viewBox="0 0 24 24" fill="none" width="22" height="22" stroke={color} strokeWidth="2">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-    </svg>
-  );
-  if (tipo === "advertencia") return (
-    <svg viewBox="0 0 24 24" fill="none" width="22" height="22" stroke={color} strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
-  );
-  if (tipo === "exito") return (
-    <svg viewBox="0 0 24 24" fill="none" width="22" height="22" stroke={color} strokeWidth="2.5">
-      <circle cx="12" cy="12" r="10"/>
-      <polyline points="9,12 11,14 15,10"/>
-    </svg>
-  );
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width="22" height="22" stroke={color} strokeWidth="2">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width="32" height="32" stroke="white" strokeWidth="2">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width="13" height="13" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10"/>
-      <polyline points="12,6 12,12 16,14"/>
-    </svg>
-  );
+function formatFecha(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function Notificaciones() {
-  const { isValidating } = useRequireAuth();
-  const senior = useModoSenior();
-  const [notifs, setNotifs] = useState(NOTIFICACIONES_INICIALES);
+  const { isValidating, session } = useRequireAuth();
+  const modoSenior = useModoSenior();
 
-  const noLeidas = notifs.filter((n) => !n.leida).length;
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [marcandoTodas, setMarcandoTodas] = useState(false);
 
-  const marcarLeida = (id) => {
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+  const fs = (base) => (modoSenior ? base + 3 : base);
+
+  const cargarNotificaciones = useCallback(async () => {
+    if (!session?.id) return;
+    setCargando(true);
+    setError(null);
+    try {
+      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}`));
+      if (!res.ok) throw new Error("No se pudieron cargar las notificaciones");
+      const data = await res.json();
+      setNotificaciones(data.notificaciones || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!isValidating && session) cargarNotificaciones();
+  }, [isValidating, session, cargarNotificaciones]);
+
+  const marcarLeida = async (id) => {
+    try {
+      const res = await fetch(buildApiUrl(`/notificaciones/${id}/leer`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.id }),
+      });
+      if (!res.ok) throw new Error("Error al marcar notificación");
+      setNotificaciones((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, leido: true } : n))
+      );
+      window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const marcarTodasLeidas = () => {
-    setNotifs((prev) => prev.map((n) => ({ ...n, leida: true })));
+  const marcarTodasLeidas = async () => {
+    setMarcandoTodas(true);
+    try {
+      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}/leer-todas`), {
+        method: "PUT",
+      });
+      if (!res.ok) throw new Error("Error al marcar todas");
+      setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+      window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setMarcandoTodas(false);
+    }
   };
+
+  const noLeidas = notificaciones.filter((n) => !n.leido).length;
+
+  if (isValidating) {
+    return (
+      <div style={s.layout}>
+        <Sidebar currentPage="notificaciones" />
+        <main style={s.main}>
+          <p style={{ color: "#64748b", paddingTop: "40px", fontSize: fs(14) }}>
+            Verificando sesión...
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="vg-layout">
+    <div style={s.layout}>
       <Sidebar currentPage="notificaciones" />
-
-      <main className={`vg-main notif-main${senior ? " notif-main--senior" : ""}`}>
-        {/* Header */}
-        <header className="notif-header">
-          <div className="notif-header__icon">
-            <BellIcon />
-          </div>
-          <div className="notif-header__info">
-            <h1 className="notif-titulo">Notificaciones</h1>
-            <p className="notif-subtitulo">
-              Avisos importantes sobre tu proceso de visa B1/B2.
-            </p>
+      <main style={s.main}>
+        {/* Encabezado */}
+        <div style={s.header}>
+          <div>
+            <h1 style={{ ...s.titulo, fontSize: fs(22) }}>Notificaciones</h1>
+            {noLeidas > 0 && (
+              <p style={{ ...s.subtitulo, fontSize: fs(13) }}>
+                Tienes{" "}
+                <span style={s.badge}>{noLeidas}</span>{" "}
+                notificación{noLeidas !== 1 ? "es" : ""} sin leer
+              </p>
+            )}
           </div>
           {noLeidas > 0 && (
-            <button className="notif-marcar-todas" onClick={marcarTodasLeidas}>
-              Marcar todas como leídas
+            <button
+              style={{
+                ...s.btnTodas,
+                opacity: marcandoTodas ? 0.6 : 1,
+                fontSize: fs(13),
+              }}
+              onClick={marcarTodasLeidas}
+              disabled={marcandoTodas}
+            >
+              {marcandoTodas ? "Marcando..." : "Marcar todas como leídas"}
             </button>
           )}
-        </header>
+        </div>
 
-        <hr className="notif-divisor" />
+        {/* Estados */}
+        {cargando && (
+          <div style={s.centrado}>
+            <p style={{ color: "#64748b", fontSize: fs(14) }}>Cargando notificaciones...</p>
+          </div>
+        )}
 
-        {isValidating ? (
-          <div className="notif-list">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="notif-skeleton">
-                <div className="sk-notification">
-                  <div className="sk-notification__icon" />
-                  <div style={{ flex: 1 }}>
-                    <div className="sk-line sk-line--lg" style={{ marginBottom: 10 }} />
-                    <div className="sk-line sk-line--md" style={{ marginBottom: 8 }} />
-                    <div className="sk-line sk-line--sm" />
-                  </div>
-                </div>
-              </div>
-            ))}
+        {!cargando && error && (
+          <div style={s.errorBox}>
+            <p style={{ color: "#dc2626", fontSize: fs(14), margin: 0 }}>{error}</p>
+            <button style={s.btnReintentar} onClick={cargarNotificaciones}>
+              Reintentar
+            </button>
           </div>
-        ) : notifs.length === 0 ? (
-          <div className="notif-empty">
-            <BellIcon />
-            <h2>Sin notificaciones</h2>
-            <p>No tienes avisos pendientes por el momento.</p>
+        )}
+
+        {!cargando && !error && notificaciones.length === 0 && (
+          <div style={s.vacio}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            <p style={{ color: "#94a3b8", fontSize: fs(15), marginTop: "16px" }}>
+              No tienes notificaciones
+            </p>
           </div>
-        ) : (
-          <div className="notif-list">
-            {notifs.map((n) => {
+        )}
+
+        {/* Lista */}
+        {!cargando && !error && notificaciones.length > 0 && (
+          <div style={s.lista}>
+            {notificaciones.map((n) => {
               const cfg = TIPO_CONFIG[n.tipo] || TIPO_CONFIG.info;
               return (
-                <article
+                <div
                   key={n.id}
-                  className={`notif-card notif-card--${n.tipo}${n.leida ? " notif-card--leida" : ""}`}
                   style={{
-                    "--notif-border": cfg.borderColor,
-                    "--notif-bg":     cfg.cardBg,
+                    ...s.card,
+                    backgroundColor: n.leido ? "#ffffff" : "#f0f9ff",
+                    borderLeft: n.leido ? "4px solid #e2e8f0" : "4px solid #dc2649",
                   }}
                 >
-                  {!n.leida && <div className="notif-unread-dot" />}
+                  {!n.leido && <span style={s.puntoPendiente} />}
 
-                  <div className="notif-card__body">
-                    <div className="notif-card__left">
-                      <div
-                        className="notif-card__icon"
-                        style={{ background: cfg.iconBg }}
-                      >
-                        <AlertIcon tipo={n.tipo} />
-                      </div>
+                  <div style={s.cardBody}>
+                    <div style={s.cardTop}>
+                      <span style={{ ...s.tipoBadge, background: cfg.bg, color: cfg.color, fontSize: fs(11) }}>
+                        {cfg.label}
+                      </span>
+                      <span style={{ ...s.fecha, fontSize: fs(12) }}>
+                        {formatFecha(n.created_at)}
+                      </span>
                     </div>
 
-                    <div className="notif-card__content">
-                      <div className="notif-card__meta">
-                        <h2 className="notif-card__titulo">{n.titulo}</h2>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span
-                            className="notif-card__badge"
-                            style={{ background: cfg.badgeBg, color: cfg.badgeColor }}
-                          >
-                            ● {n.badge}
-                          </span>
-                          <span className="notif-card__hora">
-                            <ClockIcon />
-                            {n.hora}
-                          </span>
-                        </div>
-                      </div>
+                    <p style={{ ...s.cardTitulo, fontSize: fs(15) }}>{n.titulo}</p>
+                    <p style={{ ...s.cardMensaje, fontSize: fs(13) }}>{n.mensaje}</p>
 
-                      <p className="notif-card__desc">{n.descripcion}</p>
-
-                      {(n.accion || !n.leida) && (
-                        <div className="notif-card__actions">
-                          {n.accion && (
-                            <a
-                              href={n.accion.href}
-                              className="notif-card__btn"
-                              style={{ background: cfg.iconColor }}
-                            >
-                              {n.accion.label}
-                            </a>
-                          )}
-                          {!n.leida && (
-                            <button
-                              className="notif-card__btn-secondary"
-                              onClick={() => marcarLeida(n.id)}
-                            >
-                              Marcar como leída
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    {n.etapa_relacionada && (
+                      <p style={{ ...s.etapaTag, fontSize: fs(12) }}>
+                        Etapa: {n.etapa_relacionada}
+                      </p>
+                    )}
                   </div>
-                </article>
+
+                  {!n.leido && (
+                    <button
+                      style={{ ...s.btnLeer, fontSize: fs(12) }}
+                      onClick={() => marcarLeida(n.id)}
+                    >
+                      Marcar como leída
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -241,3 +214,153 @@ export default function Notificaciones() {
     </div>
   );
 }
+
+const s = {
+  layout: {
+    display: "flex",
+    minHeight: "100vh",
+    backgroundColor: "#f8fafc",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+  main: {
+    marginLeft: "250px",
+    flex: 1,
+    padding: "32px",
+    maxWidth: "860px",
+  },
+  header: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: "28px",
+    flexWrap: "wrap",
+    gap: "12px",
+  },
+  titulo: {
+    color: "#0f172a",
+    fontWeight: "700",
+    margin: 0,
+  },
+  subtitulo: {
+    color: "#64748b",
+    margin: "6px 0 0 0",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  badge: {
+    backgroundColor: "#dc2649",
+    color: "white",
+    borderRadius: "999px",
+    padding: "2px 8px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  btnTodas: {
+    backgroundColor: "transparent",
+    border: "1px solid #dc2649",
+    color: "#dc2649",
+    borderRadius: "8px",
+    padding: "8px 16px",
+    cursor: "pointer",
+    fontWeight: "500",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+  centrado: {
+    display: "flex",
+    justifyContent: "center",
+    paddingTop: "60px",
+  },
+  errorBox: {
+    backgroundColor: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: "10px",
+    padding: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  btnReintentar: {
+    backgroundColor: "#dc2649",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    padding: "6px 14px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+  vacio: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    paddingTop: "80px",
+    color: "#94a3b8",
+  },
+  lista: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  card: {
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    padding: "18px 20px",
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "14px",
+    position: "relative",
+    transition: "box-shadow 0.15s ease",
+  },
+  puntoPendiente: {
+    width: "9px",
+    height: "9px",
+    borderRadius: "50%",
+    backgroundColor: "#dc2649",
+    flexShrink: 0,
+    marginTop: "6px",
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTop: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "8px",
+  },
+  tipoBadge: {
+    borderRadius: "6px",
+    padding: "2px 8px",
+    fontWeight: "600",
+  },
+  fecha: {
+    color: "#94a3b8",
+  },
+  cardTitulo: {
+    color: "#0f172a",
+    fontWeight: "600",
+    margin: "0 0 4px 0",
+  },
+  cardMensaje: {
+    color: "#475569",
+    margin: 0,
+    lineHeight: "1.5",
+  },
+  etapaTag: {
+    marginTop: "8px",
+    color: "#7c3aed",
+    fontWeight: "500",
+  },
+  btnLeer: {
+    flexShrink: 0,
+    backgroundColor: "transparent",
+    border: "1px solid #e2e8f0",
+    borderRadius: "7px",
+    padding: "6px 12px",
+    color: "#64748b",
+    cursor: "pointer",
+    fontFamily: "'Segoe UI', sans-serif",
+    whiteSpace: "nowrap",
+  },
+};

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { buildApiUrl } from "../config/api";
 import useTheme from "../hooks/useTheme";
 
 export default function Sidebar({ currentPage }) {
@@ -15,6 +16,28 @@ export default function Sidebar({ currentPage }) {
     }
     return null;
   });
+  const [noLeidas, setNoLeidas] = useState(0);
+
+  useEffect(() => {
+    if (!usuario?.id) return;
+
+    const fetchNoLeidas = async () => {
+      try {
+        const res = await fetch(buildApiUrl(`/notificaciones/${usuario.id}/no-leidas`));
+        if (!res.ok) return;
+        const data = await res.json();
+        setNoLeidas(data.total || 0);
+      } catch {
+        // silencioso: el badge simplemente no aparece si falla
+      }
+    };
+
+    fetchNoLeidas();
+
+    const handleActualizar = () => fetchNoLeidas();
+    window.addEventListener("notificacionesLeidas", handleActualizar);
+    return () => window.removeEventListener("notificacionesLeidas", handleActualizar);
+  }, [usuario?.id]);
 
   // Close sidebar on resize to desktop
   useEffect(() => {
@@ -39,15 +62,15 @@ export default function Sidebar({ currentPage }) {
   };
 
   const menuItems = [
-    { id: "inicio",        label: "Inicio",           icon: "grid",    path: "/dashboard" },
-    { id: "informacion",   label: "Información",       icon: "info",    path: "/informacion" },
-    { id: "ds160",         label: "DS-160",            icon: "file",    path: "/ds160" },
-    { id: "cronologia",    label: "Cronología",        icon: "clock",   path: "/cronologia" },
-    { id: "documentos",    label: "Documentos",        icon: "folder",  path: "/documents" },
-    { id: "entrevista",    label: "Entrevista",        icon: "users",   path: "/entrevista" },
-    { id: "notificaciones",label: "Notificaciones",    icon: "bell",    path: "/notificaciones", badge: 3 },
-    { id: "perfil",        label: "Perfil",            icon: "user",    path: "/perfil" },
-    { id: "chat",          label: "Chat con asesor",   icon: "message", path: "/chat" },
+    { id: "inicio",         label: "Inicio",           icon: "grid",    path: "/dashboard" },
+    { id: "informacion",    label: "Información",       icon: "info",    path: "/informacion" },
+    { id: "ds160",          label: "DS-160",            icon: "file",    path: "/ds160" },
+    { id: "cronologia",     label: "Cronología",        icon: "clock",   path: "/cronologia" },
+    { id: "documentos",     label: "Documentos",        icon: "folder",  path: "/documents" },
+    { id: "entrevista",     label: "Entrevista",        icon: "users",   path: "/entrevista" },
+    { id: "notificaciones", label: "Notificaciones",    icon: "bell",    path: "/notificaciones", badge: noLeidas > 0 ? (noLeidas > 99 ? "99+" : noLeidas) : null },
+    { id: "perfil",         label: "Perfil",            icon: "user",    path: "/perfil" },
+    { id: "chat",           label: "Chat con asesor",   icon: "message", path: "/chat" },
   ];
 
   const icons = {
