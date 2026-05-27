@@ -46,7 +46,7 @@ const ETAPAS = [
 
 // ----- Sub-componentes locales -----
 
-function InfoHighlightCard({ titulo, texto, modoSenior }) {
+function InfoHighlightCard({ titulo, texto, modoSenior, styles }) {
   return (
     <article style={styles.highlightCard}>
       <div style={styles.highlightIcon} aria-hidden="true">
@@ -87,7 +87,7 @@ function InfoHighlightCard({ titulo, texto, modoSenior }) {
   );
 }
 
-function InfoCard({ numero, titulo, descripcion, modoSenior }) {
+function InfoCard({ numero, titulo, descripcion, modoSenior, styles }) {
   return (
     <article style={styles.card}>
       <div style={styles.cardHeader}>
@@ -162,6 +162,7 @@ export default function Informacion() {
           titulo={HIGHLIGHT.titulo}
           texto={HIGHLIGHT.texto}
           modoSenior={modoSenior}
+          styles={styles}
         />
 
         <section style={styles.cardsGrid} aria-label="Etapas del proceso">
@@ -172,6 +173,7 @@ export default function Informacion() {
               titulo={etapa.titulo}
               descripcion={etapa.descripcion}
               modoSenior={modoSenior}
+              styles={styles}
             />
           ))}
         </section>
