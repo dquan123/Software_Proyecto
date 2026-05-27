@@ -175,7 +175,6 @@ export default function Notificaciones() {
                     borderLeft: n.leido ? "4px solid #e2e8f0" : "4px solid #dc2649",
                   }}
                 >
-                  {/* Punto no leído */}
                   {!n.leido && <span style={s.puntoPendiente} />}
 
                   <div style={s.cardBody}>
