@@ -1,18 +1,14 @@
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { SkeletonList } from "../components/SkeletonCard";
+import "../styles/cronologia.css";
 
-// Datos de la cronología — al hardcodear los estados aquí seguimos el patrón
-// del resto del repo (Documents, Informacion). Cuando exista un endpoint que
-// devuelva la lista de 6 etapas con su estado individual, esto se reemplaza
-// por un fetch + useState. El endpoint actual /estado-tramite solo devuelve
-// la etapa actual general, no el detalle de cada paso.
 const ETAPAS = [
   {
     numero: 1,
     titulo: "Creación de perfil",
-    descripcion:
-      "Información básica y registro inicial de la solicitud en la plataforma.",
+    descripcion: "Información básica y registro inicial de la solicitud en la plataforma.",
     estado: "completada",
     fecha: "14 de Marzo, 2026",
   },
@@ -34,10 +30,8 @@ const ETAPAS = [
   {
     numero: 4,
     titulo: "Pago de tarifa (MRV)",
-    descripcion:
-      "Abonar la tarifa consular de $185 USD. Este pago no es reembolsable.",
+    descripcion: "Abonar la tarifa consular de $185 USD. Este pago no es reembolsable.",
     estado: "pendiente",
-    destacada: true,
   },
   {
     numero: 5,
@@ -55,529 +49,166 @@ const ETAPAS = [
   },
 ];
 
-// ----- Sub-componentes -----
+function CheckIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20,6 9,17 4,12" />
+    </svg>
+  );
+}
 
-function Circulo({ numero, estado }) {
+function ExternalIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15,3 21,3 21,9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function Nodo({ numero, estado }) {
   if (estado === "completada") {
     return (
-      <div style={{ ...styles.circuloBase, ...styles.circuloCompletada }}>
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+      <div className="cron-nodo cron-nodo--done">
+        <CheckIcon />
       </div>
     );
   }
   if (estado === "actual") {
     return (
-      <div style={{ ...styles.circuloBase, ...styles.circuloActual }}>
-        <span style={styles.circuloNumeroActual}>{numero}</span>
+      <div className="cron-nodo cron-nodo--actual">
+        <span className="cron-nodo__num">{numero}</span>
       </div>
     );
   }
   return (
-    <div style={{ ...styles.circuloBase, ...styles.circuloPendiente }}>
-      <span style={styles.circuloNumeroPendiente}>{numero}</span>
+    <div className="cron-nodo cron-nodo--pendiente">
+      <span className="cron-nodo__num cron-nodo__num--muted">{numero}</span>
     </div>
   );
 }
 
-function TarjetaCompletada({ etapa, modoSenior }) {
+function TarjetaCompletada({ etapa, senior }) {
   return (
-    <article style={styles.tarjetaCompletada}>
-      <div style={styles.tarjetaHeader}>
-        <h3
-          style={{
-            ...styles.tarjetaTitulo,
-            fontSize: modoSenior ? "22px" : "18px",
-          }}
-        >
+    <article className="cron-card cron-card--done">
+      <div className="cron-card__head">
+        <h3 className={`cron-card__title${senior ? " cron-card__title--senior" : ""}`}>
           {etapa.titulo}
         </h3>
-        <span
-          style={{
-            ...styles.fechaCompletada,
-            fontSize: modoSenior ? "16px" : "13px",
-          }}
-        >
+        <span className={`cron-card__fecha${senior ? " cron-card__fecha--senior" : ""}`}>
           {etapa.fecha}
         </span>
       </div>
-      <p
-        style={{
-          ...styles.tarjetaTexto,
-          fontSize: modoSenior ? "16px" : "14px",
-        }}
-      >
+      <p className={`cron-card__desc${senior ? " cron-card__desc--senior" : ""}`}>
         {etapa.descripcion}
       </p>
     </article>
   );
 }
 
-function TarjetaActual({ etapa, modoSenior }) {
+function TarjetaActual({ etapa, senior }) {
   return (
-    <article style={styles.tarjetaActual}>
-      <span style={styles.badgeActual} aria-hidden="true">
-        ▶ ACTUAL
-      </span>
-      <div style={styles.tarjetaActualHeader}>
-        <h3
-          style={{
-            ...styles.tarjetaTituloActual,
-            fontSize: modoSenior ? "28px" : "22px",
-          }}
-        >
+    <article className="cron-card cron-card--actual">
+      <span className="cron-badge-actual">▶ ACTUAL</span>
+      <div className="cron-card__head cron-card__head--actual">
+        <h3 className={`cron-card__title cron-card__title--actual${senior ? " cron-card__title--senior" : ""}`}>
           {etapa.titulo}
         </h3>
-        <span
-          style={{
-            ...styles.badgeEnProgreso,
-            fontSize: modoSenior ? "14px" : "12px",
-          }}
-        >
-          En progreso
-        </span>
+        <span className="cron-badge-progreso">En progreso</span>
       </div>
-      <p
-        style={{
-          ...styles.tarjetaTexto,
-          fontSize: modoSenior ? "17px" : "14px",
-        }}
-      >
+      <p className={`cron-card__desc${senior ? " cron-card__desc--senior" : ""}`}>
         {etapa.descripcion}
       </p>
       {etapa.accion && (
         <button
-          type="button"
-          style={{
-            ...styles.botonAccion,
-            fontSize: modoSenior ? "16px" : "14px",
-          }}
+          className={`cron-btn-accion${senior ? " cron-btn-accion--senior" : ""}`}
           onClick={() => (window.location.href = etapa.accion.path)}
         >
           {etapa.accion.label}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ marginLeft: "8px" }}
-            aria-hidden="true"
-          >
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
+          <ExternalIcon />
         </button>
       )}
     </article>
   );
 }
 
-function TarjetaPendienteDestacada({ etapa, modoSenior }) {
+function TarjetaPendiente({ etapa, senior }) {
   return (
-    <article style={styles.tarjetaPendienteDestacada}>
-      <h3
-        style={{
-          ...styles.tarjetaTituloPendiente,
-          fontSize: modoSenior ? "22px" : "18px",
-        }}
-      >
+    <div className="cron-pendiente">
+      <h3 className={`cron-pendiente__title${senior ? " cron-pendiente__title--senior" : ""}`}>
         {etapa.titulo}
       </h3>
-      <p
-        style={{
-          ...styles.tarjetaTextoPendiente,
-          fontSize: modoSenior ? "16px" : "14px",
-        }}
-      >
-        {etapa.descripcion}
-      </p>
-    </article>
-  );
-}
-
-function TextoPendiente({ etapa, modoSenior }) {
-  return (
-    <div style={styles.pendienteSimple}>
-      <h3
-        style={{
-          ...styles.tarjetaTituloPendiente,
-          fontSize: modoSenior ? "22px" : "18px",
-        }}
-      >
-        {etapa.titulo}
-      </h3>
-      <p
-        style={{
-          ...styles.tarjetaTextoPendiente,
-          fontSize: modoSenior ? "16px" : "14px",
-        }}
-      >
+      <p className={`cron-pendiente__desc${senior ? " cron-pendiente__desc--senior" : ""}`}>
         {etapa.descripcion}
       </p>
     </div>
   );
 }
 
-function EtapaItem({ etapa, esUltima, modoSenior }) {
-  // Color de la línea conectora: rojo cuando viene de una etapa completada,
-  // gris en cualquier otro caso. Coincide con el comportamiento del Figma.
-  const colorLinea =
-    etapa.estado === "completada" ? "#e11d48" : "#cbd5e1";
+function EtapaItem({ etapa, esUltima, senior }) {
+  const lineColor = etapa.estado === "completada" ? "#e11d48" : "#e2e8f0";
 
   let contenido;
   if (etapa.estado === "completada") {
-    contenido = <TarjetaCompletada etapa={etapa} modoSenior={modoSenior} />;
+    contenido = <TarjetaCompletada etapa={etapa} senior={senior} />;
   } else if (etapa.estado === "actual") {
-    contenido = <TarjetaActual etapa={etapa} modoSenior={modoSenior} />;
-  } else if (etapa.destacada) {
-    contenido = (
-      <TarjetaPendienteDestacada etapa={etapa} modoSenior={modoSenior} />
-    );
+    contenido = <TarjetaActual etapa={etapa} senior={senior} />;
   } else {
-    contenido = <TextoPendiente etapa={etapa} modoSenior={modoSenior} />;
+    contenido = <TarjetaPendiente etapa={etapa} senior={senior} />;
   }
 
   return (
-    <li style={styles.etapaItem}>
-      <div style={styles.timelineCol}>
-        <Circulo numero={etapa.numero} estado={etapa.estado} />
+    <li className="cron-item">
+      <div className="cron-timeline-col">
+        <Nodo numero={etapa.numero} estado={etapa.estado} />
         {!esUltima && (
-          <div
-            style={{
-              ...styles.lineaConectora,
-              backgroundColor: colorLinea,
-            }}
-            aria-hidden="true"
-          />
+          <div className="cron-linea" style={{ backgroundColor: lineColor }} />
         )}
       </div>
-      <div style={styles.contenidoCol}>{contenido}</div>
+      <div className="cron-content-col">{contenido}</div>
     </li>
   );
 }
 
-// ----- Página principal -----
-
 export default function Cronologia() {
   const { isValidating } = useRequireAuth();
-  const modoSenior = useModoSenior();
-
-  if (isValidating) {
-    return (
-      <div style={{ display: "flex", minHeight: "100vh" }}>
-        <Sidebar currentPage="cronologia" />
-        <main style={{ marginLeft: "250px", padding: "40px" }}>
-          <p>Verificando sesión...</p>
-        </main>
-      </div>
-    );
-  }
+  const senior = useModoSenior();
 
   return (
-    <div style={styles.layout}>
+    <div className="vg-layout">
       <Sidebar currentPage="cronologia" />
-      <main style={styles.mainContent}>
-        <header style={styles.header}>
-          <h1
-            style={{
-              ...styles.titulo,
-              fontSize: modoSenior ? "44px" : "36px",
-            }}
-          >
+
+      <main className="vg-main cron-main">
+        <header className="cron-header">
+          <h1 className={`cron-titulo${senior ? " cron-titulo--senior" : ""}`}>
             Cronología de solicitud
           </h1>
-          <p
-            style={{
-              ...styles.subtitulo,
-              fontSize: modoSenior ? "18px" : "15px",
-            }}
-          >
-            Sigue el avance detallado de tu proceso. Cada etapa requiere
-            completarse para habilitar la siguiente.
+          <p className={`cron-subtitulo${senior ? " cron-subtitulo--senior" : ""}`}>
+            Sigue el avance detallado de tu proceso. Cada etapa requiere completarse
+            para habilitar la siguiente.
           </p>
         </header>
 
-        <hr style={styles.divisor} />
+        <hr className="cron-divisor" />
 
-        <ol style={styles.timeline} aria-label="Etapas del proceso">
-          {ETAPAS.map((etapa, idx) => (
-            <EtapaItem
-              key={etapa.numero}
-              etapa={etapa}
-              esUltima={idx === ETAPAS.length - 1}
-              modoSenior={modoSenior}
-            />
-          ))}
-        </ol>
+        {isValidating ? (
+          <SkeletonList variant="timeline" count={1} />
+        ) : (
+          <ol className="cron-timeline" aria-label="Etapas del proceso">
+            {ETAPAS.map((etapa, idx) => (
+              <EtapaItem
+                key={etapa.numero}
+                etapa={etapa}
+                esUltima={idx === ETAPAS.length - 1}
+                senior={senior}
+              />
+            ))}
+          </ol>
+        )}
       </main>
     </div>
   );
 }
-
-// ----- Estilos -----
-
-const styles = {
-  layout: {
-    display: "flex",
-    minHeight: "100vh",
-  },
-
-  mainContent: {
-    marginLeft: "250px",
-    flex: 1,
-    background: "#f1f5f9",
-    padding: "40px 56px",
-    fontFamily: "'Segoe UI', sans-serif",
-    minHeight: "100vh",
-    boxSizing: "border-box",
-  },
-
-  header: {
-    marginBottom: "20px",
-  },
-
-  titulo: {
-    margin: "0 0 12px 0",
-    fontWeight: 800,
-    color: "#0f172a",
-    lineHeight: 1.1,
-  },
-
-  subtitulo: {
-    margin: 0,
-    color: "#64748b",
-    lineHeight: 1.5,
-    maxWidth: "780px",
-  },
-
-  divisor: {
-    border: "none",
-    borderTop: "1px solid #e2e8f0",
-    margin: "24px 0 36px 0",
-  },
-
-  timeline: {
-    listStyle: "none",
-    padding: 0,
-    margin: 0,
-  },
-
-  // ----- Cada etapa (li) -----
-  etapaItem: {
-    display: "flex",
-    gap: "24px",
-    alignItems: "flex-start",
-    marginBottom: "28px",
-  },
-
-  // Columna izquierda: círculo + línea conectora
-  timelineCol: {
-    position: "relative",
-    width: "44px",
-    flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    alignSelf: "stretch",
-  },
-
-  contenidoCol: {
-    flex: 1,
-    minWidth: 0,
-    paddingTop: "2px",
-  },
-
-  // ----- Círculos -----
-  circuloBase: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    boxSizing: "border-box",
-    backgroundColor: "#ffffff",
-    zIndex: 1,
-  },
-
-  circuloCompletada: {
-    backgroundColor: "#10b981",
-    border: "3px solid #ffffff",
-    boxShadow: "0 0 0 2px #10b981",
-  },
-
-  circuloActual: {
-    backgroundColor: "#ffffff",
-    border: "2.5px solid #e11d48",
-    boxShadow: "0 0 0 4px rgba(225, 29, 72, 0.15)",
-  },
-
-  circuloNumeroActual: {
-    color: "#0f172a",
-    fontWeight: 700,
-    fontSize: "16px",
-  },
-
-  circuloPendiente: {
-    backgroundColor: "#ffffff",
-    border: "2px solid #cbd5e1",
-  },
-
-  circuloNumeroPendiente: {
-    color: "#94a3b8",
-    fontWeight: 600,
-    fontSize: "16px",
-  },
-
-  // ----- Línea conectora -----
-  lineaConectora: {
-    width: "2px",
-    flex: 1,
-    minHeight: "40px",
-    marginTop: "4px",
-    marginBottom: "-28px",
-  },
-
-  // ----- Tarjeta completada -----
-  tarjetaCompletada: {
-    background: "#ffffff",
-    border: "1.5px solid #a7f3d0",
-    borderRadius: "14px",
-    padding: "18px 22px",
-    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
-  },
-
-  tarjetaHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: "12px",
-    marginBottom: "6px",
-    flexWrap: "wrap",
-  },
-
-  tarjetaTitulo: {
-    margin: 0,
-    color: "#0f172a",
-    fontWeight: 700,
-    lineHeight: 1.3,
-  },
-
-  fechaCompletada: {
-    color: "#10b981",
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
-
-  tarjetaTexto: {
-    margin: 0,
-    color: "#64748b",
-    lineHeight: 1.55,
-  },
-
-  // ----- Tarjeta actual (DS-160) -----
-  tarjetaActual: {
-    position: "relative",
-    background: "#ffffff",
-    border: "2.5px solid #0f172a",
-    borderRadius: "14px",
-    padding: "26px 28px 24px",
-    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.08)",
-  },
-
-  badgeActual: {
-    position: "absolute",
-    top: "-14px",
-    right: "20px",
-    background: "linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)",
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: 700,
-    padding: "6px 14px",
-    borderRadius: "99px",
-    letterSpacing: "0.5px",
-    boxShadow: "0 4px 10px rgba(225, 29, 72, 0.30)",
-  },
-
-  tarjetaActualHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "10px",
-    flexWrap: "wrap",
-  },
-
-  tarjetaTituloActual: {
-    margin: 0,
-    color: "#0f172a",
-    fontWeight: 800,
-    lineHeight: 1.2,
-  },
-
-  badgeEnProgreso: {
-    background: "#fce7f3",
-    color: "#be185d",
-    padding: "5px 12px",
-    borderRadius: "99px",
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
-
-  botonAccion: {
-    marginTop: "14px",
-    display: "inline-flex",
-    alignItems: "center",
-    background: "#0f172a",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "10px",
-    padding: "12px 20px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "'Segoe UI', sans-serif",
-    transition: "background-color 0.15s",
-  },
-
-  // ----- Tarjeta pendiente destacada (Pago MRV) -----
-  tarjetaPendienteDestacada: {
-    background: "#eef2f7",
-    border: "1px solid #e2e8f0",
-    borderRadius: "14px",
-    padding: "18px 22px",
-  },
-
-  // ----- Pendiente simple (sin tarjeta, solo texto) -----
-  pendienteSimple: {
-    padding: "4px 4px",
-  },
-
-  tarjetaTituloPendiente: {
-    margin: "0 0 6px 0",
-    color: "#475569",
-    fontWeight: 700,
-    lineHeight: 1.3,
-  },
-
-  tarjetaTextoPendiente: {
-    margin: 0,
-    color: "#94a3b8",
-    lineHeight: 1.55,
-  },
-};

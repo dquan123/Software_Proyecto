@@ -1,0 +1,347 @@
+/* ══════════════════════════════
+   DASHBOARD — Estilos
+   ══════════════════════════════ */
+
+.dash-main {
+  padding: 32px 40px 52px;
+  font-family: "Segoe UI", sans-serif;
+  background: var(--vg-bg);
+  box-sizing: border-box;
+}
+
+/* ── Greeting ── */
+.dash-greeting {
+  margin-bottom: 28px;
+}
+.dash-greeting h1 {
+  margin: 0 0 6px;
+  font-weight: 800;
+  color: var(--vg-text);
+  letter-spacing: -0.5px;
+}
+.dash-greeting p {
+  margin: 0;
+  color: var(--vg-text-muted);
+}
+
+/* ── Progress card ── */
+.dash-progress-card {
+  background: var(--vg-card);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  border: 1px solid var(--vg-border);
+  box-shadow: var(--vg-shadow-sm);
+}
+
+.dash-progress-body { flex: 1; min-width: 0; }
+
+.dash-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.dash-progress-head h2 {
+  margin: 0;
+  font-weight: 700;
+  color: var(--vg-text);
+}
+
+.dash-progress-sub {
+  margin: 0 0 24px;
+  color: var(--vg-text-muted);
+}
+
+/* ── Timeline ── */
+.dash-timeline {
+  display: flex;
+  align-items: flex-start;
+}
+
+.dash-tl-node-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dash-tl-node {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--vg-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.dash-tl-node--done   { background: #0f172a; }
+.dash-tl-node--active { background: #e11d48; animation: vgPulse 2s ease-in-out infinite; }
+
+.dash-tl-num {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--vg-text-muted);
+}
+.dash-tl-num--active { color: white; }
+
+.dash-tl-label {
+  color: var(--vg-text-muted);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+.dash-tl-label--active { color: #e11d48; font-weight: 700; }
+
+.dash-tl-line {
+  flex: 1;
+  height: 2px;
+  margin-top: 17px;
+  min-width: 8px;
+  align-self: flex-start;
+}
+
+/* ── Etapa actual box ── */
+.dash-etapa-box {
+  background: #0f172a;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 148px;
+  flex-shrink: 0;
+}
+.dash-etapa-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.dash-etapa-num-row { display: flex; align-items: baseline; gap: 5px; }
+.dash-etapa-num     { font-weight: 800; color: #ffffff; line-height: 1; }
+.dash-etapa-de      { font-size: 15px; color: #94a3b8; font-weight: 500; }
+
+.dash-ring-wrap { position: relative; width: 58px; height: 58px; }
+.dash-ring-pct  {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+
+/* ── Next action ── */
+.dash-action-section { margin-bottom: 24px; }
+
+.dash-action-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--vg-text-muted);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.dash-action-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--vg-text-light);
+}
+
+.dash-action-card {
+  background: var(--vg-card);
+  border-radius: 16px;
+  border-top:    1px solid var(--vg-border);
+  border-right:  1px solid var(--vg-border);
+  border-bottom: 1px solid var(--vg-border);
+  border-left:   5px solid #e11d48;
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  box-shadow: var(--vg-shadow-sm);
+}
+
+.dash-action-left { flex: 1; }
+
+.dash-action-badges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.dash-priority-badge {
+  background: #fce7f3;
+  color: #be185d;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dash-time-est { color: var(--vg-text-muted); font-weight: 500; }
+
+.dash-action-left h3 {
+  margin: 0 0 8px;
+  font-weight: 800;
+  color: var(--vg-text);
+}
+.dash-action-left p {
+  margin: 0;
+  color: var(--vg-text-muted);
+  line-height: 1.55;
+  max-width: 520px;
+}
+
+.dash-action-btn {
+  background: #e11d48;
+  color: #fff;
+  border: none;
+  border-radius: 30px;
+  padding: 14px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(225,29,72,0.28);
+  font-family: "Segoe UI", sans-serif;
+  flex-shrink: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.dash-action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ── Quick cards ── */
+.dash-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.dash-card {
+  border-radius: 18px;
+  padding: 24px 22px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.dash-card:hover { transform: translateY(-3px); box-shadow: var(--vg-shadow); }
+
+.dash-card--yellow {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.dash-card--white {
+  background: var(--vg-card);
+  border: 1px solid var(--vg-border);
+  box-shadow: var(--vg-shadow-sm);
+}
+.dash-card--dark {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dash-important-badge {
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: #f59e0b;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.dash-card-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--vg-border);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+.dash-card-icon-light {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.dash-card h4 { margin: 0; font-weight: 800; color: var(--vg-text); line-height: 1.3; }
+.dash-card p  { margin: 0; line-height: 1.5; flex: 1; }
+.dash-card-cta { font-weight: 700; margin-top: 4px; }
+
+/* ══════════════════════════════
+   DARK MODE
+   ══════════════════════════════ */
+[data-theme="dark"] .dash-card--yellow {
+  background: #1c1a0f;
+  border-color: #92400e;
+}
+[data-theme="dark"] .dash-card--yellow p,
+[data-theme="dark"] .dash-card--yellow h4 {
+  color: var(--vg-text);
+}
+[data-theme="dark"] .dash-priority-badge {
+  background: #4c0519;
+  color: #fda4af;
+}
+
+/* ══════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════ */
+@media (max-width: 1024px) {
+  .dash-quick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dash-main {
+    padding: 20px 16px 40px;
+  }
+
+  .dash-progress-card {
+    flex-direction: column;
+    padding: 22px 18px;
+    gap: 20px;
+  }
+
+  .dash-etapa-box {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .dash-action-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .dash-action-btn {
+    text-align: center;
+  }
+
+  .dash-quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-tl-label { display: none; }
+}
