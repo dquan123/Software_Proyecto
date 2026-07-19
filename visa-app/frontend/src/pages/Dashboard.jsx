@@ -22,6 +22,12 @@ if (!document.getElementById("vg-dash-anim")) {
 export default function Dashboard() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const activarTarjeta = (event, path) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      window.location.href = path;
+    }
+  };
   const [tramite, setTramite]   = useState(null);
   const [loading, setLoading]   = useState(true);
 
@@ -43,7 +49,7 @@ export default function Dashboard() {
     return (
       <div className="vg-layout">
         <Sidebar currentPage="inicio" />
-        <main className="vg-main dash-main">
+        <main id="main-content" tabIndex="-1" className="vg-main dash-main">
           <DashSkeleton />
         </main>
       </div>
@@ -106,7 +112,7 @@ export default function Dashboard() {
   return (
     <div className="vg-layout">
       <Sidebar currentPage="inicio" />
-      <main className="vg-main dash-main">
+      <main id="main-content" tabIndex="-1" className="vg-main dash-main">
 
         {/* GREETING */}
         <header className="dash-greeting">
@@ -186,7 +192,7 @@ export default function Dashboard() {
 
             {/* QUICK CARDS */}
             <section className="dash-quick-grid">
-              <article className="dash-card dash-card--yellow" onClick={() => (window.location.href = "/documents")} role="button" tabIndex={0}>
+              <article className="dash-card dash-card--yellow" onClick={() => (window.location.href = "/documents")} onKeyDown={(event) => activarTarjeta(event, "/documents")} role="button" tabIndex={0}>
                 <span className="dash-important-badge">IMPORTANTE</span>
                 <div className="dash-card-icon" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px" }}>Revisión de documentos</h4>
@@ -198,7 +204,7 @@ export default function Dashboard() {
                 </span>
               </article>
 
-              <article className="dash-card dash-card--white" onClick={() => (window.location.href = "/cronologia")} role="button" tabIndex={0}>
+              <article className="dash-card dash-card--white" onClick={() => (window.location.href = "/cronologia")} onKeyDown={(event) => activarTarjeta(event, "/cronologia")} role="button" tabIndex={0}>
                 <div className="dash-card-icon" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px" }}>Ver cronología completa</h4>
                 <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "var(--vg-text-muted)" }}>
@@ -209,7 +215,7 @@ export default function Dashboard() {
                 </span>
               </article>
 
-              <article className="dash-card dash-card--dark" onClick={() => (window.location.href = "/entrevista")} role="button" tabIndex={0}>
+              <article className="dash-card dash-card--dark" onClick={() => (window.location.href = "/entrevista")} onKeyDown={(event) => activarTarjeta(event, "/entrevista")} role="button" tabIndex={0}>
                 <div className="dash-card-icon-light" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px", color: "white" }}>Simulador de entrevista</h4>
                 <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "#94a3b8", flex: 1 }}>

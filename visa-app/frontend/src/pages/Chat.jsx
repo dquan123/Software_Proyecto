@@ -117,7 +117,7 @@ export default function Chat() {
     <div className="vg-layout">
       <Sidebar currentPage="chat" />
 
-      <main className={`vg-main chat-main${senior ? " chat-main--senior" : ""}`}>
+      <main id="main-content" tabIndex="-1" className={`vg-main chat-main${senior ? " chat-main--senior" : ""}`}>
         {isValidating ? (
           <div className="chat-loading">
             <SkeletonCard variant="message" />

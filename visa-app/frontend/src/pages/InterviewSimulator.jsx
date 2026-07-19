@@ -438,7 +438,7 @@ export default function InterviewSimulator() {
     return (
       <div className="interview-shell">
         <Sidebar currentPage="entrevista" />
-        <main className="interview-main">
+        <main id="main-content" tabIndex="-1" className="interview-main">
           <p className="interview-loading">Verificando sesión...</p>
         </main>
       </div>
@@ -449,6 +449,7 @@ export default function InterviewSimulator() {
     <div className="interview-shell">
       <Sidebar currentPage="entrevista" />
       <main
+        id="main-content" tabIndex="-1"
         className={`interview-main simulator-main${
           modoSenior ? " interview-main--senior" : ""
         }`}
