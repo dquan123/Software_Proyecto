@@ -373,7 +373,7 @@ useEffect(() => {
       }
 
       if (v.pattern === "telefono") {
-        const telRegex = /^[\d\s\+\-\(\)]{8,20}$/;
+        const telRegex = /^[\d\s+()-]{8,20}$/;
         if (!telRegex.test(valorStr)) {
           return "Ingresa un número de teléfono válido";
         }
@@ -518,14 +518,15 @@ const siguienteSeccion = () => {
   const renderCampo = (campo) => {
     if (!debeMostrar(campo)) return null;
     const tieneError = errores[campo.name];
+    const inputId = `campo-${campo.name}`;
 
     if (campo.type === "radio") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <div id={`${inputId}-label`} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
-        </label>
-        <div style={st.radioGroup}>
+        </div>
+        <div style={st.radioGroup} role="group" aria-labelledby={`${inputId}-label`}>
           {campo.opciones.map(op => (
             <button key={op} type="button"
               style={{ 
@@ -534,41 +535,45 @@ const siguienteSeccion = () => {
                 ...(tieneError && !formData[campo.name] ? st.radioBtnError : {}),
                 fontSize: modoSenior ? "16px" : "14px" 
               }}
+              aria-pressed={formData[campo.name] === op}
               onClick={() => handleChange(campo.name, op)}>{op}</button>
           ))}
         </div>
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     if (campo.type === "select") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <label htmlFor={inputId} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
         </label>
-        <select 
+        <select
+          id={inputId}
           style={{ 
             ...st.input, 
             fontSize: modoSenior ? "17px" : "15px",
             ...(tieneError ? st.inputError : {})
           }}
           value={formData[campo.name] || ""} 
+          aria-invalid={!!tieneError}
+          aria-describedby={tieneError ? `${inputId}-error` : undefined}
           onChange={e => handleChange(campo.name, e.target.value)}>
           <option value="">Selecciona una opción</option>
           {campo.opciones.map(op => <option key={op} value={op}>{op}</option>)}
         </select>
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span id={`${inputId}-error`} role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <label htmlFor={inputId} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
         </label>
-        <input type={campo.type}
+        <input id={inputId} type={campo.type}
           style={{ 
             ...st.input, 
             fontSize: modoSenior ? "17px" : "15px", 
@@ -577,8 +582,10 @@ const siguienteSeccion = () => {
           }}
           placeholder={campo.placeholder || ""} 
           value={formData[campo.name] || ""}
+          aria-invalid={!!tieneError}
+          aria-describedby={tieneError ? `${inputId}-error` : undefined}
           onChange={e => handleChange(campo.name, e.target.value)} />
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span id={`${inputId}-error`} role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
   };
@@ -588,18 +595,18 @@ const siguienteSeccion = () => {
   if (authValidating || cargando) return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <div style={st.page}>
+      <main id="main-content" tabIndex="-1" style={st.page}>
         <div style={st.headerCard}>
           <p style={{ textAlign: "center", color: "#64748b", margin: 0 }}>Cargando formulario...</p>
         </div>
-      </div>
+      </main>
     </div>
   );
 
   return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <div style={st.page}>
+      <main id="main-content" tabIndex="-1" style={st.page}>
 
         {/* HEADER */}
         <div style={st.headerCard}>
@@ -706,7 +713,7 @@ const siguienteSeccion = () => {
 
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

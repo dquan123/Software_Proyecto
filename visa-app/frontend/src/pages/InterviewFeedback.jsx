@@ -112,7 +112,7 @@ export default function InterviewFeedback() {
     return (
       <div className="interview-shell">
         <Sidebar currentPage="entrevista" />
-        <main className="interview-main">
+        <main id="main-content" tabIndex="-1" className="interview-main">
           <p className="interview-loading">Verificando sesión...</p>
         </main>
       </div>
@@ -123,6 +123,7 @@ export default function InterviewFeedback() {
     <div className="interview-shell">
       <Sidebar currentPage="entrevista" />
       <main
+        id="main-content" tabIndex="-1"
         className={`interview-main feedback-main${
           modoSenior ? " interview-main--senior" : ""
         }`}

@@ -127,7 +127,7 @@ export default function Informacion() {
     return (
       <div style={{ display: "flex", minHeight: "100vh" }}>
         <Sidebar currentPage="informacion" />
-        <main style={{ marginLeft: "var(--vg-sidebar-w)", padding: "40px" }}>
+        <main id="main-content" tabIndex="-1" style={{ marginLeft: "var(--vg-sidebar-w)", padding: "40px" }}>
           <p>Verificando sesión...</p>
         </main>
       </div>
@@ -137,7 +137,7 @@ export default function Informacion() {
   return (
     <div style={styles.layout}>
       <Sidebar currentPage="informacion" />
-      <main style={styles.mainContent}>
+      <main id="main-content" tabIndex="-1" style={styles.mainContent}>
         <header style={styles.header}>
           <h1
             style={{
