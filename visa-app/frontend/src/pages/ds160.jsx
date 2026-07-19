@@ -3,7 +3,6 @@ import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import useTheme from "../hooks/useTheme";
 
 const secciones = [
   {
@@ -222,9 +221,9 @@ function CheckCircleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
       style={{ flexShrink: 0, marginTop: "2px" }} aria-hidden="true">
-      <circle cx="12" cy="12" r="11" stroke="#10b981" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="11" stroke="var(--vg-success)" strokeWidth="1.8" />
       <polyline points="7,12.5 10.5,16 17,8.5"
-        stroke="#10b981" strokeWidth="2"
+        stroke="var(--vg-success)" strokeWidth="2"
         strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -234,9 +233,9 @@ function InfoCircleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
       style={{ flexShrink: 0 }} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="#d97706" strokeWidth="1.8" />
-      <line x1="12" y1="8"  x2="12" y2="12" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
-      <line x1="12" y1="16" x2="12.01" y2="16" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="10" stroke="var(--vg-warning)" strokeWidth="1.8" />
+      <line x1="12" y1="8"  x2="12" y2="12" stroke="var(--vg-warning)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="12" y1="16" x2="12.01" y2="16" stroke="var(--vg-warning)" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -255,8 +254,7 @@ function SaveIcon() {
 
 export default function DS160Form() {
   const { isValidating: authValidating } = useRequireAuth();
-  const { isDark } = useTheme();
-  const st = getSt(isDark);
+  const st = getSt();
   const [seccionActual,   setSeccionActual]   = useState(1);
   const [formData,        setFormData]        = useState({});
   const [errores,         setErrores]         = useState({});
@@ -597,7 +595,7 @@ const siguienteSeccion = () => {
       <Sidebar currentPage="ds160" />
       <main id="main-content" tabIndex="-1" style={st.page}>
         <div style={st.headerCard}>
-          <p style={{ textAlign: "center", color: "#64748b", margin: 0 }}>Cargando formulario...</p>
+          <p style={{ textAlign: "center", color: "var(--vg-text-muted)", margin: 0 }}>Cargando formulario...</p>
         </div>
       </main>
     </div>
@@ -628,7 +626,7 @@ const siguienteSeccion = () => {
         </div>
 
         {mensajeGuardado && (
-          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("✓") ? "#f0fdf4" : "#fef2f2", borderColor: mensajeGuardado.startsWith("✓") ? "#bbf7d0" : "#fecaca", color: mensajeGuardado.startsWith("✓") ? "#15803d" : "#dc2626" }}>
+          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("✓") ? "var(--vg-success-bg)" : "var(--vg-danger-bg)", borderColor: "var(--vg-border)", color: mensajeGuardado.startsWith("✓") ? "var(--vg-success)" : "var(--vg-danger-text)" }}>
             {mensajeGuardado}
           </div>
         )}
@@ -700,7 +698,7 @@ const siguienteSeccion = () => {
                     }}>
                     {sc.id < seccionActual && (
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                        stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                        stroke="var(--vg-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
                         style={{ marginRight: "6px", flexShrink: 0 }} aria-hidden="true">
                         <polyline points="20,6 9,17 4,12" />
                       </svg>
@@ -718,12 +716,12 @@ const siguienteSeccion = () => {
   );
 }
 
-function getSt(isDark) {
-  const bg      = isDark ? "#0b1120"  : "#f1f3f6";
-  const card    = isDark ? "#1e293b"  : "#ffffff";
-  const border  = isDark ? "#334155"  : "#e2e8f0";
-  const text    = isDark ? "#f1f5f9"  : "#0f172a";
-  const muted   = isDark ? "#94a3b8"  : "#64748b";
+function getSt() {
+  const bg      = "var(--vg-bg)";
+  const card    = "var(--vg-card)";
+  const border  = "var(--vg-border)";
+  const text    = "var(--vg-text)";
+  const muted   = "var(--vg-text-muted)";
 
   return {
   layout: { display: "flex", minHeight: "100vh" },
@@ -742,7 +740,7 @@ function getSt(isDark) {
     background: card,
     borderRadius: "14px",
     padding: "20px 26px 16px",
-    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(15,23,42,0.08)",
+    boxShadow: "var(--vg-shadow-sm)",
     marginBottom: "20px",
     border: `1px solid ${border}`,
   },
@@ -775,7 +773,7 @@ function getSt(isDark) {
   },
 
   barTrack: { width: "100%", height: "5px", background: border, borderRadius: "99px", overflow: "hidden" },
-  barFill:  { height: "100%", background: "#e11d48", borderRadius: "99px", transition: "width 0.4s ease" },
+  barFill:  { height: "100%", background: "var(--vg-red)", borderRadius: "99px", transition: "width 0.4s ease" },
 
   toast: {
     padding: "10px 16px",
@@ -793,7 +791,7 @@ function getSt(isDark) {
     background: card,
     borderRadius: "14px",
     padding: "28px 28px 24px",
-    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(15,23,42,0.08)",
+    boxShadow: "var(--vg-shadow-sm)",
     border: `1px solid ${border}`,
   },
 
@@ -811,7 +809,7 @@ function getSt(isDark) {
     textTransform: "uppercase",
   },
 
-  required: { color: "#e11d48", marginLeft: "4px" },
+  required: { color: "var(--vg-red)", marginLeft: "4px" },
 
   input: {
     width: "100%",
@@ -824,19 +822,19 @@ function getSt(isDark) {
     transition: "border-color 0.2s",
     fontFamily: "'Segoe UI', sans-serif",
     color: text,
-    background: isDark ? "#0f172a" : "#ffffff",
+    background: "var(--vg-input)",
   },
 
   inputError: {
-    borderColor: "#e11d48",
-    background: isDark ? "#2d0a0a" : "#fef2f2",
+    borderColor: "var(--vg-red)",
+    background: "var(--vg-danger-bg)",
   },
 
   errorText: {
     display: "block",
     marginTop: "6px",
     fontSize: "12px",
-    color: "#dc2626",
+    color: "var(--vg-danger-text)",
     fontWeight: 500,
   },
 
@@ -848,7 +846,7 @@ function getSt(isDark) {
     fontSize: "14px",
     border: `1.5px solid ${border}`,
     borderRadius: "10px",
-    background: isDark ? "#0f172a" : "#ffffff",
+    background: "var(--vg-input)",
     cursor: "pointer",
     transition: "all 0.15s",
     fontFamily: "'Segoe UI', sans-serif",
@@ -856,8 +854,8 @@ function getSt(isDark) {
     fontWeight: 500,
   },
 
-  radioBtnSel: { background: isDark ? "#e11d48" : "#0f172a", color: "#ffffff", borderColor: isDark ? "#e11d48" : "#0f172a" },
-  radioBtnError: { borderColor: "#e11d48" },
+  radioBtnSel: { background: "var(--vg-red)", color: "#ffffff", borderColor: "var(--vg-red)" },
+  radioBtnError: { borderColor: "var(--vg-red)" },
 
   navegacion: {
     display: "flex",
@@ -882,34 +880,34 @@ function getSt(isDark) {
   navBack: { background: "transparent", color: muted, padding: "12px 4px", fontWeight: 400 },
 
   helpBox: {
-    background: isDark ? "#1c1a0f" : "#fffbeb",
+    background: "var(--vg-amber-bg)",
     borderRadius: "12px",
     padding: "16px 18px",
-    border: isDark ? "1px solid #92400e" : "1px solid #fde68a",
+    border: "1px solid var(--vg-amber-border)",
   },
 
   helpTitleRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
-  helpTitle:    { margin: 0, fontWeight: 700, color: isDark ? "#fde68a" : "#92400e" },
-  helpText:     { margin: 0, color: isDark ? "#fcd34d" : "#78350f", lineHeight: 1.65 },
+  helpTitle:    { margin: 0, fontWeight: 700, color: "var(--vg-amber-text)" },
+  helpText:     { margin: 0, color: "var(--vg-amber-text)", lineHeight: 1.65 },
 
   tipBox: {
-    background: "#0f172a",
+    background: "var(--vg-strong-surface)",
     borderRadius: "12px",
     padding: "18px 20px",
-    border: "2px solid #e11d48",
+    border: "2px solid var(--vg-red)",
   },
 
   tipTitleRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" },
-  tipTitle:    { margin: 0, fontWeight: 700, color: "#f8fafc" },
+  tipTitle:    { margin: 0, fontWeight: 700, color: "var(--vg-on-strong)" },
   tipItem:     { display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "10px" },
-  tipText:     { margin: 0, color: "#94a3b8", lineHeight: 1.6 },
+  tipText:     { margin: 0, color: "var(--vg-strong-muted)", lineHeight: 1.6 },
 
-  seccionesBox: { background: "#1e3a5f", borderRadius: "12px", padding: "18px 20px" },
+  seccionesBox: { background: "var(--vg-navy-blue)", borderRadius: "12px", padding: "18px 20px" },
 
   seccionesTitle: {
     margin: "0 0 12px 0",
     fontWeight: 700,
-    color: "#e2e8f0",
+    color: "var(--vg-on-strong)",
     letterSpacing: "0.5px",
   },
 
@@ -926,7 +924,7 @@ function getSt(isDark) {
     lineHeight: 1.4,
   },
 
-  seccionActual: { color: "#ffffff", fontWeight: 700 },
-  seccionDone:   { color: "#34d399" },
+  seccionActual: { color: "var(--vg-on-strong)", fontWeight: 700 },
+  seccionDone:   { color: "var(--vg-success)" },
   };
 }

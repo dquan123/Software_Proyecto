@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
 import { SkeletonCard, SkeletonList } from "../components/SkeletonCard";
+import InformationSection from "../components/InformationSection";
 import "../styles/dashboard.css";
 
 // Pulse animation for active node
@@ -30,6 +31,13 @@ export default function Dashboard() {
   };
   const [tramite, setTramite]   = useState(null);
   const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    if (isValidating || window.location.hash !== "#informacion") return;
+    requestAnimationFrame(() => {
+      document.getElementById("informacion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [isValidating]);
 
   useEffect(() => {
     if (!session) return;
@@ -104,7 +112,7 @@ export default function Dashboard() {
     );
     if (i < ETAPAS.length - 1) {
       timelineEls.push(
-        <div key={`l${e.n}`} className="dash-tl-line" style={{ background: e.done ? "#0f172a" : "var(--vg-border)" }} />
+        <div key={`l${e.n}`} className="dash-tl-line" style={{ background: e.done ? "var(--vg-navy)" : "var(--vg-border)" }} />
       );
     }
   });
@@ -152,7 +160,7 @@ export default function Dashboard() {
                 <div className="dash-ring-wrap">
                   <svg width="58" height="58" viewBox="0 0 60 60" aria-hidden="true">
                     <circle cx="30" cy="30" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/>
-                    <circle cx="30" cy="30" r={r} fill="none" stroke="#e11d48" strokeWidth="5"
+                    <circle cx="30" cy="30" r={r} fill="none" stroke="var(--vg-red)" strokeWidth="5"
                       strokeLinecap="round"
                       strokeDasharray={`${(pct/100)*circ} ${circ}`}
                       transform="rotate(-90 30 30)"/>
@@ -197,9 +205,9 @@ export default function Dashboard() {
                 <div className="dash-card-icon" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px" }}>Revisión de documentos</h4>
                 <p style={{ fontSize: modoSenior ? "14px" : "13px" }}>
-                  Tienes <strong style={{ color: "#d97706" }}>1 documento</strong> que requiere corrección.
+                  Tienes <strong style={{ color: "var(--vg-warning)" }}>1 documento</strong> que requiere corrección.
                 </p>
-                <span className="dash-card-cta" style={{ color: "#d97706", fontSize: modoSenior ? "14px" : "13px" }}>
+                <span className="dash-card-cta" style={{ color: "var(--vg-warning)", fontSize: modoSenior ? "14px" : "13px" }}>
                   Corregir ahora &rarr;
                 </span>
               </article>
@@ -218,16 +226,17 @@ export default function Dashboard() {
               <article className="dash-card dash-card--dark" onClick={() => (window.location.href = "/entrevista")} onKeyDown={(event) => activarTarjeta(event, "/entrevista")} role="button" tabIndex={0}>
                 <div className="dash-card-icon-light" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px", color: "white" }}>Simulador de entrevista</h4>
-                <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "#94a3b8", flex: 1 }}>
+                <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "var(--vg-text-light)", flex: 1 }}>
                   Practica con preguntas reales para ganar confianza antes de tu cita consular.
                 </p>
-                <span className="dash-card-cta" style={{ color: "#10b981", fontSize: modoSenior ? "14px" : "13px" }}>
+                <span className="dash-card-cta" style={{ color: "var(--vg-success)", fontSize: modoSenior ? "14px" : "13px" }}>
                   Practicar &rarr;
                 </span>
               </article>
             </section>
           </>
         )}
+        <InformationSection modoSenior={modoSenior} />
       </main>
     </div>
   );

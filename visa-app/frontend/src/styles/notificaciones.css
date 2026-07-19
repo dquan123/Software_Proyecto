@@ -86,7 +86,7 @@
 /* ── Card ── */
 .notif-card {
   position: relative;
-  border: 1.5px solid var(--notif-border, #e2e8f0);
+  border: 1.5px solid var(--notif-border, var(--vg-border));
   border-radius: 18px;
   background: var(--notif-bg, var(--vg-card));
   overflow: hidden;

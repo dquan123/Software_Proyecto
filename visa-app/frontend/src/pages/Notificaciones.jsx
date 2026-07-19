@@ -5,11 +5,11 @@ import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
 
 const TIPO_CONFIG = {
-  etapa:       { label: "Etapa",       bg: "#ede9fe", color: "#7c3aed" },
-  documento:   { label: "Documento",   bg: "#ffedd5", color: "#ea580c" },
-  entrevista:  { label: "Entrevista",  bg: "#dcfce7", color: "#16a34a" },
-  alerta:      { label: "Alerta",      bg: "#fee2e2", color: "#dc2626" },
-  info:        { label: "Info",        bg: "#dbeafe", color: "#2563eb" },
+  etapa:       { label: "Etapa",       bg: "var(--vg-info-bg)", color: "var(--vg-info-text)" },
+  documento:   { label: "Documento",   bg: "var(--vg-amber-bg)", color: "var(--vg-amber-text)" },
+  entrevista:  { label: "Entrevista",  bg: "var(--vg-success-bg)", color: "var(--vg-success)" },
+  alerta:      { label: "Alerta",      bg: "var(--vg-danger-bg)", color: "var(--vg-danger-text)" },
+  info:        { label: "Info",        bg: "var(--vg-info-bg)", color: "var(--vg-info-text)" },
 };
 
 function formatFecha(dateStr) {
@@ -94,7 +94,7 @@ export default function Notificaciones() {
       <div style={s.layout}>
         <Sidebar currentPage="notificaciones" />
         <main id="main-content" tabIndex="-1" style={s.main}>
-          <p style={{ color: "#64748b", paddingTop: "40px", fontSize: fs(14) }}>
+          <p style={{ color: "var(--vg-text-muted)", paddingTop: "40px", fontSize: fs(14) }}>
             Verificando sesión...
           </p>
         </main>
@@ -136,7 +136,7 @@ export default function Notificaciones() {
         {/* Estados */}
         {cargando && (
           <div style={s.centrado}>
-            <p style={{ color: "#64748b", fontSize: fs(14) }}>Cargando notificaciones...</p>
+            <p style={{ color: "var(--vg-text-muted)", fontSize: fs(14) }}>Cargando notificaciones...</p>
           </div>
         )}
 
@@ -219,11 +219,11 @@ const s = {
   layout: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "var(--vg-bg)",
     fontFamily: "'Segoe UI', sans-serif",
   },
   main: {
-    marginLeft: "250px",
+    marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
     padding: "32px",
     maxWidth: "860px",
@@ -237,12 +237,12 @@ const s = {
     gap: "12px",
   },
   titulo: {
-    color: "#0f172a",
+    color: "var(--vg-text)",
     fontWeight: "700",
     margin: 0,
   },
   subtitulo: {
-    color: "#64748b",
+    color: "var(--vg-text-muted)",
     margin: "6px 0 0 0",
     display: "flex",
     alignItems: "center",
@@ -272,8 +272,8 @@ const s = {
     paddingTop: "60px",
   },
   errorBox: {
-    backgroundColor: "#fef2f2",
-    border: "1px solid #fecaca",
+    backgroundColor: "var(--vg-danger-bg)",
+    border: "1px solid var(--vg-border)",
     borderRadius: "10px",
     padding: "20px",
     display: "flex",
@@ -304,7 +304,7 @@ const s = {
   },
   card: {
     borderRadius: "12px",
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--vg-border)",
     padding: "18px 20px",
     display: "flex",
     alignItems: "flex-start",
@@ -338,27 +338,27 @@ const s = {
     color: "#94a3b8",
   },
   cardTitulo: {
-    color: "#0f172a",
+    color: "var(--vg-text)",
     fontWeight: "600",
     margin: "0 0 4px 0",
   },
   cardMensaje: {
-    color: "#475569",
+    color: "var(--vg-text-muted)",
     margin: 0,
     lineHeight: "1.5",
   },
   etapaTag: {
     marginTop: "8px",
-    color: "#7c3aed",
+    color: "var(--vg-info-text)",
     fontWeight: "500",
   },
   btnLeer: {
     flexShrink: 0,
     backgroundColor: "transparent",
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--vg-border)",
     borderRadius: "7px",
     padding: "6px 12px",
-    color: "#64748b",
+    color: "var(--vg-text-muted)",
     cursor: "pointer",
     fontFamily: "'Segoe UI', sans-serif",
     whiteSpace: "nowrap",
