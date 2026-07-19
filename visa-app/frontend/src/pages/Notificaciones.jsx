@@ -34,24 +34,28 @@ export default function Notificaciones() {
 
   const fs = (base) => (modoSenior ? base + 3 : base);
 
-  const cargarNotificaciones = useCallback(async () => {
+  const cargarNotificaciones = useCallback(async (signal) => {
     if (!session?.id) return;
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}`));
+      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}`), { signal });
       if (!res.ok) throw new Error("No se pudieron cargar las notificaciones");
       const data = await res.json();
       setNotificaciones(data.notificaciones || []);
     } catch (e) {
+      if (e.name === "AbortError") return;
       setError(e.message);
     } finally {
-      setCargando(false);
+      if (!signal?.aborted) setCargando(false);
     }
   }, [session]);
 
   useEffect(() => {
-    if (!isValidating && session) cargarNotificaciones();
+    if (isValidating || !session) return;
+    const controller = new AbortController();
+    cargarNotificaciones(controller.signal);
+    return () => controller.abort();
   }, [isValidating, session, cargarNotificaciones]);
 
   const marcarLeida = async (id) => {
@@ -143,7 +147,7 @@ export default function Notificaciones() {
         {!cargando && error && (
           <div style={s.errorBox}>
             <p style={{ color: "#dc2626", fontSize: fs(14), margin: 0 }}>{error}</p>
-            <button style={s.btnReintentar} onClick={cargarNotificaciones}>
+            <button style={s.btnReintentar} onClick={() => cargarNotificaciones()}>
               Reintentar
             </button>
           </div>

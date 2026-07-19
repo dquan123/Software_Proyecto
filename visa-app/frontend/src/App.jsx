@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Upload from "./Upload";
-import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
-import Perfil from "./pages/Perfil/Perfil";
-import Documents from "./pages/Documents";
-import DS160Form from "./pages/ds160";
-import Informacion from "./pages/Informacion";
-import Cronologia from "./pages/Cronologia";
-import Entrevista from "./pages/Entrevista";
-import InterviewFeedback from "./pages/InterviewFeedback";
-import InterviewSimulator from "./pages/InterviewSimulator";
-import QuestionBank from "./pages/QuestionBank";
-import Chat from "./pages/Chat";
-import Notificaciones from "./pages/Notificaciones";
 import { buildApiUrl } from "./config/api";
-import Dashboard from "./pages/Dashboard";
+
+const Upload = lazy(() => import("./Upload"));
+const ProfileSelection = lazy(() => import("./pages/ProfileSelection/ProfileSelection"));
+const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
+const Documents = lazy(() => import("./pages/Documents"));
+const DS160Form = lazy(() => import("./pages/ds160"));
+const Informacion = lazy(() => import("./pages/Informacion"));
+const Cronologia = lazy(() => import("./pages/Cronologia"));
+const Entrevista = lazy(() => import("./pages/Entrevista"));
+const InterviewFeedback = lazy(() => import("./pages/InterviewFeedback"));
+const InterviewSimulator = lazy(() => import("./pages/InterviewSimulator"));
+const QuestionBank = lazy(() => import("./pages/QuestionBank"));
+const Chat = lazy(() => import("./pages/Chat"));
+const Notificaciones = lazy(() => import("./pages/Notificaciones"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 // ── Apply saved theme on app start ──
 const savedTheme = localStorage.getItem("vg-theme");
@@ -63,6 +64,7 @@ const validateSession = async (session) => {
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<RouteLoadingState />}>
       <Routes>
         <Route path="/"                               element={<Onboarding />} />
         <Route path="/login"                          element={<Login />} />
@@ -83,7 +85,19 @@ function App() {
         <Route path="/chat"                           element={<Chat />} />
         <Route path="/notificaciones"                 element={<Notificaciones />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
+  );
+}
+
+function RouteLoadingState() {
+  return (
+    <main id="main-content" tabIndex="-1" className="route-loading">
+      <span className="route-loading__spinner" aria-hidden="true" />
+      <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+        Cargando página…
+      </span>
+    </main>
   );
 }
 

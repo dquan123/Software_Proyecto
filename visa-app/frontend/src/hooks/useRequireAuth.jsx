@@ -6,6 +6,7 @@ export default function useRequireAuth() {
   const [session, setSession] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     const checkSession = async () => {
       const sessionRaw = localStorage.getItem("visaguide_session");
 
@@ -18,7 +19,8 @@ export default function useRequireAuth() {
         const sessionData = JSON.parse(sessionRaw);
 
         const res = await fetch(
-          `${buildApiUrl("/validar-sesion")}?correo=${encodeURIComponent(sessionData.correo)}`
+          `${buildApiUrl("/validar-sesion")}?correo=${encodeURIComponent(sessionData.correo)}`,
+          { signal: controller.signal }
         );
         const data = await res.json();
 
@@ -32,6 +34,7 @@ export default function useRequireAuth() {
 
         setSession(sessionData);
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error("Error validando sesión:", err);
         window.location.href = "/login";
         return;
@@ -41,6 +44,7 @@ export default function useRequireAuth() {
     };
 
     checkSession();
+    return () => controller.abort();
   }, []);
 
   return { isValidating, session };

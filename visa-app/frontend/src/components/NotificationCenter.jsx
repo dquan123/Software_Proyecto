@@ -9,6 +9,7 @@ export default function NotificationCenter({ userId, unreadCount = 0 }) {
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const closeRef = useRef(null);
+  const requestControllerRef = useRef(null);
 
   const closePanel = (restoreFocus = true) => {
     setOpen(false);
@@ -22,15 +23,22 @@ export default function NotificationCenter({ userId, unreadCount = 0 }) {
     }
     setLoading(true);
     setError("");
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     try {
-      const response = await fetch(buildApiUrl(`/notificaciones/${userId}`));
+      const response = await fetch(buildApiUrl(`/notificaciones/${userId}`), {
+        signal: controller.signal,
+      });
       if (!response.ok) throw new Error("No se pudieron cargar las notificaciones.");
       const data = await response.json();
       setNotifications(data.notificaciones || []);
-    } catch {
-      setError("No se pudieron cargar las notificaciones.");
+    } catch (requestError) {
+      if (requestError.name !== "AbortError") {
+        setError("No se pudieron cargar las notificaciones.");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
@@ -62,6 +70,8 @@ export default function NotificationCenter({ userId, unreadCount = 0 }) {
       document.removeEventListener("pointerdown", handlePointerDown);
     };
   }, [open]);
+
+  useEffect(() => () => requestControllerRef.current?.abort(), []);
 
   return (
     <div className="vg-notification-center">

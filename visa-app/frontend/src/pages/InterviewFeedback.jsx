@@ -61,6 +61,7 @@ export default function InterviewFeedback() {
 
   useEffect(() => {
     if (isValidating) return;
+    const controller = new AbortController();
 
     const fetchFeedbackSession = async () => {
       try {
@@ -73,7 +74,7 @@ export default function InterviewFeedback() {
           ? `/interview-sessions/${sessionId}`
           : `/interview-sessions/user/${session?.id}`;
 
-        const response = await fetch(buildApiUrl(endpoint));
+        const response = await fetch(buildApiUrl(endpoint), { signal: controller.signal });
         const data = await response.json();
 
         if (!response.ok) {
@@ -93,15 +94,17 @@ export default function InterviewFeedback() {
             : null
         );
       } catch (error) {
+        if (error.name === "AbortError") return;
         setSessionError(
           error.message || "No se pudo cargar la retroalimentación."
         );
       } finally {
-        setLoadingSession(false);
+        if (!controller.signal.aborted) setLoadingSession(false);
       }
     };
 
     fetchFeedbackSession();
+    return () => controller.abort();
   }, [isValidating, session?.id]);
 
   const responses = useMemo(() => getResponses(feedbackSession), [feedbackSession]);

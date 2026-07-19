@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ProfileSelection from "../pages/ProfileSelection/ProfileSelection";
+import { buildApiUrl } from "../config/api";
 
 describe("ProfileSelection", () => {
   it("permite seleccionar un perfil y guardarlo contra el endpoint real configurado", async () => {
@@ -17,7 +18,7 @@ describe("ProfileSelection", () => {
     );
 
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
-      if (String(url).startsWith("/validar-sesion")) {
+      if (String(url).includes("/validar-sesion")) {
         return Promise.resolve({ json: async () => ({ valid: true }) });
       }
 
@@ -47,7 +48,7 @@ describe("ProfileSelection", () => {
       expect(screen.getByText("¡Perfil seleccionado con éxito!")).toBeInTheDocument()
     );
     expect(localStorage.getItem("perfilUsuario")).toBe("turismo_negocios");
-    expect(fetchMock).toHaveBeenCalledWith("/guardar-perfil", {
+    expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/guardar-perfil"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

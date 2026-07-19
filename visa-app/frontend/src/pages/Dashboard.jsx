@@ -41,16 +41,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!session) return;
+    const controller = new AbortController();
     const fetchTramite = async () => {
       try {
         const res = await fetch(
-          `${buildApiUrl("/estado-tramite")}?correo=${encodeURIComponent(session.correo)}`
+          `${buildApiUrl("/estado-tramite")}?correo=${encodeURIComponent(session.correo)}`,
+          { signal: controller.signal }
         );
         if (res.ok) setTramite(await res.json());
-      } catch { /* silent */ }
-      finally { setLoading(false); }
+      } catch (error) {
+        if (error.name !== "AbortError") { /* silent */ }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
     };
     fetchTramite();
+    return () => controller.abort();
   }, [session]);
 
   if (isValidating) {
