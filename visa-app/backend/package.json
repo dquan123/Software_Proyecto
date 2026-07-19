@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --runInBand",
     "start": "node index.js"
   },
   "keywords": [],
@@ -17,5 +19,9 @@
     "express": "^5.2.1",
     "multer": "^2.1.1",
     "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0",
+    "supertest": "^7.0.0"
   }
 }
