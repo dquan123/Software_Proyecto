@@ -181,7 +181,7 @@ export default function Cronologia() {
     <div className="vg-layout">
       <Sidebar currentPage="cronologia" />
 
-      <main className="vg-main cron-main">
+      <main id="main-content" tabIndex="-1" className="vg-main cron-main">
         <header className="cron-header">
           <h1 className={`cron-titulo${senior ? " cron-titulo--senior" : ""}`}>
             Cronología de solicitud

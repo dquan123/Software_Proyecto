@@ -213,6 +213,7 @@ export default function Documents() {
       <Sidebar currentPage="documentos" />
 
       <main
+        id="main-content" tabIndex="-1"
         className={`documents-main${modoSenior ? " documents-main--senior" : ""}`}
       >
         {isValidating ? (

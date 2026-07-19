@@ -651,7 +651,7 @@
 
 @media (max-width: 640px) {
   .documents-main {
-    margin-left: 250px;
+    margin-left: 0;
     padding: 28px 18px 40px;
   }
 

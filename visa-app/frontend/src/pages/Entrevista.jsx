@@ -177,7 +177,7 @@ export default function Entrevista() {
     return (
       <div className="interview-shell">
         <Sidebar currentPage="entrevista" />
-        <main className="interview-main">
+        <main id="main-content" tabIndex="-1" className="interview-main">
           <p className="interview-loading">Verificando sesión...</p>
         </main>
       </div>
@@ -187,7 +187,7 @@ export default function Entrevista() {
   return (
     <div className="interview-shell">
       <Sidebar currentPage="entrevista" />
-      <main className={`interview-main${modoSenior ? " interview-main--senior" : ""}`}>
+      <main id="main-content" tabIndex="-1" className={`interview-main${modoSenior ? " interview-main--senior" : ""}`}>
         <header className="interview-header">
           <h1>Entrevista Consular</h1>
           <p>

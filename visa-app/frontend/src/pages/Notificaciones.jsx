@@ -93,7 +93,7 @@ export default function Notificaciones() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="notificaciones" />
-        <main style={s.main}>
+        <main id="main-content" tabIndex="-1" style={s.main}>
           <p style={{ color: "#64748b", paddingTop: "40px", fontSize: fs(14) }}>
             Verificando sesión...
           </p>
@@ -105,7 +105,7 @@ export default function Notificaciones() {
   return (
     <div style={s.layout}>
       <Sidebar currentPage="notificaciones" />
-      <main style={s.main}>
+      <main id="main-content" tabIndex="-1" style={s.main}>
         {/* Encabezado */}
         <div style={s.header}>
           <div>
