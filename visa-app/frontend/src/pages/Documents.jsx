@@ -107,6 +107,7 @@ export default function Documents() {
   const [documentsError, setDocumentsError] = useState("");
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchUserDocuments = async () => {
       if (isValidating) return;
 
@@ -121,7 +122,9 @@ export default function Documents() {
         setLoadingDocuments(true);
         setDocumentsError("");
 
-        const response = await fetch(buildApiUrl(`/documentos/${session.id}`));
+        const response = await fetch(buildApiUrl(`/documentos/${session.id}`), {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error("No se pudieron cargar tus documentos.");
         }
@@ -129,14 +132,16 @@ export default function Documents() {
         const data = await response.json();
         setDocuments(mergeSavedDocuments(Array.isArray(data) ? data : []));
       } catch (error) {
+        if (error.name === "AbortError") return;
         setDocuments(getInitialDocuments());
         setDocumentsError(error.message || "No se pudieron cargar tus documentos.");
       } finally {
-        setLoadingDocuments(false);
+        if (!controller.signal.aborted) setLoadingDocuments(false);
       }
     };
 
     fetchUserDocuments();
+    return () => controller.abort();
   }, [isValidating, session?.id]);
 
   const statusCounts = useMemo(() => {

@@ -127,6 +127,7 @@ export default function Perfil() {
   // -----------------------------------------------------------------
   useEffect(() => {
     if (isValidating || !session?.correo) return;
+    const controller = new AbortController();
 
     const cargar = async () => {
       try {
@@ -134,7 +135,8 @@ export default function Perfil() {
         setErrorCarga("");
 
         const res = await fetch(
-          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`
+          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`,
+          { signal: controller.signal }
         );
 
         if (!res.ok) throw new Error("No se pudo cargar tu perfil.");
@@ -149,14 +151,16 @@ export default function Perfil() {
           pais:     data.usuario.pais     || "",
         });
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error(err);
         setErrorCarga(err.message || "Error al cargar el perfil.");
       } finally {
-        setCargando(false);
+        if (!controller.signal.aborted) setCargando(false);
       }
     };
 
     cargar();
+    return () => controller.abort();
   }, [isValidating, session?.correo]);
 
   // Auto-dismiss del mensaje de éxito

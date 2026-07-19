@@ -177,6 +177,44 @@ img, video, canvas, svg {
   max-width: 100%;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.route-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--vg-bg);
+}
+
+.route-loading__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--vg-border-mid);
+  border-top-color: var(--vg-red);
+  border-radius: 50%;
+  animation: route-spinner 0.7s linear infinite;
+}
+
+@keyframes route-spinner {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading__spinner {
+    animation: none;
+  }
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--vg-bg-alt); }

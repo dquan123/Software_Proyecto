@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
@@ -262,6 +262,13 @@ export default function DS160Form() {
   const [mensajeGuardado, setMensajeGuardado] = useState("");
   const [cargando,        setCargando]        = useState(true);
   const modoSenior = useModoSenior();
+  const formDataRef = useRef(formData);
+  const seccionActualRef = useRef(seccionActual);
+  const dirtyRef = useRef(false);
+  const autosaveControllerRef = useRef(null);
+
+  formDataRef.current = formData;
+  seccionActualRef.current = seccionActual;
 
   const seccion        = secciones.find(s => s.id === seccionActual);
   const totalSecciones = secciones.length;
@@ -272,6 +279,7 @@ export default function DS160Form() {
     !campo.dependeDe || formData[campo.dependeDe.campo] === campo.dependeDe.valor;
 
   useEffect(() => {
+    const controller = new AbortController();
     const cargar = async () => {
       const sessionRaw = localStorage.getItem("visaguide_session");
       const correo = sessionRaw
@@ -279,40 +287,79 @@ export default function DS160Form() {
         : localStorage.getItem("correoUsuario");
       if (!correo) { setCargando(false); return; }
       try {
-        const res  = await fetch(`${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`);
+        const res  = await fetch(`${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error();
         const data = await res.json();
         setFormData(data.datos || {});
         setSeccionActual(data.seccion_actual || 1);
-      } catch { /* ignorar */ } finally { setCargando(false); }
+      } catch (error) {
+        if (error.name !== "AbortError") { /* ignorar errores de carga */ }
+      } finally {
+        if (!controller.signal.aborted) setCargando(false);
+      }
     };
     cargar();
+    return () => controller.abort();
   }, []);
 
-  // Auto-guardado cada 30 segundos
-useEffect(() => {
-  // No iniciar el auto-guardado hasta que termine de cargar
-  if (cargando) return;
-  
-  const intervalo = setInterval(() => {
-    const correo = getCorreo();
-    if (correo && Object.keys(formData).length > 0) {
-      // Guardar silenciosamente (sin mostrar mensaje)
-      fetch(buildApiUrl("/ds160"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          correo, 
-          datos: formData, 
-          seccion_actual: seccionActual, 
-          completado: false 
-        }),
-      }).catch(() => {}); // Ignorar errores silenciosamente
-    }
-  }, 30000); // 30 segundos
+  // Auto-guardado con debounce después de que la persona deja de editar.
+  useEffect(() => {
+    if (cargando || !dirtyRef.current || Object.keys(formData).length === 0) return;
 
-  return () => clearInterval(intervalo);
-}, [formData, seccionActual, cargando]);
+    const timeout = window.setTimeout(async () => {
+      const correo = getCorreo();
+      if (!correo) return;
+      autosaveControllerRef.current?.abort();
+      const controller = new AbortController();
+      autosaveControllerRef.current = controller;
+      try {
+        const response = await fetch(buildApiUrl("/ds160"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
+          signal: controller.signal,
+        });
+        if (response.ok) dirtyRef.current = false;
+      } catch (error) {
+        if (error.name !== "AbortError") { /* el próximo cambio reintentará */ }
+      }
+    }, 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [formData, seccionActual, cargando]);
+
+  // Última escritura al abandonar la página para reducir el riesgo de pérdida de datos.
+  useEffect(() => {
+    const flushPendingChanges = () => {
+      if (!dirtyRef.current || Object.keys(formDataRef.current).length === 0) return;
+      const correo = getCorreo();
+      if (!correo) return;
+      const body = JSON.stringify({
+        correo,
+        datos: formDataRef.current,
+        seccion_actual: seccionActualRef.current,
+        completado: false,
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(buildApiUrl("/ds160"), new Blob([body], { type: "application/json" }));
+      } else {
+        fetch(buildApiUrl("/ds160"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("pagehide", flushPendingChanges);
+    return () => {
+      window.removeEventListener("pagehide", flushPendingChanges);
+      autosaveControllerRef.current?.abort();
+      flushPendingChanges();
+    };
+  }, []);
 
   const getCorreo = () => {
     const sessionRaw = localStorage.getItem("visaguide_session");
@@ -429,6 +476,7 @@ useEffect(() => {
   };
 
   const handleChange = (name, value) => {
+    dirtyRef.current = true;
     setFormData(p => ({ ...p, [name]: value }));
     
     // Validar en tiempo real
@@ -458,6 +506,7 @@ useEffect(() => {
         body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
       });
       if (!res.ok) throw new Error();
+      dirtyRef.current = false;
       setMensajeGuardado("✓ Progreso guardado");
       setTimeout(() => setMensajeGuardado(""), 3000);
     } catch {
@@ -484,6 +533,7 @@ useEffect(() => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: true }),
       });
+      dirtyRef.current = false;
       alert("¡Formulario completado! Los datos han sido guardados.");
       window.location.href = "/dashboard";
     } catch { alert("Error al finalizar el formulario. Intenta de nuevo."); }
