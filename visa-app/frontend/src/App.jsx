@@ -108,18 +108,18 @@ function Onboarding() {
 
   if (isValidating) {
     return (
-      <div style={styles.container}>
+      <main id="main-content" tabIndex="-1" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.logo}>VG</div>
           <p style={styles.descriptionText}>Verificando sesión...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (currentUser) {
     return (
-      <div style={styles.container}>
+      <main id="main-content" tabIndex="-1" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.logo}>VG</div>
           <h1 style={styles.title}>VisaGuide</h1>
@@ -131,20 +131,17 @@ function Onboarding() {
           <button style={styles.primaryBtn} onClick={() => (window.location.href = "/dashboard")}>
             Ir al Dashboard →
           </button>
-          <button style={styles.secondaryBtn} onClick={() => (window.location.href = "/seleccion-perfil")}>
-            Seleccionar Perfil
-          </button>
           <button style={styles.linkBtn} onClick={() => { SessionManager.clearSession(); window.location.reload(); }}>
             Cerrar sesión
           </button>
         </div>
         <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <main id="main-content" tabIndex="-1" style={styles.container}>
       <div style={styles.card}>
         <div style={styles.logo}>VG</div>
         <h1 style={styles.title}>VisaGuide</h1>
@@ -163,7 +160,7 @@ function Onboarding() {
         </button>
       </div>
       <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </div>
+    </main>
   );
 }
 
@@ -216,20 +213,20 @@ function Login() {
   };
 
   return (
-    <div style={styles.container}>
+    <main id="main-content" tabIndex="-1" style={styles.container}>
       <div style={styles.card}>
         <div style={styles.logo}>VG</div>
         <h1 style={styles.title}>VisaGuide</h1>
         <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
         <h2 style={styles.formTitle}>Iniciar Sesión</h2>
-        {error && <div style={styles.errorMessage}>{error}</div>}
+        {error && <div role="alert" aria-live="assertive" style={styles.errorMessage}>{error}</div>}
         <div style={styles.inputGroup}>
-          <label style={styles.label}>Correo electrónico</label>
-          <input style={styles.input} type="email" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
+          <label htmlFor="login-correo" style={styles.label}>Correo electrónico</label>
+          <input id="login-correo" style={styles.input} type="email" autoComplete="username" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
         </div>
         <div style={styles.inputGroup}>
-          <label style={styles.label}>Contraseña</label>
-          <input style={styles.input} type="password" placeholder="••••••••" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
+          <label htmlFor="login-contrasena" style={styles.label}>Contraseña</label>
+          <input id="login-contrasena" style={styles.input} type="password" autoComplete="current-password" placeholder="••••••••" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
         </div>
         <button style={{ ...styles.primaryBtn, opacity: isLoading ? 0.7 : 1, cursor: isLoading ? "not-allowed" : "pointer" }} onClick={handleLogin} disabled={isLoading}>
           {isLoading ? "Ingresando..." : "Ingresar →"}
@@ -238,7 +235,7 @@ function Login() {
         <button style={styles.backLink} onClick={() => (window.location.href = "/")}>← Volver al inicio</button>
       </div>
       <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </div>
+    </main>
   );
 }
 
@@ -294,23 +291,23 @@ function Registro() {
   };
 
   return (
-    <div style={styles.container}>
+    <main id="main-content" tabIndex="-1" style={styles.container}>
       <div style={styles.card}>
         <div style={styles.logo}>VG</div>
         <h1 style={styles.title}>VisaGuide</h1>
         <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
         <h2 style={styles.formTitle}>Crear Cuenta</h2>
-        {error && <div style={styles.errorMessage}>{error}</div>}
-        {success && <div style={styles.successMessage}>{success}</div>}
+        {error && <div role="alert" aria-live="assertive" style={styles.errorMessage}>{error}</div>}
+        {success && <div role="status" aria-live="polite" style={styles.successMessage}>{success}</div>}
         {[
-          { label: "Nombre completo", type: "text", placeholder: "Juan Pérez", value: nombre, set: setNombre },
-          { label: "Correo electrónico", type: "email", placeholder: "tu@correo.com", value: correo, set: setCorreo },
-          { label: "Contraseña", type: "password", placeholder: "••••••••", value: contrasena, set: setContrasena },
-          { label: "Confirmar contraseña", type: "password", placeholder: "••••••••", value: confirmarContrasena, set: setConfirmarContrasena },
-        ].map((f) => (
+          { label: "Nombre completo", type: "text", autoComplete: "name", placeholder: "Juan Pérez", value: nombre, set: setNombre },
+          { label: "Correo electrónico", type: "email", autoComplete: "email", placeholder: "tu@correo.com", value: correo, set: setCorreo },
+          { label: "Contraseña", type: "password", autoComplete: "new-password", placeholder: "••••••••", value: contrasena, set: setContrasena },
+          { label: "Confirmar contraseña", type: "password", autoComplete: "new-password", placeholder: "••••••••", value: confirmarContrasena, set: setConfirmarContrasena },
+        ].map((f, index) => (
           <div key={f.label} style={styles.inputGroup}>
-            <label style={styles.label}>{f.label}</label>
-            <input style={styles.input} type={f.type} placeholder={f.placeholder} value={f.value} onChange={(e) => f.set(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRegister()} disabled={isLoading} />
+            <label htmlFor={`registro-campo-${index}`} style={styles.label}>{f.label}</label>
+            <input id={`registro-campo-${index}`} style={styles.input} type={f.type} autoComplete={f.autoComplete} placeholder={f.placeholder} value={f.value} onChange={(e) => f.set(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRegister()} disabled={isLoading} />
           </div>
         ))}
         <button style={{ ...styles.primaryBtn, opacity: isLoading ? 0.7 : 1, cursor: isLoading ? "not-allowed" : "pointer" }} onClick={handleRegister} disabled={isLoading}>
@@ -320,7 +317,7 @@ function Registro() {
         <button style={styles.backLink} onClick={() => (window.location.href = "/")}>← Volver al inicio</button>
       </div>
       <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </div>
+    </main>
   );
 }
 

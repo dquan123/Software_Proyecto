@@ -393,6 +393,7 @@ export default function QuestionBank() {
   return (
     <div className="question-bank-shell">
       <main
+        id="main-content" tabIndex="-1"
         className={`question-bank-main${
           modoSenior ? " question-bank-main--senior" : ""
         }`}

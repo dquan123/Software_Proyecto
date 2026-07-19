@@ -28,11 +28,11 @@
   /* ---- Texto ---- */
   --vg-text:         #0f172a;
   --vg-text-muted:   #64748b;
-  --vg-text-light:   #94a3b8;
+  --vg-text-light:   #64748b;
 
   /* ---- Semánticos ---- */
-  --vg-success:      #10b981;
-  --vg-warning:      #f59e0b;
+  --vg-success:      #047857;
+  --vg-warning:      #92400e;
   --vg-amber-bg:     #fffbeb;
   --vg-amber-border: #fde68a;
   --vg-amber-text:   #92400e;
@@ -73,7 +73,9 @@
   --vg-border-mid:   #475569;
   --vg-text:         #f1f5f9;
   --vg-text-muted:   #94a3b8;
-  --vg-text-light:   #64748b;
+  --vg-text-light:   #cbd5e1;
+  --vg-success:      #6ee7b7;
+  --vg-warning:      #fcd34d;
   --vg-amber-bg:     #1c1a0f;
   --vg-amber-border: #92400e;
   --vg-amber-text:   #fde68a;
@@ -93,11 +95,13 @@ html, body {
   min-height: 100vh;
   background: var(--vg-bg);
   transition: background 0.25s ease, color 0.25s ease;
+  max-width: 100%;
 }
 
 body {
   font-family: var(--vg-font);
   color: var(--vg-text);
+  overflow-wrap: anywhere;
 }
 
 #root {
@@ -123,15 +127,33 @@ h1, h2, h3, h4, h5, h6 {
 p { margin: 0; }
 a { color: inherit; text-decoration: none; }
 
+main, section, article, form, fieldset {
+  min-width: 0;
+  max-width: 100%;
+}
+
 button, input, select, textarea {
   font-family: inherit;
 }
 button { cursor: pointer; }
 
-input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--vg-red);
-  outline-offset: 0;
+:focus-visible {
+  outline: 3px solid var(--vg-red-dark);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--vg-white);
+}
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--vg-red) !important;
+}
+
+:where(a, button, input, select, textarea, summary, [role="button"], [role="checkbox"], [role="radio"], [role="switch"]) {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
 }
 
 /* ---- Scrollbar ---- */
@@ -146,6 +168,8 @@ input:focus, select:focus, textarea:focus {
 .vg-layout {
   display: flex;
   min-height: 100vh;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .vg-main {
@@ -153,6 +177,8 @@ input:focus, select:focus, textarea:focus {
   flex: 1;
   min-height: 100vh;
   transition: margin-left 0.3s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ══════════════════════════════
@@ -453,3 +479,21 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .question-bank-header h1 { color: #f1f5f9; }
 [data-theme="dark"] .question-bank-header p  { color: #94a3b8; }
 [data-theme="dark"] .question-card-admin h3  { color: #f1f5f9; }
+
+/* Enlace visible al recibir foco para omitir la navegación repetida. */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 10000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 16px;
+}

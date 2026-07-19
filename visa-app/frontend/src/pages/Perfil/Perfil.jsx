@@ -268,7 +268,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main style={s.main}>
+        <main id="main-content" tabIndex="-1" style={s.main}>
           <p style={s.loading}>Cargando perfil…</p>
         </main>
       </div>
@@ -279,7 +279,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main style={s.main}>
+        <main id="main-content" tabIndex="-1" style={s.main}>
           <p style={s.error}>{errorCarga || "No se pudo cargar el perfil."}</p>
         </main>
       </div>
@@ -293,7 +293,7 @@ export default function Perfil() {
     <div style={s.layout}>
       <Sidebar currentPage="perfil" />
 
-      <main style={s.main}>
+      <main id="main-content" tabIndex="-1" style={s.main}>
         {/* ====================== HEADER ====================== */}
         <header style={s.header}>
           <div>

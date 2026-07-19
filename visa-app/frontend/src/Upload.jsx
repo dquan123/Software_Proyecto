@@ -28,7 +28,7 @@ function Upload() {
   };
 
   return (
-    <div style={styles.container}>
+    <main id="main-content" tabIndex="-1" style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Subir Documento</h1>
 
@@ -36,7 +36,9 @@ function Upload() {
           Sube tu archivo PDF para continuar con el proceso
         </p>
 
+        <label htmlFor="documento-pdf">Seleccionar documento PDF</label>
         <input
+          id="documento-pdf"
           type="file"
           accept="application/pdf"
           style={styles.input}
@@ -49,7 +51,7 @@ function Upload() {
 
         {message && <p style={styles.message}>{message}</p>}
       </div>
-    </div>
+    </main>
   );
 }
 
