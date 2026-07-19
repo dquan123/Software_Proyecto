@@ -1,12 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { buildApiUrl } from "../config/api";
 import useTheme from "../hooks/useTheme";
+import TopActions from "./TopActions";
+
+function SidebarLogo() {
+  return (
+    <div className="vg-sidebar-logo" style={s.logoContainer}>
+      <div style={s.logoIcon} aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      </div>
+      <span className="vg-sidebar-label" style={s.logoText}>
+        Visa<span style={s.logoTextAccent}>Guide</span>
+      </span>
+    </div>
+  );
+}
 
 export default function Sidebar({ currentPage }) {
   const [modoSenior, setModoSenior] = useState(
     () => localStorage.getItem("modoSenior") === "true"
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopExpanded, setDesktopExpanded] = useState(false);
+  const [autoExpandDisabled, setAutoExpandDisabled] = useState(false);
+  const sidebarRef = useRef(null);
   const { isDark, toggleTheme } = useTheme();
 
   const [usuario] = useState(() => {
@@ -17,6 +39,11 @@ export default function Sidebar({ currentPage }) {
     return null;
   });
   const [noLeidas, setNoLeidas] = useState(0);
+
+  useEffect(() => {
+    document.body.classList.add("vg-has-top-actions");
+    return () => document.body.classList.remove("vg-has-top-actions");
+  }, []);
 
   useEffect(() => {
     if (!usuario?.id) return;
@@ -54,6 +81,20 @@ export default function Sidebar({ currentPage }) {
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") return;
+      setDesktopExpanded(false);
+      setAutoExpandDisabled(true);
+      setMobileOpen(false);
+      if (sidebarRef.current?.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, []);
+
   const toggleModoSenior = () => {
     const next = !modoSenior;
     setModoSenior(next);
@@ -63,13 +104,10 @@ export default function Sidebar({ currentPage }) {
 
   const menuItems = [
     { id: "inicio",         label: "Inicio",           icon: "grid",    path: "/dashboard" },
-    { id: "informacion",    label: "Información",       icon: "info",    path: "/informacion" },
     { id: "ds160",          label: "DS-160",            icon: "file",    path: "/ds160" },
     { id: "cronologia",     label: "Cronología",        icon: "clock",   path: "/cronologia" },
     { id: "documentos",     label: "Documentos",        icon: "folder",  path: "/documents" },
     { id: "entrevista",     label: "Entrevista",        icon: "users",   path: "/entrevista" },
-    { id: "notificaciones", label: "Notificaciones",    icon: "bell",    path: "/notificaciones", badge: noLeidas > 0 ? (noLeidas > 99 ? "99+" : noLeidas) : null },
-    { id: "perfil",         label: "Perfil",            icon: "user",    path: "/perfil" },
     { id: "chat",           label: "Chat con asesor",   icon: "message", path: "/chat" },
   ];
 
@@ -106,18 +144,22 @@ export default function Sidebar({ currentPage }) {
     return map[perfil] || "Solicitante";
   };
 
-  const sidebarStyle = {
-    ...s.sidebar,
-    transform: mobileOpen ? "translateX(0)" : undefined,
+  const collapseSidebar = () => {
+    setDesktopExpanded(false);
+    setMobileOpen(false);
   };
 
   return (
     <>
       {/* ─── Mobile hamburger button ─── */}
+      <TopActions userId={usuario?.id} unreadCount={noLeidas} />
+
       <button
         className="vg-hamburger"
         onClick={() => setMobileOpen((o) => !o)}
         aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+        aria-expanded={mobileOpen}
+        aria-controls="vg-primary-sidebar"
       >
         {[0, 1, 2].map((i) => (
           <span
@@ -146,25 +188,33 @@ export default function Sidebar({ currentPage }) {
       )}
 
       {/* ─── Sidebar ─── */}
-      <aside style={sidebarStyle}>
+      <aside
+        id="vg-primary-sidebar"
+        ref={sidebarRef}
+        className={`vg-sidebar${desktopExpanded ? " vg-sidebar--expanded" : ""}${mobileOpen ? " vg-sidebar--mobile-open" : ""}${autoExpandDisabled ? " vg-sidebar--auto-disabled" : ""}`}
+        style={s.sidebar}
+        aria-label="Navegación principal"
+        onMouseLeave={() => setAutoExpandDisabled(false)}
+        onFocusCapture={() => setAutoExpandDisabled(false)}
+      >
         {/* Logo */}
-        <div style={s.logoContainer}>
-          <div style={s.logoIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <rect x="3" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </div>
-          <span style={s.logoText}>
-            Visa<span style={s.logoTextAccent}>Guide</span>
-          </span>
-        </div>
+        <SidebarLogo />
+
+        <button
+          type="button"
+          className="vg-sidebar-expand-button"
+          aria-expanded={desktopExpanded}
+          aria-controls="vg-sidebar-content"
+          aria-label={desktopExpanded ? "Contraer barra lateral" : "Expandir barra lateral"}
+          onClick={() => setDesktopExpanded((expanded) => !expanded)}
+        >
+          <span aria-hidden="true">{desktopExpanded ? "‹" : "›"}</span>
+        </button>
 
         {/* Nav */}
+        <div id="vg-sidebar-content" className="vg-sidebar-content">
         <nav style={s.nav}>
-          <p style={s.menuLabel}>MENÚ PRINCIPAL</p>
+          <p className="vg-sidebar-label" style={s.menuLabel}>MENÚ PRINCIPAL</p>
           <ul style={s.menuList}>
             {menuItems.map((item) => {
               const isActive = currentPage === item.id;
@@ -173,14 +223,14 @@ export default function Sidebar({ currentPage }) {
                   <a
                     href={item.path}
                     style={{ ...s.menuItem, ...(isActive ? s.menuItemActive : {}) }}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={collapseSidebar}
                   >
                     <span style={s.menuIcon}>{icons[item.icon]}</span>
-                    <span style={{ ...s.menuText, fontSize: modoSenior ? "17px" : "14px" }}>
+                    <span className="vg-sidebar-label" style={{ ...s.menuText, fontSize: modoSenior ? "17px" : "14px" }}>
                       {item.label}
                     </span>
                     {item.badge && (
-                      <span style={s.badge}>{item.badge}</span>
+                      <span className="vg-sidebar-label" style={s.badge}>{item.badge}</span>
                     )}
                   </a>
                 </li>
@@ -195,7 +245,7 @@ export default function Sidebar({ currentPage }) {
           <div style={s.themeRow}>
             <div style={s.themeLeft}>
               <span style={s.themeIcon}>{isDark ? icons.moon : icons.sun}</span>
-              <span style={{ ...s.themeText, fontSize: modoSenior ? "17px" : "14px" }}>
+              <span className="vg-sidebar-label" style={{ ...s.themeText, fontSize: modoSenior ? "17px" : "14px" }}>
                 {isDark ? "Modo oscuro" : "Modo claro"}
               </span>
             </div>
@@ -203,6 +253,7 @@ export default function Sidebar({ currentPage }) {
               style={{ ...s.toggle, ...(isDark ? s.toggleActive : {}) }}
               onClick={toggleTheme}
               aria-label="Cambiar tema"
+              aria-pressed={isDark}
             >
               <span style={{ ...s.toggleCircle, ...(isDark ? s.toggleCircleActive : {}) }} />
             </button>
@@ -216,22 +267,30 @@ export default function Sidebar({ currentPage }) {
                   <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>
                 </svg>
               </span>
-              <span style={{ ...s.modoSeniorText, fontSize: modoSenior ? "17px" : "14px" }}>
+              <span className="vg-sidebar-label" style={{ ...s.modoSeniorText, fontSize: modoSenior ? "17px" : "14px" }}>
                 Modo Senior
               </span>
             </div>
             <button
               style={{ ...s.toggle, ...(modoSenior ? s.toggleActive : {}) }}
               onClick={toggleModoSenior}
+              aria-label="Alternar modo Senior"
+              aria-pressed={modoSenior}
             >
               <span style={{ ...s.toggleCircle, ...(modoSenior ? s.toggleCircleActive : {}) }} />
             </button>
           </div>
 
           {/* User */}
-          <div style={s.userSection}>
+          <a
+            href="/perfil"
+            style={s.userSection}
+            className="vg-sidebar-user-link"
+            aria-label={`Abrir perfil de ${usuario?.nombre || "Usuario"}, ${getPerfilLabel(usuario?.perfil)}`}
+            onClick={collapseSidebar}
+          >
             <div style={s.userAvatar}>{getInitials(usuario?.nombre)}</div>
-            <div style={s.userInfo}>
+            <div className="vg-sidebar-label" style={s.userInfo}>
               <p style={{ ...s.userName, fontSize: modoSenior ? "17px" : "14px" }}>
                 {usuario?.nombre || "Usuario"}
               </p>
@@ -239,9 +298,10 @@ export default function Sidebar({ currentPage }) {
                 {getPerfilLabel(usuario?.perfil)}
               </p>
             </div>
-          </div>
+          </a>
 
           <button
+            className="vg-sidebar-label"
             style={s.logoutBtn}
             onClick={() => {
               localStorage.removeItem("visaguide_session");
@@ -253,6 +313,7 @@ export default function Sidebar({ currentPage }) {
             Cerrar sesión
           </button>
         </div>
+        </div>
       </aside>
     </>
   );
@@ -260,7 +321,6 @@ export default function Sidebar({ currentPage }) {
 
 const s = {
   sidebar: {
-    width: "250px",
     minHeight: "100vh",
     backgroundColor: "#0f172a",
     display: "flex",
@@ -272,7 +332,6 @@ const s = {
     bottom: 0,
     zIndex: 1000,
     overflowY: "auto",
-    transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
     // Mobile: hidden by default (CSS handles transform via media query)
   },
   logoContainer: { display:"flex", alignItems:"center", gap:"10px", padding:"20px 20px 28px" },
@@ -313,19 +372,3 @@ const s = {
   userRole: { color:"#64748b", margin:"2px 0 0 0" },
   logoutBtn: { width:"100%", padding:"10px", marginTop:"10px", backgroundColor:"transparent", border:"1px solid #334155", borderRadius:"8px", color:"#94a3b8", fontSize:"13px", cursor:"pointer", fontFamily:"'Segoe UI', sans-serif" },
 };
-
-/* Apply mobile CSS overrides via a style injection */
-if (typeof document !== "undefined") {
-  if (!document.getElementById("vg-sidebar-mobile-css")) {
-    const style = document.createElement("style");
-    style.id = "vg-sidebar-mobile-css";
-    style.textContent = `
-      @media (max-width: 768px) {
-        aside[style*="width: 250px"] {
-          transform: translateX(-100%);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}

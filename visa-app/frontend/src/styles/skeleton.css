@@ -1,6 +1,6 @@
 .vg-skel {
   display: inline-block;
-  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background: linear-gradient(90deg, var(--vg-border) 0%, var(--vg-bg-alt) 50%, var(--vg-border) 100%);
   background-size: 200% 100%;
   animation: vg-skel-shimmer 1.6s ease-in-out infinite;
 }
@@ -17,12 +17,12 @@
 .vg-skel-shell {
   display: flex;
   min-height: 100vh;
-  background: #f4f5f7;
+  background: var(--vg-bg-alt);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 .vg-skel-sidebar {
-  width: 250px;
+  width: var(--vg-sidebar-w);
   min-height: 100vh;
   background: #0f172a;
   padding: 20px 16px;
@@ -78,7 +78,7 @@
 }
 
 .vg-skel-main {
-  margin-left: 250px;
+  margin-left: var(--vg-sidebar-w);
   flex: 1;
   padding: 32px 40px 52px;
   min-height: 100vh;
@@ -92,8 +92,8 @@
 .vg-skel-doc-card,
 .vg-skel-perfil-card,
 .vg-skel-timeline-row {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--vg-card);
+  border: 1px solid var(--vg-border);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
@@ -203,8 +203,8 @@
 }
 
 .vg-skel-chat__card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--vg-card);
+  border: 1px solid var(--vg-border);
   border-radius: 20px;
   overflow: hidden;
   display: flex;
@@ -230,7 +230,7 @@
 }
 
 .vg-skel-bubble {
-  background: #f8fafc;
+  background: var(--vg-bg);
   border-radius: 16px;
   padding: 16px 18px;
   max-width: 65%;
@@ -251,12 +251,12 @@
 
 .vg-skel-chat__composer {
   padding: 16px 20px 20px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--vg-border);
 }
 
 .vg-skel-chat__side {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--vg-card);
+  border: 1px solid var(--vg-border);
   border-radius: 20px;
   padding: 24px 22px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);

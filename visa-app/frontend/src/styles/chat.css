@@ -335,7 +335,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #fce7f3;
+  background: var(--vg-red-light);
   color: #be185d;
   padding: 5px 12px;
   border-radius: 99px;
