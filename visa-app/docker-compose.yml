@@ -6,8 +6,13 @@ services:
     build: ./backend
     env_file:
       - .env
+    environment:
+      NODE_ENV: development
+      LOCAL_UPLOAD_DIR: /app/local_uploads
     ports:
       - "3000:3000"
+    volumes:
+      - local_uploads:/app/local_uploads
     depends_on:
       - db
 
@@ -34,3 +39,6 @@ services:
       - "5433:5432"
     volumes:
     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  local_uploads:

@@ -21,6 +21,21 @@ jest.mock("../r2", () => ({
   validateR2Config: jest.fn(),
 }));
 
+const mockUploadStoredFile = jest.fn(() =>
+  Promise.resolve({
+    key: "local/mock-document.pdf",
+    url: "http://localhost/local-files/mock-document.pdf",
+    provider: "local",
+  })
+);
+const mockDeleteStoredFile = jest.fn(() => Promise.resolve());
+
+jest.mock("../storage", () => ({
+  LOCAL_STORAGE_DIR: "/tmp/visa-app-test-uploads",
+  uploadStoredFile: mockUploadStoredFile,
+  deleteStoredFile: mockDeleteStoredFile,
+}));
+
 function defaultQueryHandler(sql, values) {
   const normalized = String(sql).replace(/\s+/g, " ").trim();
 
@@ -116,6 +131,44 @@ function defaultQueryHandler(sql, values) {
     return Promise.resolve({ rows: [{ id: values[0] }] });
   }
 
+  if (normalized.includes("SELECT id, storage_key FROM documentos")) {
+    return Promise.resolve({ rows: [] });
+  }
+
+  if (normalized.includes("INSERT INTO documentos")) {
+    return Promise.resolve({
+      rows: [{
+        id: 41,
+        nombre: values[0],
+        tipo: values[1],
+        archivo_url: values[2],
+        usuario_id: values[3],
+        documento_key: values[4],
+        estado: "review",
+      }],
+    });
+  }
+
+  if (normalized.includes("DELETE FROM documentos")) {
+    return Promise.resolve({ rows: [{ id: values[0], storage_key: "local/mock-document.pdf" }] });
+  }
+
+  if (normalized.includes("UPDATE usuario") && normalized.includes("RETURNING id_usuario, nombre")) {
+    return Promise.resolve({
+      rows: [{
+        id_usuario: 3,
+        nombre: values[0],
+        correo: values[values.length - 1],
+        perfil: "turismo_negocios",
+        telefono: values[1],
+        ciudad: values[2],
+        pais: values[3],
+        notificaciones_email: true,
+        idioma: "es",
+      }],
+    });
+  }
+
   if (
     normalized.includes("FROM notificaciones") &&
     normalized.includes("WHERE id_usuario = $1") &&
@@ -207,6 +260,8 @@ beforeAll(() => {
 beforeEach(() => {
   mockQuery.mockClear();
   mockQuery.mockImplementation(defaultQueryHandler);
+  mockUploadStoredFile.mockClear();
+  mockDeleteStoredFile.mockClear();
 });
 
 describe("app endpoints", () => {
@@ -391,6 +446,47 @@ describe("app endpoints", () => {
       status: "reviewed",
       feedback: "Respuesta clara y concreta.",
       rating: 5,
+    });
+  });
+
+  test("POST /upload guarda un documento mediante el proveedor configurado", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Pasaporte")
+      .field("tipo", "application/pdf")
+      .field("usuario_id", "3")
+      .field("documento_key", "passport")
+      .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({ id: 41, documento_key: "passport" });
+    expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+  });
+
+  test("DELETE /documentos/:id elimina el registro y el archivo almacenado", async () => {
+    const response = await request(app)
+      .delete("/documentos/41")
+      .query({ usuario_id: 3 });
+
+    expect(response.status).toBe(200);
+    expect(mockDeleteStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
+  });
+
+  test("PUT /usuario-perfil persiste la edición del perfil", async () => {
+    const response = await request(app).put("/usuario-perfil").send({
+      correo: "login@example.com",
+      nombre: "Nombre Actualizado",
+      telefono: "55550000",
+      ciudad: "Guatemala",
+      pais: "Guatemala",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.usuario).toMatchObject({
+      nombre: "Nombre Actualizado",
+      telefono: "55550000",
+      ciudad: "Guatemala",
+      pais: "Guatemala",
     });
   });
 });

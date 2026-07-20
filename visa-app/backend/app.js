@@ -12,11 +12,7 @@ const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
-const {
-  uploadBufferToR2,
-  deleteObjectFromR2,
-  validateR2Config,
-} = require("./r2");
+const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile } = require("./storage");
 
 const app = express();
 
@@ -35,6 +31,9 @@ app.use((req, res, next) => {
 app.use(cors());
 
 app.use(express.json());
+if (process.env.NODE_ENV !== "production") {
+  app.use("/local-files", express.static(LOCAL_STORAGE_DIR));
+}
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -159,7 +158,7 @@ async function insertDocumento({
     );
 
     if (existingDocument.storage_key && existingDocument.storage_key !== storageKey) {
-      deleteObjectFromR2(existingDocument.storage_key).catch((cleanupError) => {
+      deleteStoredFile(existingDocument.storage_key).catch((cleanupError) => {
         console.error("UPLOAD CLEANUP ERROR:", cleanupError);
       });
     }
@@ -386,17 +385,12 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     return res.status(400).json({ error: "usuario_id debe ser numérico" });
   }
 
-  try {
-    validateR2Config();
-  } catch (error) {
-    console.error("UPLOAD ERROR: invalid R2 config", error);
-    return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
-  }
-
   let uploadedFile;
 
   try {
-    uploadedFile = await uploadBufferToR2(req.file);
+    uploadedFile = await uploadStoredFile(req.file, {
+      baseUrl: `${req.protocol}://${req.get("host")}`,
+    });
     const documento = await insertDocumento({
       nombre: documentName,
       tipo: documentType,
@@ -415,16 +409,16 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
 
-    if (error.message?.includes("Missing R2") || error.message?.includes("placeholder")) {
-      return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
+    if (process.env.NODE_ENV === "production" && (error.message?.includes("Missing R2") || error.message?.includes("placeholder"))) {
+      return res.status(500).json({ error: "No fue posible subir el archivo. Inténtalo nuevamente más tarde." });
     }
 
     if (!uploadedFile) {
-      return res.status(500).json({ error: "No se pudo subir el archivo a R2" });
+      return res.status(500).json({ error: "No se pudo almacenar el archivo" });
     }
 
     try {
-      await deleteObjectFromR2(uploadedFile.key);
+      await deleteStoredFile(uploadedFile.key);
     } catch (cleanupError) {
       console.error("UPLOAD ERROR: cleanup failed", cleanupError);
     }
@@ -621,20 +615,18 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
     return res.status(400).json({ error: "usuario_id debe ser numérico" });
   }
 
-  try {
-    validateR2Config();
-  } catch (error) {
-    console.error("UPLOAD ERROR: invalid R2 config", error);
-    return res.status(500).json({ error: "Configuración R2 inválida o incompleta" });
-  }
-
   let uploadedFile;
 
   try {
-    uploadedFile = await uploadBufferToR2(req.file);
+    uploadedFile = await uploadStoredFile(req.file, {
+      baseUrl: `${req.protocol}://${req.get("host")}`,
+    });
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
-    return res.status(500).json({ error: "No se pudo subir el archivo a R2" });
+    if (process.env.NODE_ENV === "production" && (error.message?.includes("Missing R2") || error.message?.includes("placeholder"))) {
+      return res.status(500).json({ error: "No fue posible subir el archivo. Inténtalo nuevamente más tarde." });
+    }
+    return res.status(500).json({ error: "No se pudo almacenar el archivo" });
   }
 
   try {
@@ -655,7 +647,7 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
     console.error("UPLOAD ERROR:", error);
 
     try {
-      await deleteObjectFromR2(uploadedFile.key);
+      await deleteStoredFile(uploadedFile.key);
     } catch (cleanupError) {
       console.error("UPLOAD ERROR: cleanup failed", cleanupError);
     }
@@ -718,7 +710,7 @@ app.delete("/documentos/:id", async (req, res) => {
     const deletedDocument = result.rows[0];
 
     if (deletedDocument.storage_key) {
-      deleteObjectFromR2(deletedDocument.storage_key).catch((cleanupError) => {
+      deleteStoredFile(deletedDocument.storage_key).catch((cleanupError) => {
         console.error("DELETE DOCUMENT CLEANUP ERROR:", cleanupError);
       });
     }

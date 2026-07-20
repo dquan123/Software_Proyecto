@@ -495,7 +495,7 @@ export default function DS160Form() {
     }
   };
 
-  const guardarProgreso = async () => {
+  const guardarProgreso = async (seccionParaGuardar = seccionActual) => {
     const correo = getCorreo();
     if (!correo) return;
     setGuardando(true);
@@ -503,7 +503,7 @@ export default function DS160Form() {
       const res = await fetch(buildApiUrl("/ds160"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
+        body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionParaGuardar, completado: false }),
       });
       if (!res.ok) throw new Error();
       dirtyRef.current = false;
@@ -548,9 +548,10 @@ const siguienteSeccion = () => {
       setTimeout(() => setMensajeGuardado(""), 3000);
       return;
     }
+    const nuevaSeccion = seccionActual + 1;
     setErrores({});
-    setSeccionActual(s => s + 1);
-    guardarProgreso();
+    setSeccionActual(nuevaSeccion);
+    guardarProgreso(nuevaSeccion);
     window.scrollTo(0, 0);
   }
 };
@@ -665,7 +666,7 @@ const siguienteSeccion = () => {
                 Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
               </p>
             </div>
-            <button style={st.guardarBtn} onClick={guardarProgreso} disabled={guardando} aria-label="Guardar progreso">
+            <button style={st.guardarBtn} onClick={() => guardarProgreso()} disabled={guardando} aria-label="Guardar progreso">
               <SaveIcon />
               {guardando ? "Guardando..." : "Guardar progreso"}
             </button>
