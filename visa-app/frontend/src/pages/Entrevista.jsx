@@ -143,12 +143,13 @@ export default function Entrevista() {
       return;
     }
 
-    let isMounted = true;
+    const controller = new AbortController();
 
     async function fetchLatestFeedback() {
       try {
         const response = await fetch(
-          buildApiUrl(`/interview-sessions/user/${session.id}`)
+          buildApiUrl(`/interview-sessions/user/${session.id}`),
+          { signal: controller.signal }
         );
         const data = await response.json();
 
@@ -156,21 +157,15 @@ export default function Entrevista() {
           throw new Error(data?.error || "No se pudo cargar la entrevista.");
         }
 
-        if (isMounted) {
-          setLatestFeedback(Array.isArray(data.sessions) ? data.sessions[0] : null);
-        }
-      } catch {
-        if (isMounted) {
-          setLatestFeedback(null);
-        }
+        setLatestFeedback(Array.isArray(data.sessions) ? data.sessions[0] : null);
+      } catch (error) {
+        if (error.name !== "AbortError") setLatestFeedback(null);
       }
     }
 
     fetchLatestFeedback();
 
-    return () => {
-      isMounted = false;
-    };
+    return () => controller.abort();
   }, [isValidating, session?.id]);
 
   if (isValidating) {

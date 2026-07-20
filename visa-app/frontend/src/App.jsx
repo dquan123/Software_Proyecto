@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Upload from "./Upload";
-import ProfileSelection from "./pages/ProfileSelection/ProfileSelection";
-import Perfil from "./pages/Perfil/Perfil";
-import Documents from "./pages/Documents";
-import DS160Form from "./pages/ds160";
-import Informacion from "./pages/Informacion";
-import Cronologia from "./pages/Cronologia";
-import Entrevista from "./pages/Entrevista";
-import InterviewFeedback from "./pages/InterviewFeedback";
-import InterviewSimulator from "./pages/InterviewSimulator";
-import QuestionBank from "./pages/QuestionBank";
-import Chat from "./pages/Chat";
-import Notificaciones from "./pages/Notificaciones";
 import { buildApiUrl } from "./config/api";
-import Dashboard from "./pages/Dashboard";
+
+const Upload = lazy(() => import("./Upload"));
+const ProfileSelection = lazy(() => import("./pages/ProfileSelection/ProfileSelection"));
+const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
+const Documents = lazy(() => import("./pages/Documents"));
+const DS160Form = lazy(() => import("./pages/ds160"));
+const Informacion = lazy(() => import("./pages/Informacion"));
+const Cronologia = lazy(() => import("./pages/Cronologia"));
+const Entrevista = lazy(() => import("./pages/Entrevista"));
+const InterviewFeedback = lazy(() => import("./pages/InterviewFeedback"));
+const InterviewSimulator = lazy(() => import("./pages/InterviewSimulator"));
+const QuestionBank = lazy(() => import("./pages/QuestionBank"));
+const Chat = lazy(() => import("./pages/Chat"));
+const Notificaciones = lazy(() => import("./pages/Notificaciones"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 // ── Apply saved theme on app start ──
 const savedTheme = localStorage.getItem("vg-theme");
@@ -63,6 +64,7 @@ const validateSession = async (session) => {
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<RouteLoadingState />}>
       <Routes>
         <Route path="/"                               element={<Onboarding />} />
         <Route path="/login"                          element={<Login />} />
@@ -83,7 +85,19 @@ function App() {
         <Route path="/chat"                           element={<Chat />} />
         <Route path="/notificaciones"                 element={<Notificaciones />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
+  );
+}
+
+function RouteLoadingState() {
+  return (
+    <main id="main-content" tabIndex="-1" className="route-loading">
+      <span className="route-loading__spinner" aria-hidden="true" />
+      <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+        Cargando página…
+      </span>
+    </main>
   );
 }
 
@@ -323,26 +337,26 @@ function Registro() {
 
 const styles = {
   container: { minHeight:"100vh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", background:"linear-gradient(135deg,#1e3a5f 0%,#2d1b4e 50%,#4a1a3d 100%)", padding:"20px", position:"relative" },
-  card: { background:"white", padding:"40px 35px", borderRadius:"20px", width:"100%", maxWidth:"380px", boxShadow:"0px 20px 60px rgba(0,0,0,0.3)", textAlign:"center" },
+  card: { background:"var(--vg-card)", padding:"40px 35px", borderRadius:"20px", width:"100%", maxWidth:"380px", boxShadow:"0px 20px 60px rgba(0,0,0,0.3)", textAlign:"center" },
   logo: { width:"60px", height:"60px", backgroundColor:"#c73e4e", borderRadius:"12px", display:"flex", justifyContent:"center", alignItems:"center", margin:"0 auto 15px auto", color:"white", fontSize:"24px", fontWeight:"bold", fontFamily:"'Segoe UI',sans-serif" },
-  title: { margin:"0 0 5px 0", color:"#1e2a3a", fontSize:"28px", fontWeight:"700", fontFamily:"'Segoe UI',sans-serif" },
-  brandSubtitle: { margin:"0 0 25px 0", color:"#6b7280", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
-  formTitle: { margin:"0 0 20px 0", color:"#1e2a3a", fontSize:"20px", fontWeight:"600", fontFamily:"'Segoe UI',sans-serif" },
-  descriptionBox: { backgroundColor:"#f3f4f6", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
-  descriptionText: { margin:0, color:"#4b5563", fontSize:"14px", lineHeight:"1.6", fontFamily:"'Segoe UI',sans-serif" },
+  title: { margin:"0 0 5px 0", color:"var(--vg-text)", fontSize:"28px", fontWeight:"700", fontFamily:"'Segoe UI',sans-serif" },
+  brandSubtitle: { margin:"0 0 25px 0", color:"var(--vg-text-muted)", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
+  formTitle: { margin:"0 0 20px 0", color:"var(--vg-text)", fontSize:"20px", fontWeight:"600", fontFamily:"'Segoe UI',sans-serif" },
+  descriptionBox: { backgroundColor:"var(--vg-bg-alt)", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
+  descriptionText: { margin:0, color:"var(--vg-text-muted)", fontSize:"14px", lineHeight:"1.6", fontFamily:"'Segoe UI',sans-serif" },
   inputGroup: { marginBottom:"18px", textAlign:"left" },
-  label: { display:"block", marginBottom:"6px", color:"#374151", fontSize:"14px", fontWeight:"500", fontFamily:"'Segoe UI',sans-serif" },
-  input: { width:"100%", padding:"14px 16px", borderRadius:"10px", border:"1px solid #d1d5db", boxSizing:"border-box", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif", outline:"none" },
+  label: { display:"block", marginBottom:"6px", color:"var(--vg-text)", fontSize:"14px", fontWeight:"500", fontFamily:"'Segoe UI',sans-serif" },
+  input: { width:"100%", padding:"14px 16px", borderRadius:"10px", border:"1px solid var(--vg-border-mid)", background:"var(--vg-input)", color:"var(--vg-text)", boxSizing:"border-box", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif", outline:"none" },
   primaryBtn: { width:"100%", padding:"14px", marginTop:"10px", borderRadius:"10px", border:"none", backgroundColor:"#c73e4e", color:"white", cursor:"pointer", fontWeight:"600", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif" },
-  secondaryBtn: { width:"100%", padding:"14px", marginTop:"10px", borderRadius:"10px", border:"2px solid #1e3a5f", backgroundColor:"transparent", color:"#1e3a5f", cursor:"pointer", fontWeight:"600", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif" },
+  secondaryBtn: { width:"100%", padding:"14px", marginTop:"10px", borderRadius:"10px", border:"2px solid var(--vg-text)", backgroundColor:"transparent", color:"var(--vg-text)", cursor:"pointer", fontWeight:"600", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif" },
   linkBtn: { background:"none", border:"none", color:"#c73e4e", cursor:"pointer", fontSize:"14px", fontWeight:"500", marginTop:"18px", fontFamily:"'Segoe UI',sans-serif", display:"block", width:"100%" },
-  backLink: { background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:"13px", marginTop:"15px", fontFamily:"'Segoe UI',sans-serif", display:"block", width:"100%" },
-  errorMessage: { backgroundColor:"#fef2f2", border:"1px solid #fecaca", color:"#dc2626", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
-  successMessage: { backgroundColor:"#ecfdf5", border:"1px solid #a7f3d0", color:"#059669", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
+  backLink: { background:"none", border:"none", color:"var(--vg-text-muted)", cursor:"pointer", fontSize:"13px", marginTop:"15px", fontFamily:"'Segoe UI',sans-serif", display:"block", width:"100%" },
+  errorMessage: { backgroundColor:"var(--vg-danger-bg)", border:"1px solid var(--vg-danger-text)", color:"var(--vg-danger-text)", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
+  successMessage: { backgroundColor:"var(--vg-success-bg)", border:"1px solid var(--vg-success)", color:"var(--vg-success)", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
   footerText: { color:"rgba(255,255,255,0.6)", fontSize:"12px", marginTop:"25px", fontFamily:"'Segoe UI',sans-serif" },
-  welcomeBox: { backgroundColor:"#f0f7ff", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
-  welcomeText: { margin:"0 0 5px 0", color:"#1e3a5f", fontSize:"18px", fontFamily:"'Segoe UI',sans-serif" },
-  welcomeEmail: { margin:0, color:"#6b7280", fontSize:"13px", fontFamily:"'Segoe UI',sans-serif" },
+  welcomeBox: { backgroundColor:"var(--vg-info-bg)", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
+  welcomeText: { margin:"0 0 5px 0", color:"var(--vg-text)", fontSize:"18px", fontFamily:"'Segoe UI',sans-serif" },
+  welcomeEmail: { margin:0, color:"var(--vg-text-muted)", fontSize:"13px", fontFamily:"'Segoe UI',sans-serif" },
 };
 
 export default App;

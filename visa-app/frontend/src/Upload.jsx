@@ -64,7 +64,7 @@ const styles = {
     background: "linear-gradient(135deg, #0f172a, #1e3a8a)",
   },
   card: {
-    background: "white",
+    background: "var(--vg-card)",
     padding: "30px",
     borderRadius: "15px",
     width: "350px",
@@ -72,7 +72,7 @@ const styles = {
     textAlign: "center",
   },
   title: {
-  color: "#1e3a8a",
+  color: "var(--vg-info-text)",
   marginBottom: "10px",
   fontSize: "28px",
   lineHeight: "1.2",

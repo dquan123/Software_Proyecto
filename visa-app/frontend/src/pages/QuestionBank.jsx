@@ -116,12 +116,12 @@ export default function QuestionBank() {
     }, 3600);
   }, []);
 
-  const fetchQuestions = useCallback(async () => {
+  const fetchQuestions = useCallback(async (signal) => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(buildApiUrl("/questions"));
+      const response = await fetch(buildApiUrl("/questions"), { signal });
       const data = await response.json();
 
       if (!response.ok) {
@@ -132,18 +132,19 @@ export default function QuestionBank() {
 
       setQuestions(Array.isArray(data.questions) ? data.questions : []);
     } catch (fetchError) {
+      if (fetchError.name === "AbortError") return;
       setError(fetchError.message || "No se pudieron cargar las preguntas.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
-  const fetchInterviewSessions = useCallback(async () => {
+  const fetchInterviewSessions = useCallback(async (signal) => {
     try {
       setSessionsLoading(true);
       setSessionsError("");
 
-      const response = await fetch(buildApiUrl("/interview-sessions"));
+      const response = await fetch(buildApiUrl("/interview-sessions"), { signal });
       const data = await response.json();
 
       if (!response.ok) {
@@ -160,18 +161,21 @@ export default function QuestionBank() {
         return sessions.find((item) => item.id === current.id) || sessions[0];
       });
     } catch (fetchError) {
+      if (fetchError.name === "AbortError") return;
       setSessionsError(
         fetchError.message || "No se pudieron cargar las entrevistas."
       );
     } finally {
-      setSessionsLoading(false);
+      if (!signal?.aborted) setSessionsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (isValidating) return;
-    fetchQuestions();
-    fetchInterviewSessions();
+    const controller = new AbortController();
+    fetchQuestions(controller.signal);
+    fetchInterviewSessions(controller.signal);
+    return () => controller.abort();
   }, [fetchInterviewSessions, fetchQuestions, isValidating]);
 
   useEffect(() => {
@@ -623,7 +627,7 @@ export default function QuestionBank() {
               <section className="question-bank-empty question-bank-empty--error">
                 <strong>No pudimos cargar el banco</strong>
                 <p>{error}</p>
-                <button type="button" onClick={fetchQuestions}>
+                <button type="button" onClick={() => fetchQuestions()}>
                   Reintentar
                 </button>
               </section>
