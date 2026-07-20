@@ -3,7 +3,6 @@ import { buildApiUrl } from "../../config/api";
 import Sidebar from "../../components/Sidebar";
 import useModoSenior from "../../hooks/useModoSenior";
 import useRequireAuth from "../../hooks/useRequireAuth";
-import useTheme from "../../hooks/useTheme";
 
 // ---------------------------------------------------------------------
 // Utilidades
@@ -104,8 +103,7 @@ const Icon = {
 export default function Perfil() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
-  const { isDark } = useTheme();
-  const s = getS(isDark);
+  const s = getS();
 
   // Estado del servidor
   const [usuario, setUsuario] = useState(null);
@@ -129,6 +127,7 @@ export default function Perfil() {
   // -----------------------------------------------------------------
   useEffect(() => {
     if (isValidating || !session?.correo) return;
+    const controller = new AbortController();
 
     const cargar = async () => {
       try {
@@ -136,7 +135,8 @@ export default function Perfil() {
         setErrorCarga("");
 
         const res = await fetch(
-          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`
+          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`,
+          { signal: controller.signal }
         );
 
         if (!res.ok) throw new Error("No se pudo cargar tu perfil.");
@@ -151,14 +151,16 @@ export default function Perfil() {
           pais:     data.usuario.pais     || "",
         });
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error(err);
         setErrorCarga(err.message || "Error al cargar el perfil.");
       } finally {
-        setCargando(false);
+        if (!controller.signal.aborted) setCargando(false);
       }
     };
 
     cargar();
+    return () => controller.abort();
   }, [isValidating, session?.correo]);
 
   // Auto-dismiss del mensaje de éxito
@@ -521,8 +523,8 @@ export default function Perfil() {
                   style={{
                     ...s.toggle,
                     backgroundColor: usuario.preferencias.notificacionesEmail
-                      ? "#10b981"
-                      : "#cbd5e1",
+                      ? "var(--vg-success)"
+                      : "var(--vg-border-mid)",
                   }}
                   onClick={handleToggleNotificaciones}
                 >
@@ -600,13 +602,13 @@ function DatoCard({ label, valor, s }) {
 // Estilos dinámicos con dark mode
 // ---------------------------------------------------------------------
 
-function getS(isDark) {
-  const bg     = isDark ? "#0b1120"  : "#f4f5f7";
-  const card   = isDark ? "#1e293b"  : "white";
-  const border = isDark ? "#334155"  : "#e2e8f0";
-  const text   = isDark ? "#f1f5f9"  : "#0f172a";
-  const muted  = isDark ? "#94a3b8"  : "#64748b";
-  const subtle = isDark ? "#111827"  : "#f8fafc";
+function getS() {
+  const bg     = "var(--vg-bg)";
+  const card   = "var(--vg-card)";
+  const border = "var(--vg-border)";
+  const text   = "var(--vg-text)";
+  const muted  = "var(--vg-text-muted)";
+  const subtle = "var(--vg-bg-alt)";
 
   return {
   layout: {
@@ -625,7 +627,7 @@ function getS(isDark) {
   },
 
   loading: { color: muted, paddingTop: "40px" },
-  error:   { color: "#dc2649", paddingTop: "40px" },
+  error:   { color: "var(--vg-danger-text)", paddingTop: "40px" },
 
   header: {
     display: "flex",
@@ -690,9 +692,9 @@ function getS(isDark) {
   },
 
   toastOk: {
-    backgroundColor: isDark ? "#064e3b" : "#ecfdf5",
-    color: isDark ? "#6ee7b7" : "#047857",
-    border: `1px solid ${isDark ? "#065f46" : "#a7f3d0"}`,
+    backgroundColor: "var(--vg-success-bg)",
+    color: "var(--vg-success)",
+    border: "1px solid var(--vg-border)",
     padding: "10px 16px",
     borderRadius: "10px",
     fontSize: "14px",
@@ -716,7 +718,7 @@ function getS(isDark) {
     boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
   },
   userCardTop: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "var(--vg-strong-surface)",
     height: "120px",
     position: "relative",
   },
@@ -732,7 +734,7 @@ function getS(isDark) {
     width: "120px",
     height: "120px",
     borderRadius: "50%",
-    backgroundColor: isDark ? "#334155" : "#cbd5e1",
+    backgroundColor: "var(--vg-border-mid)",
     border: `4px solid ${card}`,
     display: "flex",
     alignItems: "center",
@@ -742,7 +744,7 @@ function getS(isDark) {
   avatarInitials: {
     fontSize: "36px",
     fontWeight: 700,
-    color: "#94a3b8",
+    color: "var(--vg-text-muted)",
     letterSpacing: "1px",
   },
   avatarCameraBtn: {
@@ -781,7 +783,7 @@ function getS(isDark) {
     padding: "8px 10px",
     outline: "none",
     fontFamily: "inherit",
-    background: isDark ? "#0f172a" : "white",
+    background: "var(--vg-input)",
   },
   softDivider: {
     border: "none",
@@ -807,10 +809,10 @@ function getS(isDark) {
     color: text,
     fontFamily: "inherit",
     outline: "none",
-    background: isDark ? "#0f172a" : "white",
+    background: "var(--vg-input)",
   },
   locInputs: { display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: 0 },
-  placeholderText: { color: "#94a3b8", fontStyle: "italic" },
+  placeholderText: { color: "var(--vg-text-muted)", fontStyle: "italic" },
 
   rightCol: { display: "flex", flexDirection: "column", gap: "24px", minWidth: 0 },
 
@@ -833,15 +835,15 @@ function getS(isDark) {
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    backgroundColor: isDark ? "#064e3b" : "#d1fae5",
-    color: isDark ? "#6ee7b7" : "#047857",
+    backgroundColor: "var(--vg-success-bg)",
+    color: "var(--vg-success)",
     padding: "5px 12px",
     borderRadius: "999px",
     fontSize: "11px",
     fontWeight: 700,
     letterSpacing: "0.5px",
   },
-  activoDot: { width: "6px", height: "6px", backgroundColor: "#10b981", borderRadius: "50%" },
+  activoDot: { width: "6px", height: "6px", backgroundColor: "var(--vg-success)", borderRadius: "50%" },
   tramiteGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" },
   datoCard: {
     backgroundColor: subtle,
@@ -849,7 +851,7 @@ function getS(isDark) {
     borderRadius: "12px",
     padding: "14px 16px",
   },
-  datoLabel: { fontSize: "11px", fontWeight: 700, color: "#94a3b8", letterSpacing: "0.6px", marginBottom: "6px" },
+  datoLabel: { fontSize: "11px", fontWeight: 700, color: "var(--vg-text-muted)", letterSpacing: "0.6px", marginBottom: "6px" },
   datoValor: { fontSize: "16px", fontWeight: 700, color: text, lineHeight: 1.3 },
   estadoCard: {
     backgroundColor: subtle,
@@ -861,7 +863,7 @@ function getS(isDark) {
     alignItems: "center",
     gap: "12px",
   },
-  etapaText: { color: "#e11d48", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" },
+  etapaText: { color: "var(--vg-red)", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" },
 
   prefCard: {
     backgroundColor: card,
@@ -903,7 +905,7 @@ function getS(isDark) {
     width: "22px",
     height: "22px",
     borderRadius: "50%",
-    backgroundColor: "white",
+    backgroundColor: "var(--vg-card)",
     boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
     transition: "transform 0.2s",
   },
@@ -925,13 +927,13 @@ function getS(isDark) {
     display: "flex",
     gap: "12px",
     alignItems: "flex-start",
-    backgroundColor: isDark ? "#1c1a0f" : "#fef9e7",
-    border: `1px solid ${isDark ? "#92400e" : "#fde68a"}`,
+    backgroundColor: "var(--vg-amber-bg)",
+    border: "1px solid var(--vg-amber-border)",
     borderRadius: "12px",
     padding: "14px 18px",
   },
   noticeIcon: { flexShrink: 0, paddingTop: "1px" },
-  noticeText: { margin: 0, color: isDark ? "#fcd34d" : "#92400e", lineHeight: 1.5 },
+  noticeText: { margin: 0, color: "var(--vg-amber-text)", lineHeight: 1.5 },
 
   helpFab: {
     position: "fixed",
@@ -940,7 +942,7 @@ function getS(isDark) {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    backgroundColor: "#0f172a",
+    backgroundColor: "var(--vg-strong-surface)",
     color: "white",
     border: "none",
     borderRadius: "999px",

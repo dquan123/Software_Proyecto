@@ -200,7 +200,14 @@ function DocumentFilePreview({ doc, preview, file, onOpen }) {
           type="button"
           onClick={onOpen}
         >
-          <img src={previewUrl} alt={`Vista previa de ${doc.title}`} />
+          <img
+            src={previewUrl}
+            alt={`Vista previa de ${doc.title}`}
+            loading="lazy"
+            decoding="async"
+            width="640"
+            height="360"
+          />
         </button>
       )}
 

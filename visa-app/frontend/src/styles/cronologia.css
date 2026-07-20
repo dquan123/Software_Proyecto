@@ -83,7 +83,7 @@
 
 .cron-nodo--done {
   background: #10b981;
-  box-shadow: 0 0 0 3px #ffffff, 0 0 0 5px #10b981;
+  box-shadow: 0 0 0 3px var(--vg-card), 0 0 0 5px #10b981;
 }
 
 .cron-nodo--actual {
@@ -203,7 +203,7 @@
 }
 
 .cron-badge-progreso {
-  background: #fce7f3;
+  background: var(--vg-red-light);
   color: #be185d;
   padding: 5px 12px;
   border-radius: 99px;

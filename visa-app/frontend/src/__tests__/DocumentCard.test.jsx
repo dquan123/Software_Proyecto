@@ -18,7 +18,6 @@ const passportDoc = {
 
 describe("DocumentCard", () => {
   it("rechaza archivos que no cumplen el tipo requerido", async () => {
-    const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     const { container } = render(

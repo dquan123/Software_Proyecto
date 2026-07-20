@@ -5,19 +5,19 @@ describe("buildApiUrl", () => {
     vi.resetModules();
     vi.stubEnv("VITE_API_URL", "");
 
-    const { buildApiUrl } = await import("../config/api");
+    const { API_BASE_URL, buildApiUrl } = await import("../config/api");
 
-    expect(buildApiUrl("/login")).toBe("/login");
-    expect(buildApiUrl("login")).toBe("/login");
+    expect(buildApiUrl("/login")).toBe(`${API_BASE_URL}/login`);
+    expect(buildApiUrl("login")).toBe(`${API_BASE_URL}/login`);
   });
 
   it("elimina diagonales finales de VITE_API_URL", async () => {
     vi.resetModules();
-    vi.stubEnv("VITE_API_URL", "http://localhost:3000///");
+    vi.stubEnv("VITE_API_URL", "https://api.example.test///");
 
     const { API_BASE_URL, buildApiUrl } = await import("../config/api");
 
-    expect(API_BASE_URL).toBe("http://localhost:3000");
-    expect(buildApiUrl("questions")).toBe("http://localhost:3000/questions");
+    expect(API_BASE_URL).toBe("https://api.example.test");
+    expect(buildApiUrl("questions")).toBe("https://api.example.test/questions");
   });
 });
