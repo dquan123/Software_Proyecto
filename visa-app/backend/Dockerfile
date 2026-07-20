@@ -4,6 +4,9 @@ FROM node:18
 # Carpeta de trabajo dentro del contenedor
 WORKDIR /app
 
+# Los despliegues en contenedor deben usar R2 y nunca el fallback local.
+ENV NODE_ENV=production
+
 # Copiar archivos
 COPY package*.json ./
 
