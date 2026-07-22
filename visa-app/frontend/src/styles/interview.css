@@ -4,14 +4,17 @@
   margin-left: calc((100% - 100vw) / 2);
   background: var(--vg-bg-alt);
   color: var(--vg-text);
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--vg-font);
   text-align: left;
 }
 
 .interview-main {
   min-height: 100vh;
+  width: calc(100% - var(--vg-sidebar-w));
+  max-width: var(--vg-content-max);
   margin-left: var(--vg-sidebar-w);
-  padding: 44px clamp(28px, 4vw, 68px) 64px;
+  margin-right: auto;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   box-sizing: border-box;
 }
 
@@ -26,16 +29,16 @@
 }
 
 .interview-header {
-  padding-bottom: 30px;
-  margin-bottom: 54px;
-  border-bottom: 2px solid #e3eaf2;
+  padding-bottom: var(--vg-space-4);
+  margin-bottom: var(--vg-space-5);
+  border-bottom: 1px solid var(--vg-border);
 }
 
 .interview-header h1 {
   margin: 0 0 16px;
   color: var(--vg-text);
-  font-size: 42px;
-  line-height: 1.05;
+  font-size: var(--vg-page-title);
+  line-height: var(--vg-line-heading);
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -43,9 +46,9 @@
 .interview-header p {
   margin: 0;
   color: var(--vg-text-muted);
-  font-size: 20px;
-  line-height: 1.5;
-  font-weight: 700;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
+  font-weight: 500;
 }
 
 .interview-hero,
@@ -65,9 +68,9 @@
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 36px;
   align-items: center;
-  min-height: 360px;
-  padding: 56px;
-  margin-bottom: 64px;
+  min-height: 320px;
+  padding: var(--vg-space-6);
+  margin-bottom: var(--vg-space-7);
 }
 
 .interview-pill {
@@ -97,8 +100,8 @@
 .interview-hero h2 {
   margin: 28px 0 22px;
   color: #ffffff;
-  font-size: 44px;
-  line-height: 1.08;
+  font-size: 36px;
+  line-height: var(--vg-line-heading);
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -107,25 +110,25 @@
   max-width: 720px;
   margin: 0 0 34px;
   color: #cbd5e1;
-  font-size: 20px;
-  line-height: 1.55;
-  font-weight: 700;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
+  font-weight: 600;
 }
 
 .interview-start-button {
   display: inline-flex;
-  min-height: 70px;
+  min-height: 52px;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--vg-space-2);
   border: 0;
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--vg-card);
   color: var(--vg-text);
   cursor: pointer;
-  padding: 0 36px;
+  padding: 0 var(--vg-space-4);
   font: inherit;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   box-shadow: 0 16px 26px rgba(2, 6, 23, 0.12);
   transition:
@@ -139,14 +142,14 @@
 }
 
 .interview-start-button svg {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   color: #ff2d61;
 }
 
 .interview-start-button span {
   color: #94a3b8;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .interview-hero__art {
@@ -183,7 +186,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: var(--vg-space-3);
 }
 
 .emotional-heading svg {
@@ -195,7 +198,7 @@
 .emotional-heading h2 {
   margin: 0;
   color: var(--vg-text);
-  font-size: 36px;
+  font-size: var(--vg-section-title);
   line-height: 1.12;
   font-weight: 900;
   letter-spacing: 0;
@@ -203,26 +206,26 @@
 
 .emotional-section > p {
   max-width: 1120px;
-  margin: 0 0 40px;
+  margin: 0 0 var(--vg-space-5);
   color: var(--vg-text-muted);
-  font-size: 22px;
-  line-height: 1.55;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
   font-weight: 500;
 }
 
 .prep-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
+  gap: var(--vg-space-4);
 }
 
 .prep-card {
-  min-height: 250px;
+  min-height: 220px;
   border: 1px solid var(--vg-border);
-  border-radius: 22px;
+  border-radius: var(--vg-card-radius);
   background: var(--vg-card);
-  padding: 34px;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.07);
+  padding: var(--vg-card-padding);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .prep-card--yellow {
@@ -235,7 +238,7 @@
   height: 60px;
   align-items: center;
   justify-content: center;
-  margin-bottom: 28px;
+  margin-bottom: var(--vg-space-4);
   border-radius: 18px;
 }
 
@@ -262,7 +265,7 @@
 .prep-card h3 {
   margin: 0 0 14px;
   color: var(--vg-text);
-  font-size: 27px;
+  font-size: var(--vg-card-title);
   line-height: 1.14;
   font-weight: 900;
   letter-spacing: 0;
@@ -271,9 +274,9 @@
 .prep-card p {
   margin: 0;
   color: var(--vg-text-muted);
-  font-size: 19px;
-  line-height: 1.55;
-  font-weight: 600;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
+  font-weight: 500;
 }
 
 .feedback-entry-section {
@@ -386,15 +389,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 36px;
-  padding: 46px 44px;
-  margin-bottom: 54px;
+  padding: var(--vg-space-6);
+  margin-bottom: var(--vg-space-6);
 }
 
 .sim-hero h1 {
   margin: 24px 0 14px;
   color: #ffffff;
-  font-size: 56px;
-  line-height: 1;
+  font-size: var(--vg-page-title);
+  line-height: var(--vg-line-heading);
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -405,13 +408,13 @@
 
 .sim-hero h1 span {
   color: #90a0b8;
-  font-size: 36px;
+  font-size: var(--vg-section-title);
 }
 
 .sim-hero p {
   margin: 0;
   color: #cbd5e1;
-  font-size: 21px;
+  font-size: var(--vg-body-size);
   font-weight: 700;
 }
 
@@ -441,11 +444,11 @@
 .question-card {
   position: relative;
   border: 2px solid var(--vg-border);
-  border-radius: 24px;
+  border-radius: var(--vg-card-radius);
   background: var(--vg-card);
-  padding: 76px 54px 34px;
+  padding: 64px var(--vg-card-padding) var(--vg-card-padding);
   margin-bottom: 46px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .question-card__speaker {
@@ -477,7 +480,7 @@
   max-width: 1040px;
   margin: 0 0 30px;
   color: var(--vg-text);
-  font-size: 42px;
+  font-size: var(--vg-section-title);
   line-height: 1.18;
   font-weight: 900;
   letter-spacing: 0;
@@ -879,14 +882,14 @@
 .feedback-status-card h2 {
   margin: 8px 0 10px;
   color: var(--vg-text);
-  font-size: 30px;
+  font-size: var(--vg-section-title);
   font-weight: 900;
 }
 
 .feedback-status-card p {
   margin: 0;
   color: var(--vg-text-muted);
-  font-size: 17px;
+  font-size: var(--vg-body-size);
   line-height: 1.55;
   font-weight: 650;
 }
@@ -1066,22 +1069,22 @@
 
 .interview-main--senior .interview-header h1,
 .interview-main--senior .interview-hero h2 {
-  font-size: 50px;
+  font-size: 46px;
 }
 
 .interview-main--senior .interview-header p,
 .interview-main--senior .interview-hero p,
 .interview-main--senior .emotional-section > p {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .interview-main--senior .prep-card h3 {
-  font-size: 31px;
+  font-size: 24px;
 }
 
 .interview-main--senior .prep-card p,
 .interview-main--senior .analysis-card li {
-  font-size: 22px;
+  font-size: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -1108,7 +1111,9 @@
 
 @media (max-width: 760px) {
   .interview-main {
-    padding: 30px 22px 46px;
+    width: 100%;
+    margin-left: 0;
+    padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   }
 
   .interview-hero,
@@ -1121,7 +1126,7 @@
   .interview-hero h2,
   .sim-hero h1,
   .question-card h2 {
-    font-size: 34px;
+    font-size: var(--vg-section-title);
   }
 
 }

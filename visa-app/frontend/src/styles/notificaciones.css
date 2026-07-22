@@ -5,7 +5,7 @@
 .notif-main {
   background: var(--vg-bg);
   padding: 36px 48px 64px;
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--vg-font);
   box-sizing: border-box;
 }
 

@@ -1,25 +1,30 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  Accessibility,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  FileText,
+  Folder,
+  LayoutGrid,
+  MessageSquare,
+  Moon,
+  Sun,
+  Users,
+} from "lucide-react";
 import { buildApiUrl } from "../config/api";
 import useTheme from "../hooks/useTheme";
 import TopActions from "./TopActions";
+import VisaGuideLogo from "./VisaGuideLogo";
 
-function SidebarLogo() {
-  return (
-    <div className="vg-sidebar-logo" style={s.logoContainer}>
-      <div style={s.logoIcon} aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-      </div>
-      <span className="vg-sidebar-label" style={s.logoText}>
-        Visa<span style={s.logoTextAccent}>Guide</span>
-      </span>
-    </div>
-  );
-}
+const menuItems = [
+  { id: "inicio", label: "Inicio", icon: <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />, path: "/dashboard" },
+  { id: "ds160", label: "DS-160", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" />, path: "/ds160" },
+  { id: "cronologia", label: "Cronología", icon: <Clock3 size={20} strokeWidth={2} aria-hidden="true" />, path: "/cronologia" },
+  { id: "documentos", label: "Documentos", icon: <Folder size={20} strokeWidth={2} aria-hidden="true" />, path: "/documents" },
+  { id: "entrevista", label: "Entrevista", icon: <Users size={20} strokeWidth={2} aria-hidden="true" />, path: "/entrevista" },
+  { id: "chat", label: "Chat con asesor", icon: <MessageSquare size={20} strokeWidth={2} aria-hidden="true" />, path: "/chat" },
+];
 
 export default function Sidebar({ currentPage }) {
   const [modoSenior, setModoSenior] = useState(
@@ -102,29 +107,6 @@ export default function Sidebar({ currentPage }) {
     window.dispatchEvent(new CustomEvent("modoSeniorChange", { detail: next }));
   };
 
-  const menuItems = [
-    { id: "inicio",         label: "Inicio",           icon: "grid",    path: "/dashboard" },
-    { id: "ds160",          label: "DS-160",            icon: "file",    path: "/ds160" },
-    { id: "cronologia",     label: "Cronología",        icon: "clock",   path: "/cronologia" },
-    { id: "documentos",     label: "Documentos",        icon: "folder",  path: "/documents" },
-    { id: "entrevista",     label: "Entrevista",        icon: "users",   path: "/entrevista" },
-    { id: "chat",           label: "Chat con asesor",   icon: "message", path: "/chat" },
-  ];
-
-  const icons = {
-    grid: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
-    info: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>,
-    file: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
-    clock: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>,
-    folder: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>,
-    users: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-    bell: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
-    user: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-    message: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-    sun: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-    moon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-  };
-
   const getInitials = (nombre) => {
     if (!nombre) return "US";
     const parts = nombre.split(" ");
@@ -198,7 +180,11 @@ export default function Sidebar({ currentPage }) {
         onFocusCapture={() => setAutoExpandDisabled(false)}
       >
         {/* Logo */}
-        <SidebarLogo />
+        <VisaGuideLogo
+          variant="compact"
+          className="vg-sidebar-logo"
+          textClassName="vg-sidebar-label"
+        />
 
         <button
           type="button"
@@ -208,7 +194,9 @@ export default function Sidebar({ currentPage }) {
           aria-label={desktopExpanded ? "Contraer barra lateral" : "Expandir barra lateral"}
           onClick={() => setDesktopExpanded((expanded) => !expanded)}
         >
-          <span aria-hidden="true">{desktopExpanded ? "‹" : "›"}</span>
+          {desktopExpanded
+            ? <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            : <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />}
         </button>
 
         {/* Nav */}
@@ -225,7 +213,7 @@ export default function Sidebar({ currentPage }) {
                     style={{ ...s.menuItem, ...(isActive ? s.menuItemActive : {}) }}
                     onClick={collapseSidebar}
                   >
-                    <span style={s.menuIcon}>{icons[item.icon]}</span>
+                    <span style={s.menuIcon}>{item.icon}</span>
                     <span className="vg-sidebar-label" style={{ ...s.menuText, fontSize: modoSenior ? "17px" : "14px" }}>
                       {item.label}
                     </span>
@@ -244,7 +232,11 @@ export default function Sidebar({ currentPage }) {
           {/* Dark mode toggle */}
           <div style={s.themeRow}>
             <div style={s.themeLeft}>
-              <span style={s.themeIcon}>{isDark ? icons.moon : icons.sun}</span>
+              <span style={s.themeIcon}>
+                {isDark
+                  ? <Moon size={16} strokeWidth={2} aria-hidden="true" />
+                  : <Sun size={16} strokeWidth={2} aria-hidden="true" />}
+              </span>
               <span className="vg-sidebar-label" style={{ ...s.themeText, fontSize: modoSenior ? "17px" : "14px" }}>
                 {isDark ? "Modo oscuro" : "Modo claro"}
               </span>
@@ -263,9 +255,7 @@ export default function Sidebar({ currentPage }) {
           <div style={s.modoSenior}>
             <div style={s.modoSeniorLeft}>
               <span style={s.modoSeniorIcon}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>
-                </svg>
+                <Accessibility size={16} strokeWidth={2} aria-hidden="true" />
               </span>
               <span className="vg-sidebar-label" style={{ ...s.modoSeniorText, fontSize: modoSenior ? "17px" : "14px" }}>
                 Modo Senior
@@ -325,7 +315,7 @@ const s = {
     backgroundColor: "#0f172a",
     display: "flex",
     flexDirection: "column",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     position: "fixed",
     left: 0,
     top: 0,
@@ -334,11 +324,6 @@ const s = {
     overflowY: "auto",
     // Mobile: hidden by default (CSS handles transform via media query)
   },
-  logoContainer: { display:"flex", alignItems:"center", gap:"10px", padding:"20px 20px 28px" },
-  logoIcon: { width:"36px", height:"36px", backgroundColor:"#dc2649", borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center" },
-  logoText: { fontSize:"20px", fontWeight:"600", color:"white" },
-  logoTextAccent: { color:"#dc2649" },
-
   nav: { flex:1, padding:"0 12px" },
   menuLabel: { fontSize:"11px", fontWeight:"600", color:"#64748b", letterSpacing:"0.5px", padding:"0 12px", marginBottom:"12px" },
   menuList: { listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:"4px" },
@@ -370,5 +355,5 @@ const s = {
   userInfo: { flex:1 },
   userName: { color:"white", fontWeight:"600", margin:0 },
   userRole: { color:"#64748b", margin:"2px 0 0 0" },
-  logoutBtn: { width:"100%", padding:"10px", marginTop:"10px", backgroundColor:"transparent", border:"1px solid #334155", borderRadius:"8px", color:"#94a3b8", fontSize:"13px", cursor:"pointer", fontFamily:"'Segoe UI', sans-serif" },
+  logoutBtn: { width:"100%", padding:"10px", marginTop:"10px", backgroundColor:"transparent", border:"1px solid #334155", borderRadius:"8px", color:"#94a3b8", fontSize:"13px", cursor:"pointer", fontFamily:"var(--vg-font)" },
 };

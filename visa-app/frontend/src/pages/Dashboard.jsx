@@ -130,10 +130,10 @@ export default function Dashboard() {
 
         {/* GREETING */}
         <header className="dash-greeting">
-          <h1 style={{ fontSize: modoSenior ? "36px" : "28px" }}>
+          <h1 style={{ fontSize: modoSenior ? "44px" : "var(--vg-page-title)" }}>
             ¡Hola, {firstName}!
           </h1>
-          <p style={{ fontSize: modoSenior ? "17px" : "14px" }}>
+          <p style={{ fontSize: modoSenior ? "19px" : "var(--vg-body-size)" }}>
             Continuemos con tu solicitud de visa {tipoVisa()}.
           </p>
         </header>
@@ -146,7 +146,7 @@ export default function Dashboard() {
             <section className="dash-progress-card">
               <div className="dash-progress-body">
                 <div className="dash-progress-head">
-                  <h2 style={{ fontSize: modoSenior ? "21px" : "18px" }}>Progreso general</h2>
+                  <h2 style={{ fontSize: modoSenior ? "24px" : "var(--vg-card-title)" }}>Progreso general</h2>
                 </div>
                 <p className="dash-progress-sub" style={{ fontSize: modoSenior ? "15px" : "13px" }}>
                   Sigue estas etapas para completar tu proceso.

@@ -644,7 +644,7 @@ const siguienteSeccion = () => {
   if (authValidating || cargando) return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <main id="main-content" tabIndex="-1" style={st.page}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={st.page}>
         <div style={st.headerCard}>
           <p style={{ textAlign: "center", color: "var(--vg-text-muted)", margin: 0 }}>Cargando formulario...</p>
         </div>
@@ -655,14 +655,14 @@ const siguienteSeccion = () => {
   return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <main id="main-content" tabIndex="-1" style={st.page}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={st.page}>
 
         {/* HEADER */}
         <div style={st.headerCard}>
           <div style={st.headerRow}>
             <div>
-              <h1 style={{ ...st.titulo, fontSize: modoSenior ? "28px" : "22px" }}>Formulario DS-160</h1>
-              <p style={{ ...st.subtitulo, fontSize: modoSenior ? "15px" : "13px" }}>
+              <h1 style={{ ...st.titulo, fontSize: modoSenior ? "40px" : "var(--vg-page-title)" }}>Formulario DS-160</h1>
+              <p style={{ ...st.subtitulo, fontSize: modoSenior ? "18px" : "var(--vg-body-size)" }}>
                 Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
               </p>
             </div>
@@ -782,8 +782,8 @@ function getSt() {
     flex: 1,
     minHeight: "100vh",
     background: bg,
-    padding: "28px 32px",
-    fontFamily: "'Segoe UI', sans-serif",
+    padding: "var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom)",
+    fontFamily: "var(--vg-font)",
     boxSizing: "border-box",
   },
 
@@ -819,7 +819,7 @@ function getSt() {
     color: muted,
     cursor: "pointer",
     boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     flexShrink: 0,
   },
 
@@ -871,7 +871,7 @@ function getSt() {
     boxSizing: "border-box",
     outline: "none",
     transition: "border-color 0.2s",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     color: text,
     background: "var(--vg-input)",
   },
@@ -900,7 +900,7 @@ function getSt() {
     background: "var(--vg-input)",
     cursor: "pointer",
     transition: "all 0.15s",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     color: text,
     fontWeight: 500,
   },
@@ -923,7 +923,7 @@ function getSt() {
     borderRadius: "99px",
     cursor: "pointer",
     transition: "all 0.2s",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     border: "none",
   },
 

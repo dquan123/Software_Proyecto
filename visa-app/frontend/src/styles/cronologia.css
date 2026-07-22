@@ -4,29 +4,29 @@
 
 .cron-main {
   background: var(--vg-bg);
-  padding: 40px 56px 64px;
-  font-family: "Segoe UI", sans-serif;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
+  font-family: var(--vg-font);
   box-sizing: border-box;
 }
 
 .cron-header {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .cron-titulo {
   margin: 0 0 12px 0;
-  font-size: 36px;
+  font-size: var(--vg-page-title);
   font-weight: 800;
   color: var(--vg-text);
-  line-height: 1.1;
+  line-height: var(--vg-line-heading);
 }
 .cron-titulo--senior { font-size: 44px; }
 
 .cron-subtitulo {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--vg-body-size);
   color: var(--vg-text-muted);
-  line-height: 1.55;
+  line-height: var(--vg-line-body);
   max-width: 700px;
 }
 .cron-subtitulo--senior { font-size: 18px; }
@@ -34,7 +34,7 @@
 .cron-divisor {
   border: none;
   border-top: 1px solid var(--vg-border);
-  margin: 24px 0 36px;
+  margin: var(--vg-space-4) 0 var(--vg-space-5);
 }
 
 /* ── Timeline list ── */
@@ -124,9 +124,9 @@
    TARJETA: COMPLETADA
    ══════════════════════════════ */
 .cron-card {
-  border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: var(--vg-shadow-sm);
+  border-radius: var(--vg-card-radius);
+  padding: var(--vg-card-padding);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .cron-card--done {
@@ -145,7 +145,7 @@
 
 .cron-card__title {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--vg-card-title);
   font-weight: 700;
   color: var(--vg-text);
   line-height: 1.3;
@@ -162,7 +162,7 @@
 
 .cron-card__desc {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--vg-small-size);
   color: var(--vg-text-muted);
   line-height: 1.55;
 }
@@ -226,7 +226,7 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--vg-font);
   transition: opacity 0.15s;
 }
 .cron-btn-accion:hover { opacity: 0.88; }
@@ -286,10 +286,10 @@
    ══════════════════════════════ */
 @media (max-width: 768px) {
   .cron-main {
-    padding: 24px 20px 48px;
+    padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   }
 
-  .cron-titulo { font-size: 28px; }
+  .cron-titulo { font-size: var(--vg-page-title); }
 
   .cron-card--actual {
     padding: 24px 20px 20px;
