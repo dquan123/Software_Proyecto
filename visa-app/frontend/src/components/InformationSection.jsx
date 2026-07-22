@@ -15,8 +15,8 @@ export default function InformationSection({ modoSenior = false }) {
   return (
     <section id="informacion" className="info-section" aria-labelledby="information-title">
       <header className="info-section__header">
-        <h2 id="information-title" style={{ fontSize: modoSenior ? "40px" : "32px" }}>Información del proceso</h2>
-        <p style={{ fontSize: modoSenior ? "18px" : "14px" }}>
+        <h2 id="information-title" style={{ fontSize: modoSenior ? "36px" : "var(--vg-section-title)" }}>Información del proceso</h2>
+        <p style={{ fontSize: modoSenior ? "19px" : "var(--vg-body-size)" }}>
           Conoce los detalles de cada etapa para obtener tu visa B1/B2 sin contratiempos.
         </p>
       </header>
@@ -30,8 +30,8 @@ export default function InformationSection({ modoSenior = false }) {
           </svg>
         </span>
         <div>
-          <h3 style={{ fontSize: modoSenior ? "24px" : "20px" }}>{HIGHLIGHT.titulo}</h3>
-          <p style={{ fontSize: modoSenior ? "17px" : "15px" }}>{HIGHLIGHT.texto}</p>
+          <h3 style={{ fontSize: modoSenior ? "24px" : "var(--vg-card-title)" }}>{HIGHLIGHT.titulo}</h3>
+          <p style={{ fontSize: modoSenior ? "18px" : "var(--vg-body-size)" }}>{HIGHLIGHT.texto}</p>
         </div>
       </article>
 
@@ -40,9 +40,9 @@ export default function InformationSection({ modoSenior = false }) {
           <article className="info-card" key={etapa.numero}>
             <div className="info-card__header">
               <span aria-hidden="true">{etapa.numero}</span>
-              <h3 style={{ fontSize: modoSenior ? "20px" : "17px" }}>{etapa.titulo}</h3>
+              <h3 style={{ fontSize: modoSenior ? "22px" : "var(--vg-card-title)" }}>{etapa.titulo}</h3>
             </div>
-            <p style={{ fontSize: modoSenior ? "16px" : "14px" }}>{etapa.descripcion}</p>
+            <p style={{ fontSize: modoSenior ? "18px" : "var(--vg-body-size)" }}>{etapa.descripcion}</p>
           </article>
         ))}
       </div>

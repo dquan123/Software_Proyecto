@@ -97,7 +97,7 @@ export default function Notificaciones() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="notificaciones" />
-        <main id="main-content" tabIndex="-1" style={s.main}>
+        <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
           <p style={{ color: "var(--vg-text-muted)", paddingTop: "40px", fontSize: fs(14) }}>
             Verificando sesión...
           </p>
@@ -109,11 +109,11 @@ export default function Notificaciones() {
   return (
     <div style={s.layout}>
       <Sidebar currentPage="notificaciones" />
-      <main id="main-content" tabIndex="-1" style={s.main}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
         {/* Encabezado */}
         <div style={s.header}>
           <div>
-            <h1 style={{ ...s.titulo, fontSize: fs(22) }}>Notificaciones</h1>
+            <h1 style={{ ...s.titulo, fontSize: modoSenior ? "44px" : "var(--vg-page-title)" }}>Notificaciones</h1>
             {noLeidas > 0 && (
               <p style={{ ...s.subtitulo, fontSize: fs(13) }}>
                 Tienes{" "}
@@ -224,19 +224,21 @@ const s = {
     display: "flex",
     minHeight: "100vh",
     backgroundColor: "var(--vg-bg)",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
   },
   main: {
     marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
-    padding: "32px",
-    maxWidth: "860px",
+    padding: "var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom)",
+    maxWidth: "var(--vg-content-max)",
   },
   header: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: "28px",
+    paddingBottom: "24px",
+    marginBottom: "32px",
+    borderBottom: "1px solid var(--vg-border)",
     flexWrap: "wrap",
     gap: "12px",
   },
@@ -268,7 +270,7 @@ const s = {
     padding: "8px 16px",
     cursor: "pointer",
     fontWeight: "500",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
   },
   centrado: {
     display: "flex",
@@ -292,7 +294,7 @@ const s = {
     padding: "6px 14px",
     cursor: "pointer",
     fontSize: "13px",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
   },
   vacio: {
     display: "flex",
@@ -364,7 +366,7 @@ const s = {
     padding: "6px 12px",
     color: "var(--vg-text-muted)",
     cursor: "pointer",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     whiteSpace: "nowrap",
   },
 };

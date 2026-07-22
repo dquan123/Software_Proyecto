@@ -63,6 +63,31 @@
   /* ---- Tipografía ---- */
   --vg-font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
 
+  /* ---- Shared authenticated-page system ---- */
+  --vg-content-max: 1440px;
+  --vg-page-pad-x: clamp(24px, 3.5vw, 48px);
+  --vg-page-pad-top: 40px;
+  --vg-page-pad-bottom: 64px;
+  --vg-page-title: clamp(32px, 3vw, 40px);
+  --vg-section-title: clamp(24px, 2vw, 28px);
+  --vg-card-title: 20px;
+  --vg-body-size: 16px;
+  --vg-small-size: 14px;
+  --vg-control-size: 14px;
+  --vg-line-heading: 1.15;
+  --vg-line-body: 1.55;
+  --vg-space-1: 8px;
+  --vg-space-2: 12px;
+  --vg-space-3: 16px;
+  --vg-space-4: 24px;
+  --vg-space-5: 32px;
+  --vg-space-6: 40px;
+  --vg-space-7: 48px;
+  --vg-space-8: 64px;
+  --vg-card-padding: 24px;
+  --vg-card-radius: 18px;
+  --vg-card-shadow: var(--vg-shadow-sm);
+
   font-family: var(--vg-font);
   font-size: 16px;
   line-height: 1.5;
@@ -123,6 +148,10 @@ body {
   font-family: var(--vg-font);
   color: var(--vg-text);
   overflow-wrap: anywhere;
+}
+
+main#main-content {
+  font-family: var(--vg-font);
 }
 
 #root {
@@ -234,10 +263,22 @@ img, video, canvas, svg {
 .vg-main {
   margin-left: var(--vg-sidebar-w);
   flex: 1;
+  width: calc(100% - var(--vg-sidebar-w));
+  max-width: var(--vg-content-max);
+  margin-right: auto;
   min-height: 100vh;
   transition: margin-left 0.3s ease;
   min-width: 0;
   max-width: 100%;
+}
+
+.vg-authenticated-page {
+  width: calc(100% - var(--vg-sidebar-w));
+  max-width: var(--vg-content-max) !important;
+  margin-right: auto;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom) !important;
+  box-sizing: border-box;
+  font-family: var(--vg-font) !important;
 }
 
 /* ══════════════════════════════
@@ -295,6 +336,31 @@ img, video, canvas, svg {
 
 .vg-sidebar-logo {
   flex-shrink: 0;
+  gap: 10px;
+  padding: 20px 20px 28px;
+}
+
+.vg-sidebar-logo .visaguide-logo__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #dc2649;
+  color: #fff;
+}
+
+.vg-sidebar-logo .visaguide-logo__mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.vg-sidebar-logo .visaguide-logo__name {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.vg-sidebar-logo .visaguide-logo__accent {
+  color: #dc2649;
 }
 
 .vg-sidebar-user-link {
@@ -524,6 +590,12 @@ body.vg-has-top-actions main#main-content {
 @media (max-width: 768px) {
   :root {
     --vg-sidebar-w: 0px;
+    --vg-page-pad-x: 18px;
+    --vg-page-pad-top: 24px;
+    --vg-page-pad-bottom: 40px;
+    --vg-page-title: 32px;
+    --vg-section-title: 24px;
+    --vg-card-padding: 20px;
   }
 
   .vg-hamburger {

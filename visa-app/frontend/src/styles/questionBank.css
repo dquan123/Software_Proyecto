@@ -4,15 +4,15 @@
   margin-left: calc((100% - 100vw) / 2);
   background: linear-gradient(180deg, var(--vg-bg) 0%, var(--vg-bg-alt) 100%);
   color: var(--vg-text);
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--vg-font);
   text-align: left;
 }
 
 .question-bank-main {
   min-height: 100vh;
-  width: min(1500px, 100%);
+  width: min(var(--vg-content-max), 100%);
   margin: 0 auto;
-  padding: 42px clamp(28px, 4vw, 64px) 58px;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   box-sizing: border-box;
 }
 
@@ -20,9 +20,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 28px;
-  padding-bottom: 30px;
-  margin-bottom: 26px;
+  gap: var(--vg-space-4);
+  padding-bottom: var(--vg-space-4);
+  margin-bottom: var(--vg-space-5);
   border-bottom: 1px solid #dbe5ef;
 }
 
@@ -45,8 +45,8 @@
 .question-bank-header h1 {
   margin: 0 0 12px;
   color: var(--vg-text);
-  font-size: 42px;
-  line-height: 1.05;
+  font-size: var(--vg-page-title);
+  line-height: var(--vg-line-heading);
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -55,9 +55,9 @@
   max-width: 760px;
   margin: 0;
   color: var(--vg-text-muted);
-  font-size: 18px;
-  line-height: 1.55;
-  font-weight: 650;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
+  font-weight: 500;
 }
 
 .question-bank-header button,
@@ -122,10 +122,10 @@
 
 .question-bank-stats article {
   border: 1px solid var(--vg-border);
-  border-radius: 18px;
+  border-radius: var(--vg-card-radius);
   background: rgba(255, 255, 255, 0.82);
-  padding: 22px;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  padding: var(--vg-card-padding);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .question-bank-stats span,
@@ -977,12 +977,12 @@
 }
 
 .question-bank-main--senior .question-bank-header h1 {
-  font-size: 50px;
+  font-size: 46px;
 }
 
 .question-bank-main--senior .question-bank-header p,
 .question-bank-main--senior .question-card-admin h3 {
-  font-size: 22px;
+  font-size: 19px;
 }
 
 @media (max-width: 1180px) {
@@ -1005,7 +1005,7 @@
 
 @media (max-width: 780px) {
   .question-bank-main {
-    padding: 28px 18px 42px;
+    padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   }
 
   .question-bank-header,
@@ -1015,7 +1015,7 @@
   }
 
   .question-bank-header h1 {
-    font-size: 34px;
+    font-size: var(--vg-page-title);
   }
 
   .question-bank-stats,

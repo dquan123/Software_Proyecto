@@ -270,7 +270,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main id="main-content" tabIndex="-1" style={s.main}>
+        <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
           <p style={s.loading}>Cargando perfil…</p>
         </main>
       </div>
@@ -281,7 +281,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main id="main-content" tabIndex="-1" style={s.main}>
+        <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
           <p style={s.error}>{errorCarga || "No se pudo cargar el perfil."}</p>
         </main>
       </div>
@@ -295,14 +295,14 @@ export default function Perfil() {
     <div style={s.layout}>
       <Sidebar currentPage="perfil" />
 
-      <main id="main-content" tabIndex="-1" style={s.main}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
         {/* ====================== HEADER ====================== */}
         <header style={s.header}>
           <div>
-            <h1 style={{ ...s.title, fontSize: fz("36px", "44px") }}>
+            <h1 style={{ ...s.title, fontSize: modoSenior ? "44px" : "var(--vg-page-title)" }}>
               Perfil de Usuario
             </h1>
-            <p style={{ ...s.subtitle, fontSize: fz("15px", "18px") }}>
+            <p style={{ ...s.subtitle, fontSize: modoSenior ? "19px" : "var(--vg-body-size)" }}>
               Gestiona tu información personal y los detalles de tu trámite.
             </p>
           </div>
@@ -615,13 +615,13 @@ function getS() {
     display: "flex",
     minHeight: "100vh",
     backgroundColor: bg,
-    fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+    fontFamily: "var(--vg-font)",
   },
 
   main: {
     marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
-    padding: "40px 48px 80px",
+    padding: "var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom)",
     color: text,
     position: "relative",
   },
@@ -634,7 +634,7 @@ function getS() {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "20px",
-    marginBottom: "16px",
+    marginBottom: "0",
   },
   title: {
     margin: 0,
@@ -688,7 +688,7 @@ function getS() {
   divider: {
     border: "none",
     borderTop: `1px solid ${border}`,
-    margin: "20px 0 28px",
+    margin: "24px 0 32px",
   },
 
   toastOk: {

@@ -15,7 +15,7 @@ body,
   min-height: 100vh;
   width: 100%;
   background: var(--vg-bg-alt);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--vg-font);
   color: var(--vg-text);
   display: flex;
   flex-direction: column;
@@ -29,8 +29,8 @@ body,
 /* HEADER */
 .profile-header {
   width: 100%;
-  max-width: 1100px;
-  padding: 20px 40px;
+  max-width: var(--vg-content-max);
+  padding: var(--vg-space-4) var(--vg-page-pad-x);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -73,8 +73,8 @@ body,
 /* CONTENIDO PRINCIPAL */
 .profile-main {
   width: 100%;
-  max-width: 1100px;
-  padding: 36px 40px 56px;
+  max-width: var(--vg-content-max);
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   text-align: center;
 }
 
@@ -87,8 +87,8 @@ body,
 /* TITULO */
 .profile-title {
   margin: 0 0 12px;
-  font-size: 3.6rem;
-  line-height: 1.05;
+  font-size: var(--vg-page-title);
+  line-height: var(--vg-line-heading);
   font-weight: 800;
   color: var(--vg-text);
 }
@@ -103,8 +103,8 @@ body,
 .profile-subtitle {
   max-width: 680px;
   margin: 0 auto 28px;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
   color: var(--vg-text-muted);
 }
 
@@ -148,12 +148,12 @@ body,
   position: relative;
   background: var(--vg-card);
   border: 1px solid var(--vg-border);
-  border-radius: 22px;
-  padding: 22px 20px 60px;
+  border-radius: var(--vg-card-radius);
+  padding: var(--vg-card-padding) var(--vg-card-padding) 60px;
   text-align: left;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border 0.18s ease;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .profile-card:focus-visible {
@@ -189,7 +189,7 @@ body,
 .card-title {
   display: block;
   margin: 0 0 8px;
-  font-size: 1rem;
+  font-size: var(--vg-card-title);
   line-height: 1.3;
   color: var(--vg-text);
   font-weight: 800;
@@ -200,8 +200,8 @@ body,
   display: block;
   margin: 0;
   color: var(--vg-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: var(--vg-small-size);
+  line-height: var(--vg-line-body);
 }
 
 /* FOOTER DE TARJETA — siempre al fondo, sin solapar */
@@ -253,7 +253,7 @@ body,
 
 /* Modo Senior */
 .modo-senior .profile-title {
-  font-size: 4.2rem;
+  font-size: 46px;
 }
 
 .modo-senior .profile-subtitle {
@@ -283,9 +283,7 @@ body,
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .profile-title {
-    font-size: 2.8rem;
-  }
+  .profile-title { font-size: var(--vg-page-title); }
 }
 
 @media (max-width: 680px) {
@@ -295,9 +293,7 @@ body,
     padding-right: 20px;
   }
 
-  .profile-title {
-    font-size: 2.1rem;
-  }
+  .profile-title { font-size: var(--vg-page-title); }
 
   .cards-grid {
     grid-template-columns: 1fr;

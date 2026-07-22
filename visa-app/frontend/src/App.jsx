@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Routes, Route, useNavigate } from "react-router-dom";
+import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { buildApiUrl } from "./config/api";
+import AuthLayout from "./components/auth/AuthLayout";
+import "./components/auth/auth.css";
 
 const Upload = lazy(() => import("./Upload"));
 const ProfileSelection = lazy(() => import("./pages/ProfileSelection/ProfileSelection"));
@@ -66,7 +69,7 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<RouteLoadingState />}>
       <Routes>
-        <Route path="/"                               element={<Onboarding />} />
+        <Route path="/"                               element={<Navigate to="/login" replace />} />
         <Route path="/login"                          element={<Login />} />
         <Route path="/registro"                       element={<Registro />} />
         <Route path="/upload"                         element={<Upload />} />
@@ -102,98 +105,25 @@ function RouteLoadingState() {
 }
 
 /* ══════════════════════════
-   Onboarding
-   ══════════════════════════ */
-function Onboarding() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isValidating, setIsValidating] = useState(true);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const session = SessionManager.getSession();
-      if (session) {
-        const isValid = await validateSession(session);
-        if (isValid) setCurrentUser(session);
-      }
-      setIsValidating(false);
-    };
-    checkSession();
-  }, []);
-
-  if (isValidating) {
-    return (
-      <main id="main-content" tabIndex="-1" style={styles.container}>
-        <div style={styles.card}>
-          <div style={styles.logo}>VG</div>
-          <p style={styles.descriptionText}>Verificando sesión...</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (currentUser) {
-    return (
-      <main id="main-content" tabIndex="-1" style={styles.container}>
-        <div style={styles.card}>
-          <div style={styles.logo}>VG</div>
-          <h1 style={styles.title}>VisaGuide</h1>
-          <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
-          <div style={styles.welcomeBox}>
-            <p style={styles.welcomeText}>¡Hola, <strong>{currentUser.nombre}</strong>!</p>
-            <p style={styles.welcomeEmail}>{currentUser.correo}</p>
-          </div>
-          <button style={styles.primaryBtn} onClick={() => (window.location.href = "/dashboard")}>
-            Ir al Dashboard →
-          </button>
-          <button style={styles.linkBtn} onClick={() => { SessionManager.clearSession(); window.location.reload(); }}>
-            Cerrar sesión
-          </button>
-        </div>
-        <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-      </main>
-    );
-  }
-
-  return (
-    <main id="main-content" tabIndex="-1" style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logo}>VG</div>
-        <h1 style={styles.title}>VisaGuide</h1>
-        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
-        <div style={styles.descriptionBox}>
-          <p style={styles.descriptionText}>
-            Te acompañamos en cada paso de tu proceso de visa estadounidense.
-            Organiza, prepara y entiende todo lo que necesitas con claridad y confianza.
-          </p>
-        </div>
-        <button style={styles.primaryBtn} onClick={() => (window.location.href = "/registro")}>
-          Comenzar →
-        </button>
-        <button style={styles.linkBtn} onClick={() => (window.location.href = "/login")}>
-          Ya tengo una cuenta
-        </button>
-      </div>
-      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </main>
-  );
-}
-
-/* ══════════════════════════
    Login
    ══════════════════════════ */
 function Login() {
+  const navigate = useNavigate();
   const [correo, setCorreo]       = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError]         = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const check = async () => {
       const session = SessionManager.getSession();
-      if (session && (await validateSession(session))) window.location.href = "/";
+      if (session && (await validateSession(session))) {
+        navigate(session.perfil ? "/dashboard" : "/seleccion-perfil", { replace: true });
+      }
     };
     check();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (error) { const t = setTimeout(() => setError(""), 5000); return () => clearTimeout(t); }
@@ -206,7 +136,8 @@ function Login() {
     return true;
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (event) => {
+    event?.preventDefault();
     if (!validate()) return;
     setIsLoading(true); setError("");
     try {
@@ -227,29 +158,42 @@ function Login() {
   };
 
   return (
-    <main id="main-content" tabIndex="-1" style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logo}>VG</div>
-        <h1 style={styles.title}>VisaGuide</h1>
-        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
-        <h2 style={styles.formTitle}>Iniciar Sesión</h2>
-        {error && <div role="alert" aria-live="assertive" style={styles.errorMessage}>{error}</div>}
-        <div style={styles.inputGroup}>
-          <label htmlFor="login-correo" style={styles.label}>Correo electrónico</label>
-          <input id="login-correo" style={styles.input} type="email" autoComplete="username" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
+    <AuthLayout>
+      <header className="auth-form-heading">
+        <h2>Iniciar sesión</h2>
+        <p>Continúa con tu proceso de visa.</p>
+      </header>
+
+      {error && (
+        <div className="auth-message auth-message--error" role="alert" aria-live="assertive">
+          <AlertCircle aria-hidden="true" />
+          <span>{error}</span>
         </div>
-        <div style={styles.inputGroup}>
-          <label htmlFor="login-contrasena" style={styles.label}>Contraseña</label>
-          <input id="login-contrasena" style={styles.input} type="password" autoComplete="current-password" placeholder="••••••••" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} disabled={isLoading} />
+      )}
+
+      <form className="auth-form" onSubmit={handleLogin} noValidate>
+        <div className="auth-field">
+          <label htmlFor="login-correo">Correo electrónico</label>
+          <input id="login-correo" type="email" autoComplete="username" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
         </div>
-        <button style={{ ...styles.primaryBtn, opacity: isLoading ? 0.7 : 1, cursor: isLoading ? "not-allowed" : "pointer" }} onClick={handleLogin} disabled={isLoading}>
-          {isLoading ? "Ingresando..." : "Ingresar →"}
+        <div className="auth-field">
+          <label htmlFor="login-contrasena">Contraseña</label>
+          <div className="auth-password">
+            <input id="login-contrasena" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="••••••••" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+            <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} disabled={isLoading}>
+              {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            </button>
+          </div>
+        </div>
+        <button className="auth-submit" type="submit" disabled={isLoading}>
+          {isLoading ? <><Loader2 className="auth-spinner" aria-hidden="true" /> Ingresando...</> : <>Ingresar <ArrowRight aria-hidden="true" /></>}
         </button>
-        <button style={styles.linkBtn} onClick={() => (window.location.href = "/registro")}>¿No tienes cuenta? Regístrate</button>
-        <button style={styles.backLink} onClick={() => (window.location.href = "/")}>← Volver al inicio</button>
-      </div>
-      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </main>
+      </form>
+
+      <footer className="auth-form-footer">
+        <p>¿No tienes cuenta? <Link to="/registro">Regístrate</Link></p>
+      </footer>
+    </AuthLayout>
   );
 }
 
@@ -257,6 +201,7 @@ function Login() {
    Registro
    ══════════════════════════ */
 function Registro() {
+  const navigate = useNavigate();
   const [nombre, setNombre]                       = useState("");
   const [correo, setCorreo]                       = useState("");
   const [contrasena, setContrasena]               = useState("");
@@ -264,14 +209,18 @@ function Registro() {
   const [error, setError]                         = useState("");
   const [success, setSuccess]                     = useState("");
   const [isLoading, setIsLoading]                 = useState(false);
+  const [showPassword, setShowPassword]           = useState(false);
+  const [showConfirmation, setShowConfirmation]   = useState(false);
 
   useEffect(() => {
     const check = async () => {
       const session = SessionManager.getSession();
-      if (session && (await validateSession(session))) window.location.href = "/";
+      if (session && (await validateSession(session))) {
+        navigate(session.perfil ? "/dashboard" : "/seleccion-perfil", { replace: true });
+      }
     };
     check();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (error || success) { const t = setTimeout(() => { setError(""); setSuccess(""); }, 5000); return () => clearTimeout(t); }
@@ -285,7 +234,8 @@ function Registro() {
     return true;
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (event) => {
+    event?.preventDefault();
     if (!validate()) return;
     setIsLoading(true); setError("");
     try {
@@ -295,8 +245,10 @@ function Registro() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess("¡Registro exitoso! Redirigiendo al login...");
-        setTimeout(() => (window.location.href = "/login"), 2000);
+        setSuccess("¡Registro exitoso! Continuando a la selección de perfil...");
+        SessionManager.saveSession(data.data);
+        localStorage.setItem("correoUsuario", data.data.correo);
+        navigate("/seleccion-perfil", { replace: true });
       } else {
         setError(data.error?.includes("duplicate") ? "Este correo ya está registrado" : data.error || "Error al registrar");
       }
@@ -305,58 +257,44 @@ function Registro() {
   };
 
   return (
-    <main id="main-content" tabIndex="-1" style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logo}>VG</div>
-        <h1 style={styles.title}>VisaGuide</h1>
-        <p style={styles.brandSubtitle}>Guevara Advisory Services</p>
-        <h2 style={styles.formTitle}>Crear Cuenta</h2>
-        {error && <div role="alert" aria-live="assertive" style={styles.errorMessage}>{error}</div>}
-        {success && <div role="status" aria-live="polite" style={styles.successMessage}>{success}</div>}
-        {[
-          { label: "Nombre completo", type: "text", autoComplete: "name", placeholder: "Juan Pérez", value: nombre, set: setNombre },
-          { label: "Correo electrónico", type: "email", autoComplete: "email", placeholder: "tu@correo.com", value: correo, set: setCorreo },
-          { label: "Contraseña", type: "password", autoComplete: "new-password", placeholder: "••••••••", value: contrasena, set: setContrasena },
-          { label: "Confirmar contraseña", type: "password", autoComplete: "new-password", placeholder: "••••••••", value: confirmarContrasena, set: setConfirmarContrasena },
-        ].map((f, index) => (
-          <div key={f.label} style={styles.inputGroup}>
-            <label htmlFor={`registro-campo-${index}`} style={styles.label}>{f.label}</label>
-            <input id={`registro-campo-${index}`} style={styles.input} type={f.type} autoComplete={f.autoComplete} placeholder={f.placeholder} value={f.value} onChange={(e) => f.set(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRegister()} disabled={isLoading} />
-          </div>
-        ))}
-        <button style={{ ...styles.primaryBtn, opacity: isLoading ? 0.7 : 1, cursor: isLoading ? "not-allowed" : "pointer" }} onClick={handleRegister} disabled={isLoading}>
-          {isLoading ? "Creando cuenta..." : "Crear cuenta →"}
+    <AuthLayout>
+      <header className="auth-form-heading">
+        <h2>Crear cuenta</h2>
+        <p>Crea tu cuenta y comienza tu solicitud.</p>
+      </header>
+
+      {error && <div className="auth-message auth-message--error" role="alert" aria-live="assertive"><AlertCircle aria-hidden="true" /><span>{error}</span></div>}
+      {success && <div className="auth-message auth-message--success" role="status" aria-live="polite"><CheckCircle2 aria-hidden="true" /><span>{success}</span></div>}
+
+      <form className="auth-form auth-form--register" onSubmit={handleRegister} noValidate>
+        <div className="auth-field"><label htmlFor="registro-nombre">Nombre completo</label><input id="registro-nombre" type="text" autoComplete="name" placeholder="Juan Pérez" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} /></div>
+        <div className="auth-field"><label htmlFor="registro-correo">Correo electrónico</label><input id="registro-correo" type="email" autoComplete="email" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} /></div>
+        <PasswordField id="registro-contrasena" label="Contraseña" value={contrasena} onChange={setContrasena} visible={showPassword} onToggle={() => setShowPassword((visible) => !visible)} disabled={isLoading} />
+        <PasswordField id="registro-confirmacion" label="Confirmar contraseña" value={confirmarContrasena} onChange={setConfirmarContrasena} visible={showConfirmation} onToggle={() => setShowConfirmation((visible) => !visible)} disabled={isLoading} />
+        <button className="auth-submit" type="submit" disabled={isLoading}>
+          {isLoading ? <><Loader2 className="auth-spinner" aria-hidden="true" /> Creando cuenta...</> : <>Crear cuenta <ArrowRight aria-hidden="true" /></>}
         </button>
-        <button style={styles.linkBtn} onClick={() => (window.location.href = "/login")}>¿Ya tienes cuenta? Inicia sesión</button>
-        <button style={styles.backLink} onClick={() => (window.location.href = "/")}>← Volver al inicio</button>
-      </div>
-      <p style={styles.footerText}>Proceso seguro, claro y profesional</p>
-    </main>
+      </form>
+
+      <footer className="auth-form-footer">
+        <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+      </footer>
+    </AuthLayout>
   );
 }
 
-const styles = {
-  container: { minHeight:"100vh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", background:"linear-gradient(135deg,#1e3a5f 0%,#2d1b4e 50%,#4a1a3d 100%)", padding:"20px", position:"relative" },
-  card: { background:"var(--vg-card)", padding:"40px 35px", borderRadius:"20px", width:"100%", maxWidth:"380px", boxShadow:"0px 20px 60px rgba(0,0,0,0.3)", textAlign:"center" },
-  logo: { width:"60px", height:"60px", backgroundColor:"#c73e4e", borderRadius:"12px", display:"flex", justifyContent:"center", alignItems:"center", margin:"0 auto 15px auto", color:"white", fontSize:"24px", fontWeight:"bold", fontFamily:"'Segoe UI',sans-serif" },
-  title: { margin:"0 0 5px 0", color:"var(--vg-text)", fontSize:"28px", fontWeight:"700", fontFamily:"'Segoe UI',sans-serif" },
-  brandSubtitle: { margin:"0 0 25px 0", color:"var(--vg-text-muted)", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
-  formTitle: { margin:"0 0 20px 0", color:"var(--vg-text)", fontSize:"20px", fontWeight:"600", fontFamily:"'Segoe UI',sans-serif" },
-  descriptionBox: { backgroundColor:"var(--vg-bg-alt)", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
-  descriptionText: { margin:0, color:"var(--vg-text-muted)", fontSize:"14px", lineHeight:"1.6", fontFamily:"'Segoe UI',sans-serif" },
-  inputGroup: { marginBottom:"18px", textAlign:"left" },
-  label: { display:"block", marginBottom:"6px", color:"var(--vg-text)", fontSize:"14px", fontWeight:"500", fontFamily:"'Segoe UI',sans-serif" },
-  input: { width:"100%", padding:"14px 16px", borderRadius:"10px", border:"1px solid var(--vg-border-mid)", background:"var(--vg-input)", color:"var(--vg-text)", boxSizing:"border-box", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif", outline:"none" },
-  primaryBtn: { width:"100%", padding:"14px", marginTop:"10px", borderRadius:"10px", border:"none", backgroundColor:"#c73e4e", color:"white", cursor:"pointer", fontWeight:"600", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif" },
-  secondaryBtn: { width:"100%", padding:"14px", marginTop:"10px", borderRadius:"10px", border:"2px solid var(--vg-text)", backgroundColor:"transparent", color:"var(--vg-text)", cursor:"pointer", fontWeight:"600", fontSize:"15px", fontFamily:"'Segoe UI',sans-serif" },
-  linkBtn: { background:"none", border:"none", color:"#c73e4e", cursor:"pointer", fontSize:"14px", fontWeight:"500", marginTop:"18px", fontFamily:"'Segoe UI',sans-serif", display:"block", width:"100%" },
-  backLink: { background:"none", border:"none", color:"var(--vg-text-muted)", cursor:"pointer", fontSize:"13px", marginTop:"15px", fontFamily:"'Segoe UI',sans-serif", display:"block", width:"100%" },
-  errorMessage: { backgroundColor:"var(--vg-danger-bg)", border:"1px solid var(--vg-danger-text)", color:"var(--vg-danger-text)", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
-  successMessage: { backgroundColor:"var(--vg-success-bg)", border:"1px solid var(--vg-success)", color:"var(--vg-success)", padding:"12px", borderRadius:"10px", marginBottom:"18px", fontSize:"14px", fontFamily:"'Segoe UI',sans-serif" },
-  footerText: { color:"rgba(255,255,255,0.6)", fontSize:"12px", marginTop:"25px", fontFamily:"'Segoe UI',sans-serif" },
-  welcomeBox: { backgroundColor:"var(--vg-info-bg)", borderRadius:"12px", padding:"20px", marginBottom:"25px" },
-  welcomeText: { margin:"0 0 5px 0", color:"var(--vg-text)", fontSize:"18px", fontFamily:"'Segoe UI',sans-serif" },
-  welcomeEmail: { margin:0, color:"var(--vg-text-muted)", fontSize:"13px", fontFamily:"'Segoe UI',sans-serif" },
-};
+function PasswordField({ id, label, value, onChange, visible, onToggle, disabled }) {
+  return (
+    <div className="auth-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="auth-password">
+        <input id={id} type={visible ? "text" : "password"} autoComplete="new-password" placeholder="••••••••" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
+        <button type="button" onClick={onToggle} aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-pressed={visible} disabled={disabled}>
+          {visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default App;

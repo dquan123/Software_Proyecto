@@ -4,12 +4,12 @@
 
 .chat-main {
   background: var(--vg-bg);
-  padding: 28px 32px 28px;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   box-sizing: border-box;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--vg-font);
 }
 
 .chat-main--senior .chat-bubble p { font-size: 17px; }
@@ -37,9 +37,9 @@
   flex-direction: column;
   background: var(--vg-card);
   border: 1px solid var(--vg-border);
-  border-radius: 20px;
+  border-radius: var(--vg-card-radius);
   overflow: hidden;
-  box-shadow: var(--vg-shadow);
+  box-shadow: var(--vg-card-shadow);
 }
 
 /* ─── Header ─── */

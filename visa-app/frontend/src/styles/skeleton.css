@@ -18,7 +18,7 @@
   display: flex;
   min-height: 100vh;
   background: var(--vg-bg-alt);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--vg-font);
 }
 
 .vg-skel-sidebar {

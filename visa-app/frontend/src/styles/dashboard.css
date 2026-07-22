@@ -3,15 +3,17 @@
    ══════════════════════════════ */
 
 .dash-main {
-  padding: 32px 40px 52px;
-  font-family: "Segoe UI", sans-serif;
+  padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
+  font-family: var(--vg-font);
   background: var(--vg-bg);
   box-sizing: border-box;
 }
 
 /* ── Greeting ── */
 .dash-greeting {
-  margin-bottom: 28px;
+  margin-bottom: var(--vg-space-5);
+  padding-bottom: var(--vg-space-4);
+  border-bottom: 1px solid var(--vg-border);
 }
 .dash-greeting h1 {
   margin: 0 0 6px;
@@ -22,20 +24,22 @@
 .dash-greeting p {
   margin: 0;
   color: var(--vg-text-muted);
+  font-size: var(--vg-body-size);
+  line-height: var(--vg-line-body);
 }
 
 /* ── Progress card ── */
 .dash-progress-card {
   background: var(--vg-card);
-  border-radius: 20px;
-  padding: 28px 32px;
+  border-radius: var(--vg-card-radius);
+  padding: var(--vg-card-padding);
   margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 32px;
   border: 1px solid var(--vg-border);
-  box-shadow: var(--vg-shadow-sm);
+  box-shadow: var(--vg-card-shadow);
 }
 
 .dash-progress-body { flex: 1; min-width: 0; }
@@ -216,7 +220,7 @@
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 4px 14px rgba(225,29,72,0.28);
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--vg-font);
   flex-shrink: 0;
   transition: opacity 0.15s, transform 0.15s;
 }
@@ -230,8 +234,8 @@
 }
 
 .dash-card {
-  border-radius: 18px;
-  padding: 24px 22px;
+  border-radius: var(--vg-card-radius);
+  padding: var(--vg-card-padding);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -413,7 +417,7 @@
 
 @media (max-width: 768px) {
   .dash-main {
-    padding: 20px 16px 40px;
+    padding: var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom);
   }
 
   .dash-progress-card {
