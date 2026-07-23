@@ -3,6 +3,9 @@ module.exports = {
   clearMocks: true,
   collectCoverageFrom: [
     "app.js",
+    "r2.js",
+    "storage.js",
+    "upload.js",
     "controllers/**/*.js",
     "routes/**/*.js",
     "services/**/*.js",
