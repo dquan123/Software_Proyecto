@@ -283,6 +283,35 @@ describe("app endpoints", () => {
     expect(response.body).toEqual({ valid: false });
   });
 
+  test("GET /validar-sesion devuelve 400 cuando falta el correo", async () => {
+    const response = await request(app).get("/validar-sesion");
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      valid: false,
+      error: "Correo requerido",
+    });
+  });
+
+  test("GET /validar-sesion devuelve 500 ante error simulado de base de datos", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("SELECT id_usuario FROM usuario WHERE correo = $1")) {
+        return Promise.reject(new Error("database unavailable"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app)
+      .get("/validar-sesion")
+      .query({ correo: "valido@example.com" });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      valid: false,
+      error: "database unavailable",
+    });
+  });
+
   test("POST /register guarda un usuario con datos validos", async () => {
     const response = await request(app).post("/register").send({
       nombre: "Nuevo Usuario",
@@ -295,6 +324,65 @@ describe("app endpoints", () => {
     expect(response.body.data).toMatchObject({
       nombre: "Nuevo Usuario",
       correo: "nuevo@example.com",
+    });
+  });
+
+  test("POST /register devuelve 500 cuando el correo ya existe", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("INSERT INTO usuario")) {
+        return Promise.reject(
+          new Error('duplicate key value violates unique constraint "usuario_correo_key"')
+        );
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/register").send({
+      nombre: "Usuario Repetido",
+      correo: "repetido@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      error: 'duplicate key value violates unique constraint "usuario_correo_key"',
+    });
+  });
+
+  test("POST /register devuelve 500 cuando faltan campos obligatorios", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("INSERT INTO usuario") && !values?.[1]) {
+        return Promise.reject(
+          new Error('null value in column "correo" violates not-null constraint')
+        );
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/register").send({
+      nombre: "Usuario Sin Correo",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      error: 'null value in column "correo" violates not-null constraint',
+    });
+  });
+
+  test("POST /register acepta datos con formato invalido porque el backend no los valida", async () => {
+    const response = await request(app).post("/register").send({
+      nombre: "Usuario Invalido",
+      correo: "correo-sin-formato",
+      contrasena: "",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Usuario guardado en BD");
+    expect(response.body.data).toMatchObject({
+      nombre: "Usuario Invalido",
+      correo: "correo-sin-formato",
+      contrasena: "",
     });
   });
 
@@ -335,6 +423,42 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+  });
+
+  test("POST /login devuelve 401 cuando faltan campos", async () => {
+    const response = await request(app).post("/login").send({
+      correo: "login@example.com",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+  });
+
+  test("POST /login devuelve 401 cuando el usuario no existe", async () => {
+    const response = await request(app).post("/login").send({
+      correo: "noexiste@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+  });
+
+  test("POST /login devuelve 500 ante error simulado de base de datos", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+        return Promise.reject(new Error("connection timeout"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/login").send({
+      correo: "login@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "connection timeout" });
   });
 
   test("GET /questions lista preguntas desde el servicio", async () => {
