@@ -21,13 +21,12 @@ jest.mock("../r2", () => ({
   validateR2Config: jest.fn(),
 }));
 
-const mockUploadStoredFile = jest.fn(() =>
-  Promise.resolve({
-    key: "local/mock-document.pdf",
-    url: "http://localhost/local-files/mock-document.pdf",
-    provider: "local",
-  })
-);
+const storedFileResult = {
+  key: "local/mock-document.pdf",
+  url: "http://localhost/local-files/mock-document.pdf",
+  provider: "local",
+};
+const mockUploadStoredFile = jest.fn(() => Promise.resolve(storedFileResult));
 const mockDeleteStoredFile = jest.fn(() => Promise.resolve());
 
 jest.mock("../storage", () => ({
@@ -55,6 +54,8 @@ function defaultQueryHandler(sql, values) {
       "ds160-completado@example.com": 14,
       "ds160-datos-vacios@example.com": 15,
       "ds160-invalido@example.com": 16,
+      "ds160-pdf@example.com": 17,
+      "ds160-pdf-sin-form@example.com": 18,
     };
     if (ds160Users[values?.[0]]) {
       return Promise.resolve({ rows: [{ id_usuario: ds160Users[values[0]] }] });
@@ -105,6 +106,29 @@ function defaultQueryHandler(sql, values) {
               },
             },
             seccion_actual: 3,
+            completado: false,
+          },
+        ],
+      });
+    }
+    if (values?.[0] === 17) {
+      return Promise.resolve({
+        rows: [
+          {
+            id_formulario: 51,
+            id_usuario: 17,
+            datos: {
+              personal: {
+                nombres: "Usuario",
+                apellidos: "PDF",
+                numeroPasaporte: "",
+              },
+              viaje: {
+                proposito: "Turismo",
+                duracionEstancia: 15,
+              },
+            },
+            seccion_actual: 4,
             completado: false,
           },
         ],
@@ -378,6 +402,148 @@ function defaultQueryHandler(sql, values) {
   return Promise.resolve({ rows: [] });
 }
 
+function createIntegrationFlowQueryHandler() {
+  const state = {
+    user: null,
+    ds160: null,
+    documentos: [],
+    nextUserId: 90,
+    nextFormularioId: 190,
+    nextDocumentoId: 290,
+  };
+
+  function buildDocumentoRow(documento) {
+    return {
+      id: documento.id,
+      nombre: documento.nombre,
+      tipo: documento.tipo,
+      archivo_url: documento.archivo_url,
+      usuario_id: documento.usuario_id,
+      documento_key: documento.documento_key,
+      estado: documento.estado,
+      feedback: documento.feedback,
+      creado_en: documento.creado_en,
+      actualizado_en: documento.actualizado_en,
+    };
+  }
+
+  async function queryHandler(sql, values) {
+    const normalized = String(sql).replace(/\s+/g, " ").trim();
+
+    if (normalized.includes("INSERT INTO usuario")) {
+      state.user = {
+        id_usuario: state.nextUserId,
+        nombre: values[0],
+        correo: values[1],
+        contrasena: values[2],
+        perfil: null,
+      };
+      state.nextUserId += 1;
+      return { rows: [state.user] };
+    }
+
+    if (normalized.includes("SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+      if (
+        state.user &&
+        values?.[0] === state.user.correo &&
+        values?.[1] === state.user.contrasena
+      ) {
+        return { rows: [state.user] };
+      }
+      return { rows: [] };
+    }
+
+    if (normalized.includes("SELECT id_usuario FROM usuario WHERE correo = $1")) {
+      if (state.user && values?.[0] === state.user.correo) {
+        return { rows: [{ id_usuario: state.user.id_usuario }] };
+      }
+      return { rows: [] };
+    }
+
+    if (normalized.includes("SELECT id_formulario FROM formulario_ds160 WHERE id_usuario = $1")) {
+      if (state.ds160 && values?.[0] === state.ds160.id_usuario) {
+        return { rows: [{ id_formulario: state.ds160.id_formulario }] };
+      }
+      return { rows: [] };
+    }
+
+    if (normalized.includes("INSERT INTO formulario_ds160")) {
+      state.ds160 = {
+        id_formulario: state.nextFormularioId,
+        id_usuario: values[0],
+        datos: JSON.parse(values[1]),
+        seccion_actual: values[2],
+        completado: values[3],
+      };
+      state.nextFormularioId += 1;
+      return { rows: [state.ds160] };
+    }
+
+    if (normalized.includes("UPDATE formulario_ds160")) {
+      state.ds160 = {
+        id_formulario: state.ds160?.id_formulario || state.nextFormularioId,
+        id_usuario: values[3],
+        datos: JSON.parse(values[0]),
+        seccion_actual: values[1],
+        completado: values[2],
+      };
+      return { rows: [state.ds160] };
+    }
+
+    if (normalized.includes("SELECT * FROM formulario_ds160 WHERE id_usuario = $1")) {
+      if (state.ds160 && values?.[0] === state.ds160.id_usuario) {
+        return { rows: [state.ds160] };
+      }
+      return { rows: [] };
+    }
+
+    if (normalized.includes("SELECT id, storage_key FROM documentos")) {
+      const existing = state.documentos.find(
+        (documento) =>
+          documento.usuario_id === values?.[0] &&
+          documento.documento_key === values?.[1]
+      );
+      if (!existing) return { rows: [] };
+      return { rows: [{ id: existing.id, storage_key: existing.storage_key }] };
+    }
+
+    if (normalized.includes("INSERT INTO documentos")) {
+      const documento = {
+        id: state.nextDocumentoId,
+        nombre: values[0],
+        tipo: values[1],
+        archivo_url: values[2],
+        usuario_id: values[3],
+        documento_key: values[4],
+        estado: "review",
+        feedback: null,
+        storage_key: values[5],
+        creado_en: "2026-07-08T00:00:00.000Z",
+        actualizado_en: "2026-07-08T00:00:00.000Z",
+      };
+      state.nextDocumentoId += 1;
+      state.documentos.push(documento);
+      return { rows: [buildDocumentoRow(documento)] };
+    }
+
+    if (
+      normalized.includes("SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key") &&
+      normalized.includes("FROM documentos") &&
+      normalized.includes("WHERE usuario_id = $1")
+    ) {
+      return {
+        rows: state.documentos
+          .filter((documento) => documento.usuario_id === values?.[0])
+          .map(buildDocumentoRow),
+      };
+    }
+
+    return defaultQueryHandler(sql, values);
+  }
+
+  return { state, queryHandler };
+}
+
 let app;
 
 beforeAll(() => {
@@ -388,8 +554,10 @@ beforeAll(() => {
 beforeEach(() => {
   mockQuery.mockClear();
   mockQuery.mockImplementation(defaultQueryHandler);
-  mockUploadStoredFile.mockClear();
-  mockDeleteStoredFile.mockClear();
+  mockUploadStoredFile.mockReset();
+  mockUploadStoredFile.mockResolvedValue(storedFileResult);
+  mockDeleteStoredFile.mockReset();
+  mockDeleteStoredFile.mockResolvedValue();
 });
 
 describe("app endpoints", () => {
@@ -654,6 +822,65 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "ds160 read failed" });
+  });
+
+  test("GET /ds160/pdf genera el PDF del formulario existente", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf@example.com" })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on("end", () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toMatch(/application\/pdf/);
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="ds160-17.pdf"');
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  test("GET /ds160/pdf devuelve 400 cuando falta el correo", async () => {
+    const response = await request(app).get("/ds160/pdf");
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Correo requerido" });
+  });
+
+  test("GET /ds160/pdf devuelve 404 cuando el usuario no existe", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "noexiste@example.com" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Usuario no encontrado" });
+  });
+
+  test("GET /ds160/pdf devuelve 404 cuando no existe formulario guardado", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf-sin-form@example.com" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Formulario DS-160 no encontrado" });
+  });
+
+  test("GET /ds160/pdf devuelve 500 ante error interno de base de datos", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("SELECT * FROM formulario_ds160 WHERE id_usuario = $1")) {
+        return Promise.reject(new Error("ds160 pdf failed"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf@example.com" });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "ds160 pdf failed" });
   });
 
   test("POST /ds160 crea el formulario inicial y guarda el progreso", async () => {
@@ -1286,6 +1513,113 @@ describe("app endpoints", () => {
       telefono: "55550000",
       ciudad: "Guatemala",
       pais: "Guatemala",
+    });
+  });
+
+  describe("flujo de integracion registro, login, DS-160 y documentos", () => {
+    it("mantiene consistente el usuario entre autenticacion, formulario y documentos", async () => {
+      const { state, queryHandler } = createIntegrationFlowQueryHandler();
+      mockQuery.mockImplementation(queryHandler);
+
+      const usuario = {
+        nombre: "Usuario Integracion",
+        correo: "integracion@example.com",
+        contrasena: "clave-segura",
+      };
+      const datosDs160 = {
+        personal: {
+          nombreCompleto: usuario.nombre,
+          correo: usuario.correo,
+        },
+        viaje: {
+          proposito: "Turismo",
+          ciudadDestino: "Miami",
+        },
+      };
+
+      const registerResponse = await request(app).post("/register").send(usuario);
+
+      expect(registerResponse.status).toBe(200);
+      expect(registerResponse.body.message).toBe("Usuario guardado en BD");
+      expect(registerResponse.body.data).toMatchObject({
+        id_usuario: 90,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+      });
+
+      const userId = registerResponse.body.data.id_usuario;
+
+      const loginResponse = await request(app).post("/login").send({
+        correo: usuario.correo,
+        contrasena: usuario.contrasena,
+      });
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.body.message).toBe("Login exitoso");
+      expect(loginResponse.body.user).toMatchObject({
+        id_usuario: userId,
+        correo: usuario.correo,
+      });
+
+      const saveDs160Response = await request(app).post("/ds160").send({
+        correo: usuario.correo,
+        datos: datosDs160,
+        seccion_actual: 3,
+        completado: false,
+      });
+
+      expect(saveDs160Response.status).toBe(200);
+      expect(saveDs160Response.body.message).toBe("Formulario guardado correctamente");
+      expect(saveDs160Response.body.formulario).toMatchObject({
+        id_usuario: userId,
+        datos: datosDs160,
+        seccion_actual: 3,
+        completado: false,
+      });
+
+      const getDs160Response = await request(app)
+        .get("/ds160")
+        .query({ correo: usuario.correo });
+
+      expect(getDs160Response.status).toBe(200);
+      expect(getDs160Response.body).toEqual({
+        datos: datosDs160,
+        seccion_actual: 3,
+        completado: false,
+      });
+
+      const uploadResponse = await request(app)
+        .post("/upload")
+        .field("nombre", "Pasaporte")
+        .field("tipo", "application/pdf")
+        .field("usuario_id", String(userId))
+        .field("documento_key", "passport")
+        .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
+
+      expect(uploadResponse.status).toBe(200);
+      expect(uploadResponse.body.message).toBe("Archivo subido correctamente");
+      expect(uploadResponse.body.documento).toMatchObject({
+        usuario_id: userId,
+        documento_key: "passport",
+        nombre: "Pasaporte",
+        estado: "review",
+      });
+      expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+
+      const documentosResponse = await request(app).get(`/documentos/${userId}`);
+
+      expect(documentosResponse.status).toBe(200);
+      expect(documentosResponse.body).toHaveLength(1);
+      expect(documentosResponse.body[0]).toMatchObject({
+        id: uploadResponse.body.documento.id,
+        usuario_id: userId,
+        documento_key: "passport",
+        archivo_url: "http://localhost/local-files/mock-document.pdf",
+      });
+
+      expect(state.user.id_usuario).toBe(userId);
+      expect(state.ds160.id_usuario).toBe(userId);
+      expect(state.documentos[0].usuario_id).toBe(userId);
     });
   });
 });

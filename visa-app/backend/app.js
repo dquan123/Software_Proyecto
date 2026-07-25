@@ -12,6 +12,7 @@ const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
+const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile } = require("./storage");
 
 const app = express();
@@ -725,6 +726,50 @@ app.delete("/documentos/:id", async (req, res) => {
 // =====================
 // ENDPOINTS DS-160
 // =====================
+
+// GET: Descargar formulario DS-160 del usuario en PDF
+app.get("/ds160/pdf", async (req, res) => {
+  const { correo } = req.query;
+
+  if (!correo) {
+    return res.status(400).json({ error: "Correo requerido" });
+  }
+
+  try {
+    const userResult = await pool.query(
+      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      [correo]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userId = userResult.rows[0].id_usuario;
+
+    const formResult = await pool.query(
+      "SELECT * FROM formulario_ds160 WHERE id_usuario = $1",
+      [userId]
+    );
+
+    if (formResult.rows.length === 0) {
+      return res.status(404).json({ error: "Formulario DS-160 no encontrado" });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="ds160-${userId}.pdf"`);
+    res.setHeader("Cache-Control", "no-store");
+
+    return streamDs160Pdf({
+      usuario: { id_usuario: userId, correo },
+      formulario: formResult.rows[0],
+    }, res);
+  } catch (error) {
+    console.log("ERROR GET DS160 PDF:", error);
+    if (res.headersSent) return res.end();
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 // GET: Cargar formulario DS-160 del usuario
 app.get("/ds160", async (req, res) => {
