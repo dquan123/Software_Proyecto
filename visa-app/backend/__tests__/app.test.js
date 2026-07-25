@@ -21,13 +21,12 @@ jest.mock("../r2", () => ({
   validateR2Config: jest.fn(),
 }));
 
-const mockUploadStoredFile = jest.fn(() =>
-  Promise.resolve({
-    key: "local/mock-document.pdf",
-    url: "http://localhost/local-files/mock-document.pdf",
-    provider: "local",
-  })
-);
+const storedFileResult = {
+  key: "local/mock-document.pdf",
+  url: "http://localhost/local-files/mock-document.pdf",
+  provider: "local",
+};
+const mockUploadStoredFile = jest.fn(() => Promise.resolve(storedFileResult));
 const mockDeleteStoredFile = jest.fn(() => Promise.resolve());
 
 jest.mock("../storage", () => ({
@@ -55,6 +54,8 @@ function defaultQueryHandler(sql, values) {
       "ds160-completado@example.com": 14,
       "ds160-datos-vacios@example.com": 15,
       "ds160-invalido@example.com": 16,
+      "ds160-pdf@example.com": 17,
+      "ds160-pdf-sin-form@example.com": 18,
     };
     if (ds160Users[values?.[0]]) {
       return Promise.resolve({ rows: [{ id_usuario: ds160Users[values[0]] }] });
@@ -105,6 +106,29 @@ function defaultQueryHandler(sql, values) {
               },
             },
             seccion_actual: 3,
+            completado: false,
+          },
+        ],
+      });
+    }
+    if (values?.[0] === 17) {
+      return Promise.resolve({
+        rows: [
+          {
+            id_formulario: 51,
+            id_usuario: 17,
+            datos: {
+              personal: {
+                nombres: "Usuario",
+                apellidos: "PDF",
+                numeroPasaporte: "",
+              },
+              viaje: {
+                proposito: "Turismo",
+                duracionEstancia: 15,
+              },
+            },
+            seccion_actual: 4,
             completado: false,
           },
         ],
@@ -530,8 +554,10 @@ beforeAll(() => {
 beforeEach(() => {
   mockQuery.mockClear();
   mockQuery.mockImplementation(defaultQueryHandler);
-  mockUploadStoredFile.mockClear();
-  mockDeleteStoredFile.mockClear();
+  mockUploadStoredFile.mockReset();
+  mockUploadStoredFile.mockResolvedValue(storedFileResult);
+  mockDeleteStoredFile.mockReset();
+  mockDeleteStoredFile.mockResolvedValue();
 });
 
 describe("app endpoints", () => {
@@ -796,6 +822,65 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "ds160 read failed" });
+  });
+
+  test("GET /ds160/pdf genera el PDF del formulario existente", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf@example.com" })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on("end", () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toMatch(/application\/pdf/);
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="ds160-17.pdf"');
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  test("GET /ds160/pdf devuelve 400 cuando falta el correo", async () => {
+    const response = await request(app).get("/ds160/pdf");
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Correo requerido" });
+  });
+
+  test("GET /ds160/pdf devuelve 404 cuando el usuario no existe", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "noexiste@example.com" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Usuario no encontrado" });
+  });
+
+  test("GET /ds160/pdf devuelve 404 cuando no existe formulario guardado", async () => {
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf-sin-form@example.com" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Formulario DS-160 no encontrado" });
+  });
+
+  test("GET /ds160/pdf devuelve 500 ante error interno de base de datos", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("SELECT * FROM formulario_ds160 WHERE id_usuario = $1")) {
+        return Promise.reject(new Error("ds160 pdf failed"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app)
+      .get("/ds160/pdf")
+      .query({ correo: "ds160-pdf@example.com" });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "ds160 pdf failed" });
   });
 
   test("POST /ds160 crea el formulario inicial y guarda el progreso", async () => {
