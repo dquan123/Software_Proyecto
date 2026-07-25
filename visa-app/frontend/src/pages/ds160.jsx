@@ -252,6 +252,18 @@ function SaveIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 export default function DS160Form() {
   const { isValidating: authValidating } = useRequireAuth();
   const st = getSt();
@@ -259,6 +271,7 @@ export default function DS160Form() {
   const [formData,        setFormData]        = useState({});
   const [errores,         setErrores]         = useState({});
   const [guardando,       setGuardando]       = useState(false);
+  const [descargandoPdf,  setDescargandoPdf]  = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState("");
   const [cargando,        setCargando]        = useState(true);
   const modoSenior = useModoSenior();
@@ -515,6 +528,39 @@ export default function DS160Form() {
     } finally { setGuardando(false); }
   };
 
+  const descargarPdf = async () => {
+    const correo = getCorreo();
+    if (!correo) {
+      setMensajeGuardado("No se encontro una sesion activa.");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+      return;
+    }
+
+    setDescargandoPdf(true);
+    try {
+      const response = await fetch(`${buildApiUrl("/ds160/pdf")}?correo=${encodeURIComponent(correo)}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo descargar el PDF.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ds160.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMensajeGuardado(error.message || "No se pudo descargar el PDF.");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+    } finally {
+      setDescargandoPdf(false);
+    }
+  };
+
   const finalizarFormulario = async () => {
     // Validar sección actual antes de finalizar
     const esValida = validarSeccionActual();
@@ -666,10 +712,16 @@ const siguienteSeccion = () => {
                 Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
               </p>
             </div>
-            <button style={st.guardarBtn} onClick={() => guardarProgreso()} disabled={guardando} aria-label="Guardar progreso">
-              <SaveIcon />
-              {guardando ? "Guardando..." : "Guardar progreso"}
-            </button>
+            <div style={st.headerActions}>
+              <button style={st.guardarBtn} onClick={descargarPdf} disabled={descargandoPdf} aria-label="Descargar PDF">
+                <DownloadIcon />
+                {descargandoPdf ? "Descargando..." : "Descargar PDF"}
+              </button>
+              <button style={st.guardarBtn} onClick={() => guardarProgreso()} disabled={guardando} aria-label="Guardar progreso">
+                <SaveIcon />
+                {guardando ? "Guardando..." : "Guardar progreso"}
+              </button>
+            </div>
           </div>
           <div style={st.barTrack} role="progressbar" aria-valuenow={Math.round(progreso)} aria-valuemin={0} aria-valuemax={100}>
             <div style={{ ...st.barFill, width: `${progreso}%` }} />
@@ -801,6 +853,14 @@ function getSt() {
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: "14px",
+  },
+
+  headerActions: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
 
   titulo:   { margin: 0, fontWeight: 700, color: text, letterSpacing: "-0.3px" },
