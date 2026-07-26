@@ -10,12 +10,20 @@ function formatHostname(hostname) {
     : hostname;
 }
 
+function isRelativeUrl(url) {
+  return url.startsWith("/");
+}
+
 export function resolveApiBaseUrl(
   configuredUrl = import.meta.env.VITE_API_URL,
   browserLocation = getBrowserLocation(),
   defaultPort = import.meta.env.VITE_API_PORT || "3000",
 ) {
   const normalizedUrl = (configuredUrl || "").trim().replace(/\/+$/, "");
+
+  if (isRelativeUrl(normalizedUrl)) {
+    return normalizedUrl;
+  }
 
   if (!browserLocation?.hostname) {
     return normalizedUrl;
