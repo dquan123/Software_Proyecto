@@ -17,6 +17,8 @@ const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile } = require("./sto
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 //app.use(cors());
 //app.options("/{*splat}", cors());
 

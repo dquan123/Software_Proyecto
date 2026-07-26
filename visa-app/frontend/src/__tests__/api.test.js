@@ -26,6 +26,16 @@ describe("buildApiUrl", () => {
     expect(buildApiUrl("questions")).toBe("https://api.example.test/questions");
   });
 
+  it("soporta rutas relativas para proxy reverso en produccion", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_API_URL", "/api/");
+
+    const { API_BASE_URL, buildApiUrl } = await import("../config/api");
+
+    expect(API_BASE_URL).toBe("/api");
+    expect(buildApiUrl("/login")).toBe("/api/login");
+  });
+
   it("reemplaza localhost por el host del servidor cuando el frontend es remoto", async () => {
     vi.resetModules();
 
