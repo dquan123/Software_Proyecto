@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-
-const API = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+import { buildApiUrl } from "../config/api";
 
 function formatDate(value) {
   if (!value) return "Sin fecha";
@@ -53,7 +52,7 @@ export default function DocumentList({ usuarioId, refreshKey = 0 }) {
         setLoading(true);
         setError("");
 
-        const response = await fetch(`${API}/documentos/${usuarioId}`);
+        const response = await fetch(buildApiUrl(`/documentos/${usuarioId}`));
         if (!response.ok) {
           throw new Error("No se pudieron cargar los documentos.");
         }
