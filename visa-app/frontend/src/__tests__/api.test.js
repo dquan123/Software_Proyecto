@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
 describe("buildApiUrl", () => {
-  it("normaliza rutas sin base URL configurada", async () => {
+  it("usa el host actual y el puerto del backend cuando no hay URL configurada", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_API_URL", "");
 
-    const { API_BASE_URL, buildApiUrl } = await import("../config/api");
+    const { buildApiUrl, resolveApiBaseUrl } = await import("../config/api");
+    const baseUrl = resolveApiBaseUrl("", {
+      protocol: "http:",
+      hostname: "localhost",
+    });
 
-    expect(buildApiUrl("/login")).toBe(`${API_BASE_URL}/login`);
-    expect(buildApiUrl("login")).toBe(`${API_BASE_URL}/login`);
+    expect(baseUrl).toBe("http://localhost:3000");
+    expect(buildApiUrl("/login")).toMatch(/\/login$/);
+    expect(buildApiUrl("login")).toMatch(/\/login$/);
   });
 
   it("elimina diagonales finales de VITE_API_URL", async () => {
@@ -19,5 +24,29 @@ describe("buildApiUrl", () => {
 
     expect(API_BASE_URL).toBe("https://api.example.test");
     expect(buildApiUrl("questions")).toBe("https://api.example.test/questions");
+  });
+
+  it("reemplaza localhost por el host del servidor cuando el frontend es remoto", async () => {
+    vi.resetModules();
+
+    const { resolveApiBaseUrl } = await import("../config/api");
+    const baseUrl = resolveApiBaseUrl("http://localhost:3000", {
+      protocol: "http:",
+      hostname: "3.14.12.212",
+    });
+
+    expect(baseUrl).toBe("http://3.14.12.212:3000");
+  });
+
+  it("respeta una URL remota configurada explícitamente", async () => {
+    vi.resetModules();
+
+    const { resolveApiBaseUrl } = await import("../config/api");
+    const baseUrl = resolveApiBaseUrl("https://api.visaguide.example/", {
+      protocol: "https:",
+      hostname: "visaguide.example",
+    });
+
+    expect(baseUrl).toBe("https://api.visaguide.example");
   });
 });
