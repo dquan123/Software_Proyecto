@@ -8,9 +8,13 @@ import InformationSection from "../components/InformationSection";
 import DashboardStats from "../components/DashboardStats";
 import {
   calculateDs160Percentage,
+  getCurrentProcessStage,
   getDashboardNextAction,
   getDashboardQuickCards,
+  getProcessStageLabel,
+  getProcessTimeline,
   summarizeDocuments,
+  TOTAL_PROCESS_STEPS,
 } from "../utils/dashboardStats";
 import "../styles/dashboard.css";
 
@@ -77,13 +81,20 @@ export default function Dashboard() {
         const ds160Data = ds160Result.status === "fulfilled" ? ds160Result.value : null;
         const documentsData = documentsResult.status === "fulfilled" ? documentsResult.value : [];
         const documentsSummary = summarizeDocuments(documentsData);
+        const ds160Percentage = calculateDs160Percentage(ds160Data);
+        const currentStageNumber = getCurrentProcessStage({
+          session,
+          tramite: tramiteData,
+          ds160Percentage,
+          documentSummary: documentsSummary,
+        });
 
         setTramite(tramiteData);
         setDocumentSummary(documentsSummary);
         setStats({
-          ds160Percentage: calculateDs160Percentage(ds160Data),
+          ds160Percentage,
           documentCount: documentsSummary.total,
-          currentStage: tramiteData?.etapaActual || "Trámite no iniciado",
+          currentStage: getProcessStageLabel(currentStageNumber),
         });
 
         if ([tramiteResult, ds160Result, documentsResult].some((result) => result.status === "rejected")) {
@@ -116,13 +127,13 @@ export default function Dashboard() {
   }
 
   /* ─── Calculations ─── */
-  const progresoRecibido = Number(tramite?.progreso);
-  const progreso = Number.isFinite(progresoRecibido)
-    ? Math.min(100, Math.max(0, progresoRecibido))
-    : 0;
-  let etapaActual = Math.min(6, Math.max(1, Math.ceil(progreso / 16.66)));
-  if (session?.perfil && etapaActual < 2) etapaActual = 2;
-  const pct  = Math.round((etapaActual / 6) * 100);
+  const etapaActual = getCurrentProcessStage({
+    session,
+    tramite,
+    ds160Percentage: stats.ds160Percentage,
+    documentSummary,
+  });
+  const pct  = Math.round((etapaActual / TOTAL_PROCESS_STEPS) * 100);
   const r    = 26;
   const circ = 2 * Math.PI * r;
   const nextAction = getDashboardNextAction({
@@ -137,14 +148,12 @@ export default function Dashboard() {
   });
   const showLegacyQuickCards = false;
 
-  const ETAPAS = [
-    { n: 1, label: "Perfil",     done: etapaActual >= 2, active: etapaActual === 1 },
-    { n: 2, label: "DS-160",     done: etapaActual >= 3, active: etapaActual === 2 },
-    { n: 3, label: "Pago",       done: etapaActual >= 4, active: etapaActual === 3 },
-    { n: 4, label: "Cita",       done: etapaActual >= 5, active: etapaActual === 4 },
-    { n: 5, label: "Entrevista", done: etapaActual >= 6, active: etapaActual === 5 },
-    { n: 6, label: "Decisión",   done: false,            active: etapaActual === 6 },
-  ];
+  const ETAPAS = getProcessTimeline(etapaActual).map((step) => ({
+    n: step.number,
+    label: step.shortLabel,
+    done: step.done,
+    active: step.active,
+  }));
 
   const tipoVisa = () => {
     const p = session?.perfil;
@@ -220,7 +229,7 @@ export default function Dashboard() {
                   <span className="dash-etapa-num" style={{ fontSize: modoSenior ? "50px" : "42px" }}>
                     {etapaActual}
                   </span>
-                  <span className="dash-etapa-de">de 6</span>
+                  <span className="dash-etapa-de">de {TOTAL_PROCESS_STEPS}</span>
                 </div>
                 <div className="dash-ring-wrap">
                   <svg width="58" height="58" viewBox="0 0 60 60" aria-hidden="true">

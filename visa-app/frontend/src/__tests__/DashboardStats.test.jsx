@@ -96,7 +96,7 @@ describe("DashboardStats", () => {
   it("genera cards rápidas dinámicas según documentos y etapa", () => {
     const cards = getDashboardQuickCards({
       documentSummary: { total: 1, pending: 1 },
-      stageNumber: 5,
+      stageNumber: 6,
     });
 
     expect(cards[0]).toMatchObject({
@@ -109,5 +109,22 @@ describe("DashboardStats", () => {
       cta: "Practicar ahora",
       path: "/entrevista",
     });
+  });
+
+  it("envía los pasos de pago y cita al asesor por WhatsApp", () => {
+    const paymentAction = getDashboardNextAction({ stageNumber: 4 });
+    const appointmentAction = getDashboardNextAction({ stageNumber: 5 });
+
+    expect(paymentAction).toMatchObject({
+      buttonLabel: "Hablar con el asesor",
+    });
+    expect(paymentAction.path).toContain("https://wa.me/");
+    expect(paymentAction.path).toContain("text=");
+
+    expect(appointmentAction).toMatchObject({
+      buttonLabel: "Hablar con el asesor",
+    });
+    expect(appointmentAction.path).toContain("https://wa.me/");
+    expect(appointmentAction.path).toContain("text=");
   });
 });

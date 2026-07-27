@@ -75,7 +75,7 @@ describe("Dashboard", () => {
     expect(screen.getByRole("button", { name: /Revisión de documentos/i })).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.getByText("1", { selector: ".dash-stat-card__value" })).toBeInTheDocument();
-    expect(screen.getByText("Pago de visa")).toBeInTheDocument();
+    expect(screen.getByText("Subir documentos")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/estado-tramite?correo=ana%40example.com"),
       expect.objectContaining({ signal: expect.any(AbortSignal) })
@@ -107,15 +107,38 @@ describe("Dashboard", () => {
   });
 
   it("limita la etapa al rango válido cuando el backend devuelve progreso excesivo", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({ progreso: 180 }),
+    vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+      const requestUrl = String(url);
+
+      if (requestUrl.includes("/estado-tramite")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ progreso: 180 }),
+        });
+      }
+
+      if (requestUrl.includes("/ds160")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ seccion_actual: 10, completado: true }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => [
+          { id: 1, estado: "approved" },
+          { id: 2, estado: "approved" },
+          { id: 3, estado: "approved" },
+          { id: 4, estado: "approved" },
+        ],
+      });
     });
 
     render(<Dashboard />);
 
     await waitFor(() =>
-      expect(screen.getByText("6", { selector: ".dash-etapa-num" })).toBeInTheDocument()
+      expect(screen.getByText("7", { selector: ".dash-etapa-num" })).toBeInTheDocument()
     );
     expect(screen.getByText("100%", { selector: ".dash-ring-pct" })).toBeInTheDocument();
   });
