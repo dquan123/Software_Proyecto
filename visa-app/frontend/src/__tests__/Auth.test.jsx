@@ -67,7 +67,7 @@ describe("pantallas de autenticación", () => {
     await user.click(screen.getByRole("button", { name: /Ingresar/i }));
     expect(screen.getByRole("alert")).toHaveTextContent("El correo es obligatorio");
 
-    await user.type(screen.getByLabelText("Correo electrónico"), "correo-invalido");
+    await user.type(screen.getByLabelText("Correo electrónico"), "ana@dominio");
     await user.click(screen.getByRole("button", { name: /Ingresar/i }));
     expect(screen.getByRole("alert")).toHaveTextContent("Ingresa un correo válido");
 
@@ -153,7 +153,7 @@ describe("pantallas de autenticación", () => {
     render(<App />);
 
     await user.type(screen.getByLabelText("Nombre completo"), "Ana López");
-    await user.type(screen.getByLabelText("Correo electrónico"), "correo-invalido");
+    await user.type(screen.getByLabelText("Correo electrónico"), "ana@dominio");
     await user.click(screen.getByRole("button", { name: /Crear cuenta/i }));
     expect(screen.getByRole("alert")).toHaveTextContent("Ingresa un correo válido");
 

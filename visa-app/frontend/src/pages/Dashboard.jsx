@@ -71,8 +71,11 @@ export default function Dashboard() {
   }
 
   /* ─── Calculations ─── */
-  const progreso  = tramite?.progreso || 10;
-  let etapaActual = Math.ceil(progreso / 16.66);
+  const progresoRecibido = Number(tramite?.progreso);
+  const progreso = Number.isFinite(progresoRecibido)
+    ? Math.min(100, Math.max(0, progresoRecibido))
+    : 0;
+  let etapaActual = Math.min(6, Math.max(1, Math.ceil(progreso / 16.66)));
   if (session?.perfil && etapaActual < 2) etapaActual = 2;
   const pct  = Math.round((etapaActual / 6) * 100);
   const r    = 26;

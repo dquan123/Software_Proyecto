@@ -228,7 +228,7 @@ function Registro() {
 
   const validate = () => {
     if (!nombre.trim()) { setError("El nombre es obligatorio"); return false; }
-    if (!correo.trim() || !correo.includes("@")) { setError("Ingresa un correo válido"); return false; }
+    if (!correo.trim() || !correo.includes("@") || !correo.includes(".")) { setError("Ingresa un correo válido"); return false; }
     if (!contrasena.trim() || contrasena.length < 4) { setError("La contraseña debe tener al menos 4 caracteres"); return false; }
     if (contrasena !== confirmarContrasena) { setError("Las contraseñas no coinciden"); return false; }
     return true;
