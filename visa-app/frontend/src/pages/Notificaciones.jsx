@@ -30,7 +30,9 @@ export default function Notificaciones() {
   const [notificaciones, setNotificaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [errorAccion, setErrorAccion] = useState("");
   const [marcandoTodas, setMarcandoTodas] = useState(false);
+  const [eliminandoId, setEliminandoId] = useState(null);
 
   const fs = (base) => (modoSenior ? base + 3 : base);
 
@@ -59,6 +61,7 @@ export default function Notificaciones() {
   }, [isValidating, session, cargarNotificaciones]);
 
   const marcarLeida = async (id) => {
+    setErrorAccion("");
     try {
       const res = await fetch(buildApiUrl(`/notificaciones/${id}/leer`), {
         method: "PUT",
@@ -71,12 +74,13 @@ export default function Notificaciones() {
       );
       window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
     } catch (e) {
-      console.error(e);
+      setErrorAccion(e.message || "No se pudo actualizar la notificación");
     }
   };
 
   const marcarTodasLeidas = async () => {
     setMarcandoTodas(true);
+    setErrorAccion("");
     try {
       const res = await fetch(buildApiUrl(`/notificaciones/${session.id}/leer-todas`), {
         method: "PUT",
@@ -85,9 +89,28 @@ export default function Notificaciones() {
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
       window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
     } catch (e) {
-      console.error(e);
+      setErrorAccion(e.message || "No se pudieron actualizar las notificaciones");
     } finally {
       setMarcandoTodas(false);
+    }
+  };
+
+  const eliminarNotificacion = async (id) => {
+    setEliminandoId(id);
+    setErrorAccion("");
+    try {
+      const res = await fetch(buildApiUrl(`/notificaciones/${id}`), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.id }),
+      });
+      if (!res.ok) throw new Error("No se pudo eliminar la notificación");
+      setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+      window.dispatchEvent(new CustomEvent("notificacionesLeidas"));
+    } catch (e) {
+      setErrorAccion(e.message || "No se pudo eliminar la notificación");
+    } finally {
+      setEliminandoId(null);
     }
   };
 
@@ -136,6 +159,12 @@ export default function Notificaciones() {
             </button>
           )}
         </div>
+
+        {errorAccion && (
+          <p role="alert" style={{ ...s.errorAccion, fontSize: fs(13) }}>
+            {errorAccion}
+          </p>
+        )}
 
         {/* Estados */}
         {cargando && (
@@ -205,10 +234,19 @@ export default function Notificaciones() {
                     <button
                       style={{ ...s.btnLeer, fontSize: fs(12) }}
                       onClick={() => marcarLeida(n.id)}
+                      aria-label={`Marcar como leída: ${n.titulo}`}
                     >
                       Marcar como leída
                     </button>
                   )}
+                  <button
+                    style={{ ...s.btnEliminar, fontSize: fs(12) }}
+                    onClick={() => eliminarNotificacion(n.id)}
+                    disabled={eliminandoId === n.id}
+                    aria-label={`Eliminar: ${n.titulo}`}
+                  >
+                    {eliminandoId === n.id ? "Eliminando..." : "Eliminar"}
+                  </button>
                 </div>
               );
             })}
@@ -368,5 +406,23 @@ const s = {
     cursor: "pointer",
     fontFamily: "var(--vg-font)",
     whiteSpace: "nowrap",
+  },
+  btnEliminar: {
+    flexShrink: 0,
+    backgroundColor: "transparent",
+    border: "1px solid var(--vg-danger-text)",
+    borderRadius: "7px",
+    padding: "6px 12px",
+    color: "var(--vg-danger-text)",
+    cursor: "pointer",
+    fontFamily: "var(--vg-font)",
+    whiteSpace: "nowrap",
+  },
+  errorAccion: {
+    margin: "0 0 16px",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    backgroundColor: "var(--vg-danger-bg)",
+    color: "var(--vg-danger-text)",
   },
 };

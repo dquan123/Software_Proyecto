@@ -361,6 +361,10 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
+  if (normalized.includes("DELETE FROM notificaciones")) {
+    return Promise.resolve({ rows: [{ id: values[0] }] });
+  }
+
   if (normalized.includes("INSERT INTO interview_sessions")) {
     return Promise.resolve({
       rows: [
@@ -1123,6 +1127,15 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("Notificación marcada como leída");
     expect(response.body.notificacion.leido).toBe(true);
+  });
+
+  test("DELETE /notificaciones/:id elimina una notificacion del usuario", async () => {
+    const response = await request(app)
+      .delete("/notificaciones/20")
+      .send({ userId: 1 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Notificación eliminada correctamente");
   });
 
   test("POST /interview-sessions crea una sesion sin usar R2 real cuando no hay archivos", async () => {

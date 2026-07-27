@@ -76,7 +76,20 @@ function createNotificacionController(notificacionService) {
     }
   }
 
-  return { listar, contarNoLeidas, marcarLeida, marcarTodasLeidas, crear };
+  async function eliminar(req, res) {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      await notificacionService.eliminar(req.params.id, userId);
+      return res.json({ message: "Notificación eliminada correctamente" });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  return { listar, contarNoLeidas, marcarLeida, marcarTodasLeidas, crear, eliminar };
 }
 
 module.exports = createNotificacionController;
