@@ -53,6 +53,64 @@ describe("pantallas de autenticación", () => {
     });
   });
 
+  it("renderiza el login y bloquea envíos con campos vacíos o correo inválido", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    window.history.pushState({}, "", "/login");
+
+    render(<App />);
+
+    expect(screen.getByLabelText("Correo electrónico")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ingresar/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Ingresar/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("El correo es obligatorio");
+
+    await user.type(screen.getByLabelText("Correo electrónico"), "correo-invalido");
+    await user.click(screen.getByRole("button", { name: /Ingresar/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Ingresa un correo válido");
+
+    await user.clear(screen.getByLabelText("Correo electrónico"));
+    await user.type(screen.getByLabelText("Correo electrónico"), "persona@example.com");
+    await user.click(screen.getByRole("button", { name: /Ingresar/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("La contraseña es obligatoria");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("guarda la sesión cuando el login responde correctamente", async () => {
+    const user = userEvent.setup();
+    const loggedUser = {
+      id_usuario: 8,
+      nombre: "Mario Gómez",
+      correo: "mario@example.com",
+      perfil: null,
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ user: loggedUser }),
+    });
+    window.history.pushState({}, "", "/login");
+
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Correo electrónico"), loggedUser.correo);
+    await user.type(screen.getByLabelText("Contraseña"), "secreto");
+    await user.click(screen.getByRole("button", { name: /Ingresar/i }));
+
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem("visaguide_session"))).toMatchObject({
+        id: loggedUser.id_usuario,
+        nombre: loggedUser.nombre,
+        correo: loggedUser.correo,
+        perfil: null,
+      });
+    });
+    expect(localStorage.getItem("correoUsuario")).toBe(loggedUser.correo);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("conserva validación, autocomplete y envío real del registro", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -85,6 +143,32 @@ describe("pantallas de autenticación", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre: "Ana López", correo: "ana@example.com", contrasena: "clave123" }),
     });
+  });
+
+  it("valida correo, longitud y confirmación de contraseña antes de registrar", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    window.history.pushState({}, "", "/registro");
+
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Nombre completo"), "Ana López");
+    await user.type(screen.getByLabelText("Correo electrónico"), "correo-invalido");
+    await user.click(screen.getByRole("button", { name: /Crear cuenta/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Ingresa un correo válido");
+
+    await user.clear(screen.getByLabelText("Correo electrónico"));
+    await user.type(screen.getByLabelText("Correo electrónico"), "ana@example.com");
+    await user.type(screen.getByLabelText("Contraseña"), "123");
+    await user.click(screen.getByRole("button", { name: /Crear cuenta/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("al menos 4 caracteres");
+
+    await user.clear(screen.getByLabelText("Contraseña"));
+    await user.type(screen.getByLabelText("Contraseña"), "clave123");
+    await user.type(screen.getByLabelText("Confirmar contraseña"), "otra-clave");
+    await user.click(screen.getByRole("button", { name: /Crear cuenta/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Las contraseñas no coinciden");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("guarda la sesión después del registro y continúa a selección de perfil", async () => {
