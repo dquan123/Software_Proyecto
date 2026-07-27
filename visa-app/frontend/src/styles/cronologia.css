@@ -37,6 +37,20 @@
   margin: var(--vg-space-4) 0 var(--vg-space-5);
 }
 
+.cron-message {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cron-message--warning {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
 /* ── Timeline list ── */
 .cron-timeline {
   list-style: none;
