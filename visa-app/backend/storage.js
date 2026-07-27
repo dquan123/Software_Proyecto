@@ -1,10 +1,12 @@
 const fs = require("fs/promises");
+const nodeFs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const {
   validateR2Config,
   uploadBufferToR2,
   deleteObjectFromR2,
+  getObjectFromR2,
 } = require("./r2");
 
 const LOCAL_STORAGE_DIR = process.env.LOCAL_UPLOAD_DIR
@@ -57,8 +59,27 @@ async function deleteStoredFile(key) {
   }
 }
 
+async function getStoredFile(key) {
+  if (!key) {
+    const error = new Error("Archivo no encontrado");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!key.startsWith("local/")) {
+    return getObjectFromR2(key);
+  }
+
+  const filename = path.basename(key.slice("local/".length));
+  return {
+    stream: nodeFs.createReadStream(path.join(LOCAL_STORAGE_DIR, filename)),
+    contentType: "application/octet-stream",
+  };
+}
+
 module.exports = {
   LOCAL_STORAGE_DIR,
   uploadStoredFile,
   deleteStoredFile,
+  getStoredFile,
 };
