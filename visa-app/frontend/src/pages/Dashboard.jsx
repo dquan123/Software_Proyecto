@@ -5,6 +5,8 @@ import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
 import { SkeletonCard, SkeletonList } from "../components/SkeletonCard";
 import InformationSection from "../components/InformationSection";
+import DashboardStats from "../components/DashboardStats";
+import { calculateDs160Percentage } from "../utils/dashboardStats";
 import "../styles/dashboard.css";
 
 // Pulse animation for active node
@@ -31,6 +33,13 @@ export default function Dashboard() {
   };
   const [tramite, setTramite]   = useState(null);
   const [loading, setLoading]   = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState("");
+  const [stats, setStats] = useState({
+    ds160Percentage: 0,
+    documentCount: 0,
+    currentStage: "Trámite no iniciado",
+  });
 
   useEffect(() => {
     if (isValidating || window.location.hash !== "#informacion") return;
@@ -42,20 +51,48 @@ export default function Dashboard() {
   useEffect(() => {
     if (!session) return;
     const controller = new AbortController();
-    const fetchTramite = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const res = await fetch(
-          `${buildApiUrl("/estado-tramite")}?correo=${encodeURIComponent(session.correo)}`,
-          { signal: controller.signal }
-        );
-        if (res.ok) setTramite(await res.json());
+        setStatsError("");
+        const fetchJson = async (path) => {
+          const response = await fetch(buildApiUrl(path), { signal: controller.signal });
+          if (!response.ok) throw new Error("No se pudo cargar la información");
+          return response.json();
+        };
+        const correo = encodeURIComponent(session.correo);
+        const [tramiteResult, ds160Result, documentsResult] = await Promise.allSettled([
+          fetchJson(`/estado-tramite?correo=${correo}`),
+          fetchJson(`/ds160?correo=${correo}`),
+          fetchJson(`/documentos/${session.id}`),
+        ]);
+        if (controller.signal.aborted) return;
+
+        const tramiteData = tramiteResult.status === "fulfilled" ? tramiteResult.value : null;
+        const ds160Data = ds160Result.status === "fulfilled" ? ds160Result.value : null;
+        const documentsData = documentsResult.status === "fulfilled" ? documentsResult.value : [];
+
+        setTramite(tramiteData);
+        setStats({
+          ds160Percentage: calculateDs160Percentage(ds160Data),
+          documentCount: Array.isArray(documentsData) ? documentsData.length : 0,
+          currentStage: tramiteData?.etapaActual || "Trámite no iniciado",
+        });
+
+        if ([tramiteResult, ds160Result, documentsResult].some((result) => result.status === "rejected")) {
+          setStatsError("Algunas estadísticas no pudieron actualizarse.");
+        }
       } catch (error) {
-        if (error.name !== "AbortError") { /* silent */ }
+        if (error.name !== "AbortError") {
+          setStatsError("No se pudieron cargar las estadísticas.");
+        }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setStatsLoading(false);
+        }
       }
     };
-    fetchTramite();
+    fetchDashboardData();
     return () => controller.abort();
   }, [session]);
 
@@ -178,6 +215,8 @@ export default function Dashboard() {
                 </div>
               </div>
             </section>
+
+            <DashboardStats loading={statsLoading} error={statsError} stats={stats} />
 
             {/* NEXT ACTION */}
             <section className="dash-action-section">
