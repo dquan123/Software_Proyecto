@@ -332,6 +332,18 @@ img, video, canvas, svg {
   color: #fff;
   font-size: 22px;
   line-height: 1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease, background 0.15s ease;
+}
+
+.vg-sidebar:not(.vg-sidebar--auto-disabled):hover .vg-sidebar-expand-button,
+.vg-sidebar:focus-within .vg-sidebar-expand-button,
+.vg-sidebar--expanded .vg-sidebar-expand-button {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .vg-sidebar-logo {
@@ -379,6 +391,30 @@ img, video, canvas, svg {
 
 .vg-sidebar-user-link:hover {
   background: var(--vg-navy-mid);
+}
+
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-user-link {
+  justify-content: center;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-theme-row,
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-senior-row,
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) button.vg-sidebar-label {
+  display: none !important;
+}
+
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-bottom-section {
+  position: absolute;
+  right: 0;
+  bottom: 16px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 !important;
+  border-top: 0 !important;
+  margin-top: 0 !important;
 }
 
 /* Notification popover shared by authenticated application pages. */

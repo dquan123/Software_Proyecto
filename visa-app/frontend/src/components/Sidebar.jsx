@@ -228,9 +228,9 @@ export default function Sidebar({ currentPage }) {
         </nav>
 
         {/* Bottom section */}
-        <div style={s.bottomSection}>
+        <div className="vg-sidebar-bottom-section" style={s.bottomSection}>
           {/* Dark mode toggle */}
-          <div style={s.themeRow}>
+          <div className="vg-sidebar-theme-row" style={s.themeRow}>
             <div style={s.themeLeft}>
               <span style={s.themeIcon}>
                 {isDark
@@ -252,7 +252,7 @@ export default function Sidebar({ currentPage }) {
           </div>
 
           {/* Modo Senior */}
-          <div style={s.modoSenior}>
+          <div className="vg-sidebar-senior-row" style={s.modoSenior}>
             <div style={s.modoSeniorLeft}>
               <span style={s.modoSeniorIcon}>
                 <Accessibility size={16} strokeWidth={2} aria-hidden="true" />
