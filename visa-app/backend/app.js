@@ -13,7 +13,7 @@ const createInterviewSessionService = require("./services/interviewSessionServic
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
-const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile } = require("./storage");
+const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 
 const app = express();
 
@@ -122,6 +122,29 @@ async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
   }
 }
 
+function buildStoredDocumentUrl(documentId) {
+  return `/documentos/${documentId}/archivo`;
+}
+
+function presentDocumento(document) {
+  if (!document) return document;
+
+  const { storage_key, ...safeDocument } = document;
+
+  return {
+    ...safeDocument,
+    archivo_url: storage_key
+      ? buildStoredDocumentUrl(document.id)
+      : safeDocument.archivo_url,
+  };
+}
+
+function buildDownloadFilename(document) {
+  const rawName = document.nombre || `documento-${document.id}`;
+  const sanitizedName = path.basename(rawName).replace(/["\r\n]/g, "").trim();
+  return sanitizedName || `documento-${document.id}`;
+}
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -156,7 +179,7 @@ async function insertDocumento({
            feedback = NULL,
            actualizado_en = CURRENT_TIMESTAMP
        WHERE id = $5
-       RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en`,
+       RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en, storage_key`,
       [nombre, tipo, archivoUrl, storageKey, existingDocument.id]
     );
 
@@ -173,7 +196,7 @@ async function insertDocumento({
   const result = await pool.query(
     `INSERT INTO documentos (nombre, tipo, archivo_url, usuario_id, documento_key, estado, storage_key, actualizado_en)
      VALUES ($1, $2, $3, $4, $5, 'review', $6, CURRENT_TIMESTAMP)
-     RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en`,
+     RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en, storage_key`,
     [nombre, tipo, archivoUrl, usuarioId, documentoKey || null, storageKey || null]
   );
 
@@ -394,18 +417,18 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     uploadedFile = await uploadStoredFile(req.file, {
       baseUrl: `${req.protocol}://${req.get("host")}`,
     });
-    const documento = await insertDocumento({
+    const documento = presentDocumento(await insertDocumento({
       nombre: documentName,
       tipo: documentType,
       archivoUrl: uploadedFile.url,
       usuarioId: parsedUsuarioId,
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
-    });
+    }));
 
     res.json({
       message: "Archivo subido correctamente",
-      archivo_url: uploadedFile.url,
+      archivo_url: documento.archivo_url,
       key: uploadedFile.key,
       documento,
     });
@@ -633,14 +656,14 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
   }
 
   try {
-    const documento = await insertDocumento({
+    const documento = presentDocumento(await insertDocumento({
       nombre: nombre.trim(),
       tipo: tipo || null,
       archivoUrl: uploadedFile.url,
       usuarioId: parsedUsuarioId,
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
-    });
+    }));
 
     return res.status(201).json({
       message: "Documento guardado correctamente",
@@ -659,6 +682,65 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
   }
 });
 
+app.get("/documentos/:id/archivo", async (req, res) => {
+  const documentId = Number(req.params.id);
+
+  if (Number.isNaN(documentId)) {
+    return res.status(400).json({ error: "documento_id debe ser numÃ©rico" });
+  }
+
+  try {
+    await documentSchemaReady;
+
+    const result = await pool.query(
+      `SELECT id, nombre, tipo, archivo_url, storage_key
+       FROM documentos
+       WHERE id = $1
+       LIMIT 1`,
+      [documentId]
+    );
+
+    const document = result.rows[0];
+
+    if (!document) {
+      return res.status(404).json({ error: "Documento no encontrado" });
+    }
+
+    if (!document.storage_key) {
+      return res.redirect(document.archivo_url);
+    }
+
+    const storedFile = await getStoredFile(document.storage_key);
+    const contentType = storedFile.contentType || document.tipo || "application/octet-stream";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${buildDownloadFilename(document)}"`
+    );
+
+    if (storedFile.contentLength) {
+      res.setHeader("Content-Length", String(storedFile.contentLength));
+    }
+
+    storedFile.stream.on("error", (error) => {
+      console.error("ERROR STREAM DOCUMENTO:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "No se pudo cargar el documento" });
+      } else {
+        res.destroy(error);
+      }
+    });
+
+    return storedFile.stream.pipe(res);
+  } catch (error) {
+    console.error("ERROR GET DOCUMENTO ARCHIVO:", error);
+    return res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : "No se pudo cargar el documento",
+    });
+  }
+});
+
 app.get("/documentos/:usuarioId", async (req, res) => {
   const usuarioId = Number(req.params.usuarioId);
 
@@ -670,14 +752,14 @@ app.get("/documentos/:usuarioId", async (req, res) => {
     await documentSchemaReady;
 
     const result = await pool.query(
-      `SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en
+      `SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key, estado, feedback, creado_en, actualizado_en, storage_key
        FROM documentos
        WHERE usuario_id = $1
        ORDER BY actualizado_en DESC, creado_en DESC`,
       [usuarioId]
     );
 
-    return res.json(result.rows);
+    return res.json(result.rows.map(presentDocumento));
   } catch (error) {
     console.error("ERROR GET DOCUMENTOS:", error);
     return res.status(500).json({ error: "No se pudieron cargar los documentos" });

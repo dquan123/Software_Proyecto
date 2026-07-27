@@ -174,7 +174,9 @@ function getUpdatedLabel(updatedAt, fallback) {
 }
 
 function getPreviewUrl(preview, downloadUrl) {
-  return preview || downloadUrl || "";
+  if (preview) return preview;
+  if (!downloadUrl) return "";
+  return downloadUrl.startsWith("/") ? buildApiUrl(downloadUrl) : downloadUrl;
 }
 
 function DocumentFilePreview({ doc, preview, file, onOpen }) {
@@ -369,8 +371,9 @@ export default function DocumentCard({
   };
 
   const handleOpenPreview = () => {
-    if (!preview && !doc.downloadUrl) return;
-    window.open(preview || doc.downloadUrl, "_blank", "noopener,noreferrer");
+    const previewUrl = getPreviewUrl(preview, doc.downloadUrl);
+    if (!previewUrl) return;
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
   };
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
