@@ -113,6 +113,27 @@ function createNotificacionService(pool) {
     return result.rows.length;
   }
 
+  async function eliminar(id, userId) {
+    await ensureSchema();
+    const nid = parseId(id);
+    const uid = parseUserId(userId);
+
+    const result = await pool.query(
+      `DELETE FROM notificaciones
+       WHERE id = $1 AND id_usuario = $2
+       RETURNING id`,
+      [nid, uid]
+    );
+
+    if (result.rows.length === 0) {
+      const error = new Error("Notificación no encontrada");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return result.rows[0].id;
+  }
+
   async function crearNotificacion({ userId, titulo, mensaje, tipo = "info", etapaRelacionada = null }) {
     await ensureSchema();
     const uid = parseUserId(userId);
@@ -166,6 +187,7 @@ function createNotificacionService(pool) {
     contarNoLeidas,
     marcarLeida,
     marcarTodasLeidas,
+    eliminar,
     crearNotificacion,
     existeNotificacionEtapa,
   };

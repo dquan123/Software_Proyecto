@@ -22,6 +22,9 @@ function createNotificacionRoutes(pool) {
   // PUT /notificaciones/:userId/leer-todas — marcar todas como leídas
   router.put("/:userId/leer-todas", controller.marcarTodasLeidas);
 
+  // DELETE /notificaciones/:id — eliminar una notificación propia (body: { userId })
+  router.delete("/:id", controller.eliminar);
+
   return router;
 }
 
