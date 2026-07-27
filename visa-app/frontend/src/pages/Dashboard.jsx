@@ -6,7 +6,12 @@ import useRequireAuth from "../hooks/useRequireAuth";
 import { SkeletonCard, SkeletonList } from "../components/SkeletonCard";
 import InformationSection from "../components/InformationSection";
 import DashboardStats from "../components/DashboardStats";
-import { calculateDs160Percentage } from "../utils/dashboardStats";
+import {
+  calculateDs160Percentage,
+  getDashboardNextAction,
+  getDashboardQuickCards,
+  summarizeDocuments,
+} from "../utils/dashboardStats";
 import "../styles/dashboard.css";
 
 // Pulse animation for active node
@@ -40,6 +45,7 @@ export default function Dashboard() {
     documentCount: 0,
     currentStage: "Trámite no iniciado",
   });
+  const [documentSummary, setDocumentSummary] = useState(summarizeDocuments([]));
 
   useEffect(() => {
     if (isValidating || window.location.hash !== "#informacion") return;
@@ -70,11 +76,13 @@ export default function Dashboard() {
         const tramiteData = tramiteResult.status === "fulfilled" ? tramiteResult.value : null;
         const ds160Data = ds160Result.status === "fulfilled" ? ds160Result.value : null;
         const documentsData = documentsResult.status === "fulfilled" ? documentsResult.value : [];
+        const documentsSummary = summarizeDocuments(documentsData);
 
         setTramite(tramiteData);
+        setDocumentSummary(documentsSummary);
         setStats({
           ds160Percentage: calculateDs160Percentage(ds160Data),
-          documentCount: Array.isArray(documentsData) ? documentsData.length : 0,
+          documentCount: documentsSummary.total,
           currentStage: tramiteData?.etapaActual || "Trámite no iniciado",
         });
 
@@ -117,6 +125,17 @@ export default function Dashboard() {
   const pct  = Math.round((etapaActual / 6) * 100);
   const r    = 26;
   const circ = 2 * Math.PI * r;
+  const nextAction = getDashboardNextAction({
+    stageNumber: etapaActual,
+    ds160Percentage: stats.ds160Percentage,
+    documentSummary,
+    tramite,
+  });
+  const quickCards = getDashboardQuickCards({
+    documentSummary,
+    stageNumber: etapaActual,
+  });
+  const showLegacyQuickCards = false;
 
   const ETAPAS = [
     { n: 1, label: "Perfil",     done: etapaActual >= 2, active: etapaActual === 1 },
@@ -227,28 +246,49 @@ export default function Dashboard() {
               <div className="dash-action-card">
                 <div className="dash-action-left">
                   <div className="dash-action-badges">
-                    <span className="dash-priority-badge">PRIORIDAD ALTA</span>
+                    <span className="dash-priority-badge">{nextAction.priority}</span>
                     <span className="dash-time-est" style={{ fontSize: modoSenior ? "14px" : "12px" }}>
-                      Tiempo est.: 45 min
+                      {nextAction.timeEstimate}
                     </span>
                   </div>
                   <h3 style={{ fontSize: modoSenior ? "26px" : "21px" }}>
-                    Completar formulario DS-160
+                    {nextAction.title}
                   </h3>
                   <p style={{ fontSize: modoSenior ? "15px" : "13px" }}>
-                    El formulario oficial del gobierno requiere tu información personal, laboral y de viaje.
-                    Recomendamos hacerlo en una sola sesión.
+                    {nextAction.description}
                   </p>
                 </div>
-                <button className="dash-action-btn" onClick={() => (window.location.href = "/ds160")}>
-                  Iniciar sección &rarr;
+                <button className="dash-action-btn" onClick={() => (window.location.href = nextAction.path)}>
+                  {nextAction.buttonLabel} &rarr;
                 </button>
               </div>
             </section>
 
             {/* QUICK CARDS */}
             <section className="dash-quick-grid">
-              <article className="dash-card dash-card--yellow" onClick={() => (window.location.href = "/documents")} onKeyDown={(event) => activarTarjeta(event, "/documents")} role="button" tabIndex={0}>
+              {quickCards.map((card) => (
+                <article
+                  key={card.title}
+                  className={`dash-card dash-card--${card.tone}`}
+                  onClick={() => (window.location.href = card.path)}
+                  onKeyDown={(event) => activarTarjeta(event, card.path)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {card.badge && <span className="dash-important-badge">{card.badge}</span>}
+                  <div className={card.tone === "dark" ? "dash-card-icon-light" : "dash-card-icon"} aria-hidden="true" />
+                  <h4 style={{ fontSize: modoSenior ? "19px" : "16px", color: card.tone === "dark" ? "white" : undefined }}>
+                    {card.title}
+                  </h4>
+                  <p style={{ fontSize: modoSenior ? "14px" : "13px", color: card.tone === "dark" ? "var(--vg-text-light)" : "var(--vg-text-muted)" }}>
+                    {card.description}
+                  </p>
+                  <span className="dash-card-cta" style={{ color: card.tone === "dark" ? "var(--vg-success)" : "var(--vg-warning)", fontSize: modoSenior ? "14px" : "13px" }}>
+                    {card.cta} &rarr;
+                  </span>
+                </article>
+              ))}
+              {showLegacyQuickCards && <article className="dash-card dash-card--yellow" onClick={() => (window.location.href = "/documents")} onKeyDown={(event) => activarTarjeta(event, "/documents")} role="button" tabIndex={0}>
                 <span className="dash-important-badge">IMPORTANTE</span>
                 <div className="dash-card-icon" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px" }}>Revisión de documentos</h4>
@@ -258,9 +298,9 @@ export default function Dashboard() {
                 <span className="dash-card-cta" style={{ color: "var(--vg-warning)", fontSize: modoSenior ? "14px" : "13px" }}>
                   Corregir ahora &rarr;
                 </span>
-              </article>
+              </article>}
 
-              <article className="dash-card dash-card--white" onClick={() => (window.location.href = "/cronologia")} onKeyDown={(event) => activarTarjeta(event, "/cronologia")} role="button" tabIndex={0}>
+              {showLegacyQuickCards && (<><article className="dash-card dash-card--white" onClick={() => (window.location.href = "/cronologia")} onKeyDown={(event) => activarTarjeta(event, "/cronologia")} role="button" tabIndex={0}>
                 <div className="dash-card-icon" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px" }}>Ver cronología completa</h4>
                 <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "var(--vg-text-muted)" }}>
@@ -269,9 +309,9 @@ export default function Dashboard() {
                 <span className="dash-card-cta" style={{ color: "var(--vg-text-muted)", fontSize: modoSenior ? "14px" : "13px" }}>
                   Explorar &rarr;
                 </span>
-              </article>
+              </article></>)}
 
-              <article className="dash-card dash-card--dark" onClick={() => (window.location.href = "/entrevista")} onKeyDown={(event) => activarTarjeta(event, "/entrevista")} role="button" tabIndex={0}>
+              {showLegacyQuickCards && <article className="dash-card dash-card--dark" onClick={() => (window.location.href = "/entrevista")} onKeyDown={(event) => activarTarjeta(event, "/entrevista")} role="button" tabIndex={0}>
                 <div className="dash-card-icon-light" aria-hidden="true" />
                 <h4 style={{ fontSize: modoSenior ? "19px" : "16px", color: "white" }}>Simulador de entrevista</h4>
                 <p style={{ fontSize: modoSenior ? "14px" : "13px", color: "var(--vg-text-light)", flex: 1 }}>
@@ -280,7 +320,7 @@ export default function Dashboard() {
                 <span className="dash-card-cta" style={{ color: "var(--vg-success)", fontSize: modoSenior ? "14px" : "13px" }}>
                   Practicar &rarr;
                 </span>
-              </article>
+              </article>}
             </section>
           </>
         )}
