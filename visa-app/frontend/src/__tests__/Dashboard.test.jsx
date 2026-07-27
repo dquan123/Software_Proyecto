@@ -79,4 +79,18 @@ describe("Dashboard", () => {
     expect(screen.getByTestId("sidebar")).toHaveTextContent("inicio");
     expect(document.querySelectorAll(".sk-shimmer").length).toBeGreaterThan(0);
   });
+
+  it("limita la etapa al rango válido cuando el backend devuelve progreso excesivo", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ progreso: 180 }),
+    });
+
+    render(<Dashboard />);
+
+    await waitFor(() =>
+      expect(screen.getByText("6", { selector: ".dash-etapa-num" })).toBeInTheDocument()
+    );
+    expect(screen.getByText("100%", { selector: ".dash-ring-pct" })).toBeInTheDocument();
+  });
 });
