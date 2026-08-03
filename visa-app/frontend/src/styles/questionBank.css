@@ -16,6 +16,21 @@
   box-sizing: border-box;
 }
 
+.question-bank-shell--embedded {
+  width: 100%;
+  min-height: 0;
+  margin-left: 0;
+  background: transparent;
+}
+
+.question-bank-main--embedded {
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .question-bank-header {
   display: flex;
   align-items: flex-start;
@@ -42,7 +57,8 @@
   text-transform: uppercase;
 }
 
-.question-bank-header h1 {
+.question-bank-header h1,
+.question-bank-header h2 {
   margin: 0 0 12px;
   color: var(--vg-text);
   font-size: var(--vg-page-title);
