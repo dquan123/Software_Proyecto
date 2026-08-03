@@ -83,12 +83,51 @@ async function ensureUserSchema() {
       ADD COLUMN IF NOT EXISTS ciudad               VARCHAR(120),
       ADD COLUMN IF NOT EXISTS pais                 VARCHAR(120),
       ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
-      ADD COLUMN IF NOT EXISTS idioma               VARCHAR(10)  DEFAULT 'es'
+      ADD COLUMN IF NOT EXISTS idioma               VARCHAR(10)  DEFAULT 'es',
+      ADD COLUMN IF NOT EXISTS rol                  VARCHAR(20)  DEFAULT 'cliente'
   `);
 }
  
 const userSchemaReady = ensureUserSchema().catch((error) => {
   console.error("ERROR USER SCHEMA:", error);
+});
+
+const testUsers = [
+  ["Norman", "norman@prueba.cliente", "123456", "cliente"],
+  ["Juanfri", "juanfri@prueba.cliente", "123456", "cliente"],
+  ["Yaya", "yaya@prueba.cliente", "123456", "cliente"],
+  ["Quan", "quan@prueba.cliente", "123456", "cliente"],
+  ["Usuario Prueba", "usuario@prueba.com", "123456", "cliente"],
+  ["Admin Norman", "admin.norman@prueba.com", "123456", "admin"],
+  ["Admin Juanfri", "admin.juanfri@prueba.com", "123456", "admin"],
+  ["Admin Yaya", "admin.yaya@prueba.com", "123456", "admin"],
+  ["Admin Quan", "admin.quan@prueba.com", "123456", "admin"],
+  ["Admin General", "admin@prueba.com", "123456", "admin"],
+];
+
+async function seedTestUsers() {
+  await userSchemaReady;
+
+  await pool.query(
+    `
+      INSERT INTO usuario(nombre, correo, contrasena, rol)
+      SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
+      FROM (VALUES
+        ${testUsers.map((_, index) => {
+          const base = index * 4;
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+        }).join(",\n        ")}
+      ) AS seed(nombre, correo, contrasena, rol)
+      WHERE NOT EXISTS (
+        SELECT 1 FROM usuario u WHERE u.correo = seed.correo
+      )
+    `,
+    testUsers.flat()
+  );
+}
+
+const testUsersReady = seedTestUsers().catch((error) => {
+  console.error("ERROR TEST USERS SEED:", error);
 });
 
 const questionBankService = createQuestionBankService(pool);
@@ -136,6 +175,17 @@ function presentDocumento(document) {
     archivo_url: storage_key
       ? buildStoredDocumentUrl(document.id)
       : safeDocument.archivo_url,
+  };
+}
+
+function presentLoginUser(user) {
+  return {
+    id: user.id_usuario,
+    id_usuario: user.id_usuario,
+    nombre: user.nombre,
+    correo: user.correo,
+    perfil: user.perfil || null,
+    rol: user.rol || "cliente",
   };
 }
 
@@ -298,8 +348,9 @@ app.post("/register", async (req, res) => {
   const { nombre, correo, contrasena } = req.body;
 
   try {
+    await userSchemaReady;
     const result = await pool.query(
-      "INSERT INTO usuario(nombre, correo, contrasena) VALUES($1,$2,$3) RETURNING *",
+      "INSERT INTO usuario(nombre, correo, contrasena, rol) VALUES($1,$2,$3,'cliente') RETURNING *",
       [nombre, correo, contrasena]
     );
 
@@ -318,15 +369,21 @@ app.post("/login", async (req, res) => {
   const { correo, contrasena } = req.body;
 
   try {
+    await testUsersReady;
     const result = await pool.query(
-      "SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2",
+      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol
+       FROM usuario
+       WHERE correo=$1 AND contrasena=$2`,
       [correo, contrasena]
     );
 
     if (result.rows.length > 0) {
+      const usuario = presentLoginUser(result.rows[0]);
       res.json({
+        success: true,
         message: "Login exitoso",
-        user: result.rows[0],
+        usuario,
+        user: usuario,
       });
     } else {
       res.status(401).json({ error: "Credenciales incorrectas" });
