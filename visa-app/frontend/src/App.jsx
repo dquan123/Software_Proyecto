@@ -26,13 +26,22 @@ if (savedTheme) {
   document.documentElement.setAttribute("data-theme", savedTheme);
 }
 
+const getUserId = (userData) => userData.id_usuario || userData.id;
+
+const getLoginDestination = (userData) => {
+  if (userData?.rol === "admin") return "/admin";
+  if (userData?.rol === "cliente") return "/dashboard";
+  return userData?.perfil ? "/dashboard" : "/seleccion-perfil";
+};
+
 const SessionManager = {
   saveSession: (userData) => {
     localStorage.setItem("visaguide_session", JSON.stringify({
-      id: userData.id_usuario,
+      id: getUserId(userData),
       nombre: userData.nombre,
       correo: userData.correo,
       perfil: userData.perfil || null,
+      rol: userData.rol || "cliente",
       loginTime: new Date().toISOString(),
     }));
   },
@@ -81,6 +90,7 @@ function App() {
         <Route path="/entrevista"                     element={<Entrevista />} />
         <Route path="/entrevista/simulador"           element={<InterviewSimulator />} />
         <Route path="/entrevista/retroalimentacion"   element={<InterviewFeedback />} />
+        <Route path="/admin"                          element={<QuestionBank />} />
         <Route path="/admin/questions"                element={<QuestionBank />} />
         <Route path="/questions"                      element={<QuestionBank />} />
         <Route path="/documents"                      element={<Documents />} />
@@ -119,7 +129,7 @@ function Login() {
     const check = async () => {
       const session = SessionManager.getSession();
       if (session && (await validateSession(session))) {
-        navigate(session.perfil ? "/dashboard" : "/seleccion-perfil", { replace: true });
+        navigate(getLoginDestination(session), { replace: true });
       }
     };
     check();
@@ -147,9 +157,10 @@ function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        SessionManager.saveSession(data.user);
+        const usuario = data.usuario || data.user;
+        SessionManager.saveSession(usuario);
         localStorage.setItem("correoUsuario", correo);
-        window.location.href = data.user.perfil ? "/dashboard" : "/seleccion-perfil";
+        navigate(getLoginDestination(usuario), { replace: true });
       } else {
         setError(res.status === 401 ? "Correo o contraseña incorrectos" : data.error || "Error al iniciar sesión");
       }
@@ -216,7 +227,7 @@ function Registro() {
     const check = async () => {
       const session = SessionManager.getSession();
       if (session && (await validateSession(session))) {
-        navigate(session.perfil ? "/dashboard" : "/seleccion-perfil", { replace: true });
+        navigate(getLoginDestination(session), { replace: true });
       }
     };
     check();
