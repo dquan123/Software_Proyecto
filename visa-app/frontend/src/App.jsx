@@ -19,6 +19,12 @@ const QuestionBank = lazy(() => import("./pages/QuestionBank"));
 const Chat = lazy(() => import("./pages/Chat"));
 const Notificaciones = lazy(() => import("./pages/Notificaciones"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminDocuments = lazy(() => import("./pages/admin/AdminDocuments"));
+const AdminProcesses = lazy(() => import("./pages/admin/AdminProcesses"));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 
 // ── Apply saved theme on app start ──
 const savedTheme = localStorage.getItem("vg-theme");
@@ -90,7 +96,12 @@ function App() {
         <Route path="/entrevista"                     element={<Entrevista />} />
         <Route path="/entrevista/simulador"           element={<InterviewSimulator />} />
         <Route path="/entrevista/retroalimentacion"   element={<InterviewFeedback />} />
-        <Route path="/admin"                          element={<QuestionBank />} />
+        <Route path="/admin"                          element={<AdminDashboard />} />
+        <Route path="/admin/users"                    element={<AdminUsers />} />
+        <Route path="/admin/documents"                element={<AdminDocuments />} />
+        <Route path="/admin/processes"                element={<AdminProcesses />} />
+        <Route path="/admin/reports"                  element={<AdminReports />} />
+        <Route path="/admin/settings"                 element={<AdminSettings />} />
         <Route path="/admin/questions"                element={<QuestionBank />} />
         <Route path="/questions"                      element={<QuestionBank />} />
         <Route path="/documents"                      element={<Documents />} />
