@@ -1,53 +1,16 @@
+import { useEffect, useState } from "react";
+import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
 import { SkeletonList } from "../components/SkeletonCard";
+import {
+  calculateDs160Percentage,
+  getCurrentProcessStage,
+  getProcessTimeline,
+  summarizeDocuments,
+} from "../utils/dashboardStats";
 import "../styles/cronologia.css";
-
-const ETAPAS = [
-  {
-    numero: 1,
-    titulo: "Creación de perfil",
-    descripcion: "Información básica y registro inicial de la solicitud en la plataforma.",
-    estado: "completada",
-    fecha: "14 de Marzo, 2026",
-  },
-  {
-    numero: 2,
-    titulo: "Completar DS-160",
-    descripcion:
-      "Formulario oficial del gobierno de EE. UU. Requiere tu historial personal, familiar y laboral detallado. Es el paso más crítico.",
-    estado: "actual",
-    accion: { label: "Continuar llenando", path: "/ds160" },
-  },
-  {
-    numero: 3,
-    titulo: "Revisión experta",
-    descripcion:
-      "Nuestro equipo validará tu DS-160 para evitar errores comunes antes de enviarlo al sistema consular.",
-    estado: "pendiente",
-  },
-  {
-    numero: 4,
-    titulo: "Pago de tarifa (MRV)",
-    descripcion: "Abonar la tarifa consular de $185 USD. Este pago no es reembolsable.",
-    estado: "pendiente",
-  },
-  {
-    numero: 5,
-    titulo: "Agendar cita consular",
-    descripcion:
-      "Seleccionar fecha y hora para el CAS (toma de huellas) y la entrevista en la embajada.",
-    estado: "pendiente",
-  },
-  {
-    numero: 6,
-    titulo: "Entrevista en embajada",
-    descripcion:
-      "Presentación final ante el oficial consular para la decisión sobre tu visa.",
-    estado: "pendiente",
-  },
-];
 
 function CheckIcon() {
   return (
@@ -96,14 +59,14 @@ function TarjetaCompletada({ etapa, senior }) {
     <article className="cron-card cron-card--done">
       <div className="cron-card__head">
         <h3 className={`cron-card__title${senior ? " cron-card__title--senior" : ""}`}>
-          {etapa.titulo}
+          {etapa.label}
         </h3>
         <span className={`cron-card__fecha${senior ? " cron-card__fecha--senior" : ""}`}>
-          {etapa.fecha}
+          Completado
         </span>
       </div>
       <p className={`cron-card__desc${senior ? " cron-card__desc--senior" : ""}`}>
-        {etapa.descripcion}
+        {etapa.description}
       </p>
     </article>
   );
@@ -115,19 +78,19 @@ function TarjetaActual({ etapa, senior }) {
       <span className="cron-badge-actual">▶ ACTUAL</span>
       <div className="cron-card__head cron-card__head--actual">
         <h3 className={`cron-card__title cron-card__title--actual${senior ? " cron-card__title--senior" : ""}`}>
-          {etapa.titulo}
+          {etapa.label}
         </h3>
         <span className="cron-badge-progreso">En progreso</span>
       </div>
       <p className={`cron-card__desc${senior ? " cron-card__desc--senior" : ""}`}>
-        {etapa.descripcion}
+        {etapa.description}
       </p>
-      {etapa.accion && (
+      {etapa.action && (
         <button
           className={`cron-btn-accion${senior ? " cron-btn-accion--senior" : ""}`}
-          onClick={() => (window.location.href = etapa.accion.path)}
+          onClick={() => (window.location.href = etapa.action.path)}
         >
-          {etapa.accion.label}
+          {etapa.action.label}
           <ExternalIcon />
         </button>
       )}
@@ -139,10 +102,10 @@ function TarjetaPendiente({ etapa, senior }) {
   return (
     <div className="cron-pendiente">
       <h3 className={`cron-pendiente__title${senior ? " cron-pendiente__title--senior" : ""}`}>
-        {etapa.titulo}
+        {etapa.label}
       </h3>
       <p className={`cron-pendiente__desc${senior ? " cron-pendiente__desc--senior" : ""}`}>
-        {etapa.descripcion}
+        {etapa.description}
       </p>
     </div>
   );
@@ -163,7 +126,7 @@ function EtapaItem({ etapa, esUltima, senior }) {
   return (
     <li className="cron-item">
       <div className="cron-timeline-col">
-        <Nodo numero={etapa.numero} estado={etapa.estado} />
+        <Nodo numero={etapa.number} estado={etapa.estado} />
         {!esUltima && (
           <div className="cron-linea" style={{ backgroundColor: lineColor }} />
         )}
@@ -174,8 +137,72 @@ function EtapaItem({ etapa, esUltima, senior }) {
 }
 
 export default function Cronologia() {
-  const { isValidating } = useRequireAuth();
+  const { isValidating, session } = useRequireAuth();
   const senior = useModoSenior();
+  const [timeline, setTimeline] = useState(() => getProcessTimeline(1));
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    if (isValidating) return undefined;
+
+    const controller = new AbortController();
+    const fetchTimelineData = async () => {
+      if (!session) {
+        setTimeline(getProcessTimeline(1));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setLoadError("");
+
+        const fetchJson = async (path) => {
+          const response = await fetch(buildApiUrl(path), { signal: controller.signal });
+          if (!response.ok) throw new Error("No se pudo actualizar la cronología.");
+          return response.json();
+        };
+
+        const correo = encodeURIComponent(session.correo || "");
+        const [tramiteResult, ds160Result, documentsResult] = await Promise.allSettled([
+          fetchJson(`/estado-tramite?correo=${correo}`),
+          fetchJson(`/ds160?correo=${correo}`),
+          fetchJson(`/documentos/${session.id}`),
+        ]);
+
+        if (controller.signal.aborted) return;
+
+        const tramiteData = tramiteResult.status === "fulfilled" ? tramiteResult.value : null;
+        const ds160Data = ds160Result.status === "fulfilled" ? ds160Result.value : null;
+        const documentsData = documentsResult.status === "fulfilled" ? documentsResult.value : [];
+        const documentSummary = summarizeDocuments(documentsData);
+        const ds160Percentage = calculateDs160Percentage(ds160Data);
+        const currentStage = getCurrentProcessStage({
+          session,
+          tramite: tramiteData,
+          ds160Percentage,
+          documentSummary,
+        });
+
+        setTimeline(getProcessTimeline(currentStage));
+
+        if ([tramiteResult, ds160Result, documentsResult].some((result) => result.status === "rejected")) {
+          setLoadError("Algunas etapas no pudieron actualizarse con datos recientes.");
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setTimeline(getProcessTimeline(1));
+          setLoadError("No se pudo actualizar la cronología.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    fetchTimelineData();
+    return () => controller.abort();
+  }, [isValidating, session]);
 
   return (
     <div className="vg-layout">
@@ -194,15 +221,21 @@ export default function Cronologia() {
 
         <hr className="cron-divisor" />
 
-        {isValidating ? (
+        {loadError && (
+          <p className="cron-message cron-message--warning" role="alert">
+            {loadError}
+          </p>
+        )}
+
+        {isValidating || loading ? (
           <SkeletonList variant="timeline" count={1} />
         ) : (
           <ol className="cron-timeline" aria-label="Etapas del proceso">
-            {ETAPAS.map((etapa, idx) => (
+            {timeline.map((etapa, idx) => (
               <EtapaItem
-                key={etapa.numero}
+                key={etapa.number}
                 etapa={etapa}
-                esUltima={idx === ETAPAS.length - 1}
+                esUltima={idx === timeline.length - 1}
                 senior={senior}
               />
             ))}
