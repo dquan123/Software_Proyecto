@@ -79,9 +79,12 @@ function formatSessionDate(value) {
   }).format(date);
 }
 
-export default function QuestionBank() {
+export default function QuestionBank({ embedded = false, mode = "full" }) {
   const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const isInterviewOnly = mode === "interviews";
+  const ContentTag = embedded ? "section" : "main";
+  const HeadingTag = embedded ? "h2" : "h1";
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -173,10 +176,10 @@ export default function QuestionBank() {
   useEffect(() => {
     if (isValidating) return;
     const controller = new AbortController();
-    fetchQuestions(controller.signal);
+    if (!isInterviewOnly) fetchQuestions(controller.signal);
     fetchInterviewSessions(controller.signal);
     return () => controller.abort();
-  }, [fetchInterviewSessions, fetchQuestions, isValidating]);
+  }, [fetchInterviewSessions, fetchQuestions, isInterviewOnly, isValidating]);
 
   useEffect(() => {
     setFeedbackDraft(selectedInterviewSession?.feedback || "");
@@ -395,10 +398,10 @@ export default function QuestionBank() {
   };
 
   return (
-    <div className="question-bank-shell">
-      <main
-        id="main-content" tabIndex="-1"
-        className={`question-bank-main${
+    <div className={`question-bank-shell${embedded ? " question-bank-shell--embedded" : ""}`}>
+      <ContentTag
+        {...(!embedded ? { id: "main-content", tabIndex: "-1" } : {})}
+        className={`question-bank-main${embedded ? " question-bank-main--embedded" : ""}${
           modoSenior ? " question-bank-main--senior" : ""
         }`}
       >
@@ -411,18 +414,22 @@ export default function QuestionBank() {
                 <span className="question-bank-eyebrow">
                   Administración consular
                 </span>
-                <h1>Banco de Preguntas</h1>
+                <HeadingTag>{isInterviewOnly ? "Entrevistas" : "Banco de Preguntas"}</HeadingTag>
                 <p>
-                  Gestiona preguntas reutilizables para entrevistas migratorias
-                  con filtros, dificultad y prioridad operativa.
+                  {isInterviewOnly
+                    ? "Revisa sesiones enviadas desde el simulador y registra retroalimentacion para los usuarios."
+                    : "Gestiona preguntas reutilizables para entrevistas migratorias con filtros, dificultad y prioridad operativa."}
                 </p>
               </div>
-              <button type="button" onClick={openCreateModal}>
-                <PlusIcon />
-                Nueva pregunta
-              </button>
+              {!isInterviewOnly && (
+                <button type="button" onClick={openCreateModal}>
+                  <PlusIcon />
+                  Nueva pregunta
+                </button>
+              )}
             </section>
 
+            {!isInterviewOnly && (
             <section className="question-bank-stats" aria-label="Resumen">
               <article>
                 <span>Total</span>
@@ -445,6 +452,7 @@ export default function QuestionBank() {
                 <small>preguntas sensibles</small>
               </article>
             </section>
+            )}
 
             <section className="question-feedback-reference">
               <div className="question-feedback-reference__summary">
@@ -575,6 +583,8 @@ export default function QuestionBank() {
               )}
             </section>
 
+            {!isInterviewOnly && (
+            <>
             <section className="question-bank-toolbar" aria-label="Filtros">
               <label className="question-bank-search">
                 <SearchIcon />
@@ -702,11 +712,13 @@ export default function QuestionBank() {
                 </section>
               </>
             )}
+            </>
+            )}
           </>
         )}
-      </main>
+      </ContentTag>
 
-      {modalState.isOpen && (
+      {!isInterviewOnly && modalState.isOpen && (
         <QuestionBankModal
           categories={CATEGORIES}
           difficulties={DIFFICULTIES}
@@ -717,12 +729,14 @@ export default function QuestionBank() {
           onSubmit={handleSubmit}
         />
       )}
-      <QuestionBankConfirmDialog
-        isDeleting={deleting}
-        question={questionToDelete}
-        onCancel={() => setQuestionToDelete(null)}
-        onConfirm={handleDelete}
-      />
+      {!isInterviewOnly && (
+        <QuestionBankConfirmDialog
+          isDeleting={deleting}
+          question={questionToDelete}
+          onCancel={() => setQuestionToDelete(null)}
+          onConfirm={handleDelete}
+        />
+      )}
       <QuestionBankToast toasts={toasts} />
     </div>
   );
