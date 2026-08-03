@@ -71,12 +71,13 @@ function defaultQueryHandler(sql, values) {
           nombre: values[0],
           correo: values[1],
           contrasena: values[2],
+          rol: values[3] || "cliente",
         },
       ],
     });
   }
 
-  if (normalized.includes("SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+  if (normalized.includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
     if (values?.[0] === "login@example.com" && values?.[1] === "1234") {
       return Promise.resolve({
         rows: [
@@ -85,6 +86,7 @@ function defaultQueryHandler(sql, values) {
             nombre: "Usuario Login",
             correo: "login@example.com",
             perfil: "turismo_negocios",
+            rol: "cliente",
           },
         ],
       });
@@ -441,12 +443,13 @@ function createIntegrationFlowQueryHandler() {
         correo: values[1],
         contrasena: values[2],
         perfil: null,
+        rol: values[3] || "cliente",
       };
       state.nextUserId += 1;
       return { rows: [state.user] };
     }
 
-    if (normalized.includes("SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+    if (normalized.includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
       if (
         state.user &&
         values?.[0] === state.user.correo &&
@@ -711,8 +714,15 @@ describe("app endpoints", () => {
     });
 
     expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
     expect(response.body.message).toBe("Login exitoso");
     expect(response.body.user.correo).toBe("login@example.com");
+    expect(response.body.usuario).toMatchObject({
+      id: 3,
+      id_usuario: 3,
+      correo: "login@example.com",
+      rol: "cliente",
+    });
   });
 
   test("POST /login devuelve 401 con credenciales incorrectas", async () => {
@@ -746,7 +756,7 @@ describe("app endpoints", () => {
 
   test("POST /login devuelve 500 ante error simulado de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).includes("SELECT * FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
         return Promise.reject(new Error("connection timeout"));
       }
       return defaultQueryHandler(sql, values);
@@ -1568,10 +1578,12 @@ describe("app endpoints", () => {
       });
 
       expect(loginResponse.status).toBe(200);
+      expect(loginResponse.body.success).toBe(true);
       expect(loginResponse.body.message).toBe("Login exitoso");
-      expect(loginResponse.body.user).toMatchObject({
+      expect(loginResponse.body.usuario).toMatchObject({
         id_usuario: userId,
         correo: usuario.correo,
+        rol: "cliente",
       });
 
       const saveDs160Response = await request(app).post("/ds160").send({

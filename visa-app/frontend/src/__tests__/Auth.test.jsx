@@ -78,6 +78,43 @@ describe("pantallas de autenticación", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("redirige a /admin usando el rol entregado por el backend", async () => {
+    const user = userEvent.setup();
+    const loggedUser = {
+      id: 1,
+      nombre: "Admin General",
+      correo: "admin@prueba.com",
+      rol: "admin",
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+      if (String(url).endsWith("/login")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, usuario: loggedUser }),
+        });
+      }
+      if (String(url).includes("/validar-sesion")) {
+        return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ questions: [], sessions: [] }) });
+    });
+    window.history.pushState({}, "", "/login");
+
+    render(<App />);
+
+    await user.type(document.querySelector("#login-correo"), loggedUser.correo);
+    await user.type(document.querySelector("#login-contrasena"), "123456");
+    await user.click(screen.getByRole("button", { name: /Ingresar/i }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/admin"));
+    expect(JSON.parse(localStorage.getItem("visaguide_session"))).toMatchObject({
+      id: 1,
+      correo: loggedUser.correo,
+      rol: "admin",
+    });
+  });
+
   it("guarda la sesión cuando el login responde correctamente", async () => {
     const user = userEvent.setup();
     const loggedUser = {
@@ -85,17 +122,26 @@ describe("pantallas de autenticación", () => {
       nombre: "Mario Gómez",
       correo: "mario@example.com",
       perfil: null,
+      rol: "cliente",
     };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ user: loggedUser }),
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+      if (String(url).endsWith("/login")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, usuario: loggedUser }),
+        });
+      }
+      if (String(url).includes("/validar-sesion")) {
+        return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
     window.history.pushState({}, "", "/login");
 
     render(<App />);
 
-    await user.type(screen.getByLabelText("Correo electrónico"), loggedUser.correo);
+    await user.type(document.querySelector("#login-correo"), loggedUser.correo);
     await user.type(screen.getByLabelText("Contraseña"), "secreto");
     await user.click(screen.getByRole("button", { name: /Ingresar/i }));
 
@@ -105,10 +151,16 @@ describe("pantallas de autenticación", () => {
         nombre: loggedUser.nombre,
         correo: loggedUser.correo,
         perfil: null,
+        rol: "cliente",
       });
     });
     expect(localStorage.getItem("correoUsuario")).toBe(loggedUser.correo);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(window.location.pathname).toBe("/dashboard");
+    expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/login"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: loggedUser.correo, contrasena: "secreto" }),
+    });
   });
 
   it("conserva validación, autocomplete y envío real del registro", async () => {
@@ -231,3 +283,4 @@ describe("pantallas de autenticación", () => {
     await waitFor(() => expect(window.location.pathname).toBe(destination));
   });
 });
+
