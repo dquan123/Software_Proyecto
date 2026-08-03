@@ -2,11 +2,15 @@ CREATE TABLE IF NOT EXISTS usuario (
   id_usuario SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
   correo TEXT NOT NULL UNIQUE,
-  contrasena TEXT NOT NULL
+  contrasena TEXT NOT NULL,
+  rol VARCHAR(20) DEFAULT 'cliente'
 );
 
 ALTER TABLE usuario
 ADD COLUMN IF NOT EXISTS perfil VARCHAR(100);
+
+ALTER TABLE usuario
+ADD COLUMN IF NOT EXISTS rol VARCHAR(20) DEFAULT 'cliente';
 
 -- Columnas extra para la pantalla "Perfil de Usuario"
 ALTER TABLE usuario
@@ -15,6 +19,25 @@ ALTER TABLE usuario
   ADD COLUMN IF NOT EXISTS pais                VARCHAR(120),
   ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS idioma              VARCHAR(10)  DEFAULT 'es';
+
+INSERT INTO usuario (nombre, correo, contrasena, rol)
+SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
+FROM (
+  VALUES
+    ('Norman', 'norman@prueba.cliente', '123456', 'cliente'),
+    ('Juanfri', 'juanfri@prueba.cliente', '123456', 'cliente'),
+    ('Yaya', 'yaya@prueba.cliente', '123456', 'cliente'),
+    ('Quan', 'quan@prueba.cliente', '123456', 'cliente'),
+    ('Usuario Prueba', 'usuario@prueba.com', '123456', 'cliente'),
+    ('Admin Norman', 'admin.norman@prueba.com', '123456', 'admin'),
+    ('Admin Juanfri', 'admin.juanfri@prueba.com', '123456', 'admin'),
+    ('Admin Yaya', 'admin.yaya@prueba.com', '123456', 'admin'),
+    ('Admin Quan', 'admin.quan@prueba.com', '123456', 'admin'),
+    ('Admin General', 'admin@prueba.com', '123456', 'admin')
+) AS seed(nombre, correo, contrasena, rol)
+WHERE NOT EXISTS (
+  SELECT 1 FROM usuario u WHERE u.correo = seed.correo
+);
 
 CREATE TABLE IF NOT EXISTS tramite (
   id_tramite SERIAL PRIMARY KEY,
