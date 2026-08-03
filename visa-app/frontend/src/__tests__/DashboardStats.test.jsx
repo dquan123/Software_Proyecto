@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import DashboardStats from "../components/DashboardStats";
-import { calculateDs160Percentage } from "../utils/dashboardStats";
+import {
+  calculateDs160Percentage,
+  getDashboardNextAction,
+  getDashboardQuickCards,
+  summarizeDocuments,
+} from "../utils/dashboardStats";
 
 describe("DashboardStats", () => {
   it("calcula el porcentaje desde las secciones persistidas del DS-160", () => {
@@ -53,5 +58,73 @@ describe("DashboardStats", () => {
       />
     );
     expect(screen.getByRole("alert")).toHaveTextContent("no pudieron actualizarse");
+  });
+
+  it("resume documentos por estado para alimentar el dashboard", () => {
+    expect(
+      summarizeDocuments([
+        { estado: "approved" },
+        { estado: "review" },
+        { estado: "correction" },
+        { estado: "pending" },
+        { status: "pending" },
+      ])
+    ).toMatchObject({
+      total: 5,
+      approved: 1,
+      review: 1,
+      correction: 1,
+      pending: 2,
+    });
+  });
+
+  it("prioriza correcciones de documentos sobre la etapa actual", () => {
+    expect(
+      getDashboardNextAction({
+        stageNumber: 3,
+        ds160Percentage: 100,
+        documentSummary: { correction: 2 },
+        tramite: { siguientePaso: "Realizar pago" },
+      })
+    ).toMatchObject({
+      title: "Corregir documentos",
+      path: "/documents",
+      buttonLabel: "Corregir ahora",
+    });
+  });
+
+  it("genera cards rápidas dinámicas según documentos y etapa", () => {
+    const cards = getDashboardQuickCards({
+      documentSummary: { total: 1, pending: 1 },
+      stageNumber: 6,
+    });
+
+    expect(cards[0]).toMatchObject({
+      badge: "PENDIENTE",
+      title: "Subir documentos",
+      path: "/documents",
+    });
+    expect(cards[2]).toMatchObject({
+      title: "Preparación de entrevista",
+      cta: "Practicar ahora",
+      path: "/entrevista",
+    });
+  });
+
+  it("envía los pasos de pago y cita al asesor por WhatsApp", () => {
+    const paymentAction = getDashboardNextAction({ stageNumber: 4 });
+    const appointmentAction = getDashboardNextAction({ stageNumber: 5 });
+
+    expect(paymentAction).toMatchObject({
+      buttonLabel: "Hablar con el asesor",
+    });
+    expect(paymentAction.path).toContain("https://wa.me/");
+    expect(paymentAction.path).toContain("text=");
+
+    expect(appointmentAction).toMatchObject({
+      buttonLabel: "Hablar con el asesor",
+    });
+    expect(appointmentAction.path).toContain("https://wa.me/");
+    expect(appointmentAction.path).toContain("text=");
   });
 });
