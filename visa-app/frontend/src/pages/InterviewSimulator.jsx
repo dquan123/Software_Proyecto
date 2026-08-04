@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import { createInterviewFeedbackSession } from "../utils/interviewFeedbackStorage";
 import "../styles/interview.css";
 
 const QUESTIONS = [
@@ -230,6 +230,7 @@ export default function InterviewSimulator() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [recordings, setRecordings] = useState({});
   const [isRecording, setIsRecording] = useState(false);
+  const [submittingSession, setSubmittingSession] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef(null);
@@ -296,6 +297,7 @@ export default function InterviewSimulator() {
           return {
             ...currentRecordings,
             [currentQuestion.id]: {
+              blob,
               url,
               duration: elapsedRef.current,
               createdAt: new Date().toISOString(),
@@ -349,8 +351,8 @@ export default function InterviewSimulator() {
     setError("");
   };
 
-  const handleFinishSession = () => {
-    if (isRecording) return;
+  const handleFinishSession = async () => {
+    if (isRecording || submittingSession) return;
 
     if (recordedCount < QUESTIONS.length) {
       setError(
@@ -359,15 +361,56 @@ export default function InterviewSimulator() {
       return;
     }
 
-    const feedbackSession = createInterviewFeedbackSession({
-      questions: QUESTIONS,
-      recordings,
-      user: session,
-    });
+    try {
+      setSubmittingSession(true);
+      setError("");
 
-    window.location.href = `/entrevista/retroalimentacion?session=${encodeURIComponent(
-      feedbackSession.id
-    )}`;
+      const formData = new FormData();
+      formData.append(
+        "session",
+        JSON.stringify({
+          user: session,
+          questions: QUESTIONS.map((question) => ({
+            id: question.id,
+            text: question.text,
+            recorded: Boolean(recordings[question.id]),
+            duration: recordings[question.id]?.duration || 0,
+          })),
+        })
+      );
+
+      QUESTIONS.forEach((question) => {
+        const recording = recordings[question.id];
+        if (recording?.blob) {
+          formData.append(
+            `audio_${question.id}`,
+            recording.blob,
+            `${question.id}.webm`
+          );
+        }
+      });
+
+      const response = await fetch(buildApiUrl("/interview-sessions"), {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "No se pudo enviar la entrevista a retroalimentación."
+        );
+      }
+
+      window.location.href = `/entrevista/retroalimentacion?session=${data.session.id}`;
+    } catch (submitError) {
+      setError(
+        submitError.message ||
+          "No se pudo enviar la entrevista. Inténtalo de nuevo."
+      );
+    } finally {
+      setSubmittingSession(false);
+    }
   };
 
   const handlePrevious = () => {
@@ -395,7 +438,7 @@ export default function InterviewSimulator() {
     return (
       <div className="interview-shell">
         <Sidebar currentPage="entrevista" />
-        <main className="interview-main">
+        <main id="main-content" tabIndex="-1" className="interview-main">
           <p className="interview-loading">Verificando sesión...</p>
         </main>
       </div>
@@ -406,6 +449,7 @@ export default function InterviewSimulator() {
     <div className="interview-shell">
       <Sidebar currentPage="entrevista" />
       <main
+        id="main-content" tabIndex="-1"
         className={`interview-main simulator-main${
           modoSenior ? " interview-main--senior" : ""
         }`}
@@ -462,6 +506,7 @@ export default function InterviewSimulator() {
               className={`record-button${isRecording ? " record-button--active" : ""}`}
               type="button"
               onClick={handleRecordClick}
+              disabled={submittingSession}
             >
               <MicIcon />
               {isRecording
@@ -475,9 +520,13 @@ export default function InterviewSimulator() {
               className="next-button"
               type="button"
               onClick={isLastQuestion ? handleFinishSession : handleNext}
-              disabled={isRecording}
+              disabled={isRecording || submittingSession}
             >
-              {isLastQuestion ? "Finalizar entrevista" : "Siguiente pregunta"}
+              {submittingSession
+                ? "Enviando..."
+                : isLastQuestion
+                  ? "Finalizar entrevista"
+                  : "Siguiente pregunta"}
               <span aria-hidden="true">&rsaquo;</span>
             </button>
 
@@ -485,7 +534,7 @@ export default function InterviewSimulator() {
               className="secondary-sim-button"
               type="button"
               onClick={handlePrevious}
-              disabled={currentIndex === 0 || isRecording}
+              disabled={currentIndex === 0 || isRecording || submittingSession}
             >
               Anterior
             </button>

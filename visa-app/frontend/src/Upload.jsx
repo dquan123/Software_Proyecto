@@ -28,7 +28,7 @@ function Upload() {
   };
 
   return (
-    <div style={styles.container}>
+    <main id="main-content" tabIndex="-1" style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Subir Documento</h1>
 
@@ -36,7 +36,9 @@ function Upload() {
           Sube tu archivo PDF para continuar con el proceso
         </p>
 
+        <label htmlFor="documento-pdf">Seleccionar documento PDF</label>
         <input
+          id="documento-pdf"
           type="file"
           accept="application/pdf"
           style={styles.input}
@@ -49,7 +51,7 @@ function Upload() {
 
         {message && <p style={styles.message}>{message}</p>}
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -62,7 +64,7 @@ const styles = {
     background: "linear-gradient(135deg, #0f172a, #1e3a8a)",
   },
   card: {
-    background: "white",
+    background: "var(--vg-card)",
     padding: "30px",
     borderRadius: "15px",
     width: "350px",
@@ -70,7 +72,7 @@ const styles = {
     textAlign: "center",
   },
   title: {
-  color: "#1e3a8a",
+  color: "var(--vg-info-text)",
   marginBottom: "10px",
   fontSize: "28px",
   lineHeight: "1.2",

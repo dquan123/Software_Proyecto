@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./ProfileSelection.css";
 import { buildApiUrl } from "../../config/api";
-import Sidebar from "../../components/Sidebar";
 import useModoSenior from "../../hooks/useModoSenior";
 import useRequireAuth from "../../hooks/useRequireAuth";
 
 function ProfileSelection() {
-  const { isValidating } = useRequireAuth();
+  const { isValidating, session } = useRequireAuth();
   const [selectedProfile, setSelectedProfile] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const modoSenior = useModoSenior();
+
+  useEffect(() => {
+    if (!isValidating && (session?.perfil || localStorage.getItem("perfilUsuario"))) {
+      window.location.replace("/dashboard");
+    }
+  }, [isValidating, session]);
 
   const profiles = [
     {
@@ -47,23 +53,25 @@ function ProfileSelection() {
 
   const handleSelectProfile = (profileId) => {
     setSelectedProfile(profileId);
+    setErrorMessage("");
   };
 
   const handleConfirmSelection = async () => {
     if (!selectedProfile) {
-      alert("Selecciona un perfil primero.");
+      setErrorMessage("Selecciona un perfil antes de continuar.");
       return;
     }
 
     const correo = localStorage.getItem("correoUsuario");
 
     if (!correo) {
-      alert("Primero inicia sesión para guardar el perfil.");
+      setErrorMessage("Primero inicia sesión para guardar el perfil.");
       return;
     }
 
     try {
       setLoading(true);
+      setErrorMessage("");
 
       const res = await fetch(buildApiUrl("/guardar-perfil"), {
         method: "POST",
@@ -95,10 +103,10 @@ function ProfileSelection() {
           window.location.href = "/dashboard";
         }, 1500);
       } else {
-        alert(data.error || "No se pudo guardar el perfil");
+        setErrorMessage(data.error || "No se pudo guardar el perfil.");
       }
     } catch {
-      alert("Error de conexión con el servidor");
+      setErrorMessage("Error de conexión con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -106,23 +114,25 @@ function ProfileSelection() {
 
   if (isValidating) {
     return (
-      <div className="layout-with-sidebar">
-        <Sidebar currentPage="perfil" />
-        <div className="profile-page">
-          <main className="profile-main">
-            <p>Verificando sesión...</p>
-          </main>
-        </div>
+      <div className="profile-page profile-page--loading">
+        <main id="main-content" tabIndex="-1" className="profile-main">
+          <p role="status" aria-live="polite">Verificando sesión...</p>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className={`layout-with-sidebar ${modoSenior ? "modo-senior" : ""}`}>
-      <Sidebar currentPage="perfil" />
-      <div className="profile-page">
-      <main className="profile-main">
-        <h1 className="profile-title">
+    <div className={`profile-page ${modoSenior ? "modo-senior" : ""}`}>
+      <header className="profile-header">
+        <div className="brand" aria-label="VisaGuide">
+          <span className="brand-badge" aria-hidden="true">VG</span>
+          <span className="brand-name">VisaGuide</span>
+        </div>
+        <span className="onboarding-step">Configuración de cuenta</span>
+      </header>
+      <main id="main-content" tabIndex="-1" className="profile-main">
+        <h1 id="profile-selection-title" className="profile-title">
           Prepara tu solicitud de visa
           <span>sin estrés</span>
         </h1>
@@ -133,27 +143,30 @@ function ProfileSelection() {
           experiencia.
         </p>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
-        )}
+        <div className="profile-announcements" aria-live="polite" aria-atomic="true">
+          {successMessage && <p className="success-message" role="status">{successMessage}</p>}
+          {errorMessage && <p className="error-message" role="alert">{errorMessage}</p>}
+        </div>
 
-        <section className="cards-grid">
+        <section className="cards-grid" aria-labelledby="profile-selection-title">
           {profiles.map((profile) => (
-            <article
+            <button
+              type="button"
               key={profile.id}
               className={`profile-card ${
                 selectedProfile === profile.id ? "selected" : ""
               }`}
               onClick={() => handleSelectProfile(profile.id)}
+              aria-pressed={selectedProfile === profile.id}
             >
-              <div className="card-icon" aria-hidden="true" />
-              <h3>{profile.title}</h3>
-              <p>{profile.description}</p>
-              <div className="card-footer">
+              <span className="card-icon" aria-hidden="true" />
+              <span className="card-title">{profile.title}</span>
+              <span className="card-description">{profile.description}</span>
+              <span className="card-footer">
                 <span>Seleccionar</span>
                 <span className="arrow">➜</span>
-              </div>
-            </article>
+              </span>
+            </button>
           ))}
         </section>
 
@@ -167,7 +180,6 @@ function ProfileSelection() {
           </button>
         </div>
       </main>
-    </div>
     </div>
   );
 }

@@ -103,6 +103,7 @@ const Icon = {
 export default function Perfil() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const s = getS();
 
   // Estado del servidor
   const [usuario, setUsuario] = useState(null);
@@ -126,6 +127,7 @@ export default function Perfil() {
   // -----------------------------------------------------------------
   useEffect(() => {
     if (isValidating || !session?.correo) return;
+    const controller = new AbortController();
 
     const cargar = async () => {
       try {
@@ -133,7 +135,8 @@ export default function Perfil() {
         setErrorCarga("");
 
         const res = await fetch(
-          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`
+          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`,
+          { signal: controller.signal }
         );
 
         if (!res.ok) throw new Error("No se pudo cargar tu perfil.");
@@ -148,14 +151,16 @@ export default function Perfil() {
           pais:     data.usuario.pais     || "",
         });
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error(err);
         setErrorCarga(err.message || "Error al cargar el perfil.");
       } finally {
-        setCargando(false);
+        if (!controller.signal.aborted) setCargando(false);
       }
     };
 
     cargar();
+    return () => controller.abort();
   }, [isValidating, session?.correo]);
 
   // Auto-dismiss del mensaje de éxito
@@ -265,7 +270,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main style={s.main}>
+        <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
           <p style={s.loading}>Cargando perfil…</p>
         </main>
       </div>
@@ -276,7 +281,7 @@ export default function Perfil() {
     return (
       <div style={s.layout}>
         <Sidebar currentPage="perfil" />
-        <main style={s.main}>
+        <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
           <p style={s.error}>{errorCarga || "No se pudo cargar el perfil."}</p>
         </main>
       </div>
@@ -290,14 +295,14 @@ export default function Perfil() {
     <div style={s.layout}>
       <Sidebar currentPage="perfil" />
 
-      <main style={s.main}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
         {/* ====================== HEADER ====================== */}
         <header style={s.header}>
           <div>
-            <h1 style={{ ...s.title, fontSize: fz("36px", "44px") }}>
+            <h1 style={{ ...s.title, fontSize: modoSenior ? "44px" : "var(--vg-page-title)" }}>
               Perfil de Usuario
             </h1>
-            <p style={{ ...s.subtitle, fontSize: fz("15px", "18px") }}>
+            <p style={{ ...s.subtitle, fontSize: modoSenior ? "19px" : "var(--vg-body-size)" }}>
               Gestiona tu información personal y los detalles de tu trámite.
             </p>
           </div>
@@ -478,8 +483,8 @@ export default function Perfil() {
               </header>
 
               <div style={s.tramiteGrid}>
-                <DatoCard label="TIPO DE VISA" valor={tramite?.tipoVisa} />
-                <DatoCard label="CONSULADO"    valor={tramite?.consulado} />
+                <DatoCard label="TIPO DE VISA" valor={tramite?.tipoVisa} s={s} />
+                <DatoCard label="CONSULADO"    valor={tramite?.consulado} s={s} />
               </div>
 
               <div style={s.estadoCard}>
@@ -518,8 +523,8 @@ export default function Perfil() {
                   style={{
                     ...s.toggle,
                     backgroundColor: usuario.preferencias.notificacionesEmail
-                      ? "#10b981"
-                      : "#cbd5e1",
+                      ? "var(--vg-success)"
+                      : "var(--vg-border-mid)",
                   }}
                   onClick={handleToggleNotificaciones}
                 >
@@ -584,7 +589,7 @@ export default function Perfil() {
 // Sub-componentes
 // ---------------------------------------------------------------------
 
-function DatoCard({ label, valor }) {
+function DatoCard({ label, valor, s }) {
   return (
     <div style={s.datoCard}>
       <div style={s.datoLabel}>{label}</div>
@@ -594,45 +599,52 @@ function DatoCard({ label, valor }) {
 }
 
 // ---------------------------------------------------------------------
-// Estilos
+// Estilos dinámicos con dark mode
 // ---------------------------------------------------------------------
 
-const s = {
+function getS() {
+  const bg     = "var(--vg-bg)";
+  const card   = "var(--vg-card)";
+  const border = "var(--vg-border)";
+  const text   = "var(--vg-text)";
+  const muted  = "var(--vg-text-muted)";
+  const subtle = "var(--vg-bg-alt)";
+
+  return {
   layout: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "#f4f5f7",
-    fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+    backgroundColor: bg,
+    fontFamily: "var(--vg-font)",
   },
 
   main: {
-    marginLeft: "250px",
+    marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
-    padding: "40px 48px 80px",
-    color: "#0f172a",
+    padding: "var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom)",
+    color: text,
     position: "relative",
   },
 
-  loading: { color: "#64748b", paddingTop: "40px" },
-  error:   { color: "#dc2649", paddingTop: "40px" },
+  loading: { color: muted, paddingTop: "40px" },
+  error:   { color: "var(--vg-danger-text)", paddingTop: "40px" },
 
-  // -------- Header --------
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "20px",
-    marginBottom: "16px",
+    marginBottom: "0",
   },
   title: {
     margin: 0,
     fontWeight: 800,
-    color: "#0f172a",
+    color: text,
     lineHeight: 1.1,
   },
   subtitle: {
     margin: "8px 0 0 0",
-    color: "#64748b",
+    color: muted,
     lineHeight: 1.5,
     maxWidth: "560px",
   },
@@ -640,31 +652,27 @@ const s = {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    backgroundColor: "white",
-    border: "1px solid #cbd5e1",
+    backgroundColor: card,
+    border: `1px solid ${border}`,
     borderRadius: "10px",
     padding: "10px 18px",
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: 600,
-    color: "#0f172a",
+    color: text,
     boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
     flexShrink: 0,
   },
-  editActions: {
-    display: "flex",
-    gap: "10px",
-    flexShrink: 0,
-  },
+  editActions: { display: "flex", gap: "10px", flexShrink: 0 },
   cancelBtn: {
-    backgroundColor: "white",
-    border: "1px solid #cbd5e1",
+    backgroundColor: card,
+    border: `1px solid ${border}`,
     borderRadius: "10px",
     padding: "10px 18px",
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: 600,
-    color: "#475569",
+    color: muted,
   },
   saveBtn: {
     backgroundColor: "#dc2649",
@@ -679,14 +687,14 @@ const s = {
 
   divider: {
     border: "none",
-    borderTop: "1px solid #e2e8f0",
-    margin: "20px 0 28px",
+    borderTop: `1px solid ${border}`,
+    margin: "24px 0 32px",
   },
 
   toastOk: {
-    backgroundColor: "#ecfdf5",
-    color: "#047857",
-    border: "1px solid #a7f3d0",
+    backgroundColor: "var(--vg-success-bg)",
+    color: "var(--vg-success)",
+    border: "1px solid var(--vg-border)",
     padding: "10px 16px",
     borderRadius: "10px",
     fontSize: "14px",
@@ -695,7 +703,6 @@ const s = {
     display: "inline-block",
   },
 
-  // -------- Grid principal --------
   grid: {
     display: "grid",
     gridTemplateColumns: "300px 1fr",
@@ -703,16 +710,15 @@ const s = {
     alignItems: "start",
   },
 
-  // -------- Tarjeta usuario (izquierda) --------
   userCard: {
-    backgroundColor: "white",
+    backgroundColor: card,
     borderRadius: "18px",
-    border: "1px solid #e2e8f0",
+    border: `1px solid ${border}`,
     overflow: "hidden",
     boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
   },
   userCardTop: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "var(--vg-strong-surface)",
     height: "120px",
     position: "relative",
   },
@@ -728,8 +734,8 @@ const s = {
     width: "120px",
     height: "120px",
     borderRadius: "50%",
-    backgroundColor: "#cbd5e1",
-    border: "4px solid white",
+    backgroundColor: "var(--vg-border-mid)",
+    border: `4px solid ${card}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -738,7 +744,7 @@ const s = {
   avatarInitials: {
     fontSize: "36px",
     fontWeight: 700,
-    color: "#94a3b8",
+    color: "var(--vg-text-muted)",
     letterSpacing: "1px",
   },
   avatarCameraBtn: {
@@ -749,45 +755,39 @@ const s = {
     height: "32px",
     borderRadius: "50%",
     backgroundColor: "#dc2649",
-    border: "2px solid white",
+    border: `2px solid ${card}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     boxShadow: "0 2px 6px rgba(220,38,73,0.3)",
   },
-  userCardBody: {
-    padding: "62px 24px 24px",
-    textAlign: "left",
-  },
+  userCardBody: { padding: "62px 24px 24px", textAlign: "left" },
   userName: {
     margin: 0,
     fontWeight: 800,
-    color: "#0f172a",
+    color: text,
     lineHeight: 1.2,
     textAlign: "center",
     wordBreak: "break-word",
   },
-  userRole: {
-    margin: "6px 0 0 0",
-    color: "#64748b",
-    textAlign: "center",
-  },
+  userRole: { margin: "6px 0 0 0", color: muted, textAlign: "center" },
   nameInput: {
     width: "100%",
     fontSize: "20px",
     fontWeight: 800,
-    color: "#0f172a",
+    color: text,
     textAlign: "center",
-    border: "1px solid #cbd5e1",
+    border: `1px solid ${border}`,
     borderRadius: "8px",
     padding: "8px 10px",
     outline: "none",
     fontFamily: "inherit",
+    background: "var(--vg-input)",
   },
   softDivider: {
     border: "none",
-    borderTop: "1px solid #e2e8f0",
+    borderTop: `1px solid ${border}`,
     margin: "20px 0 14px",
   },
   contactRow: {
@@ -795,56 +795,31 @@ const s = {
     alignItems: "center",
     gap: "12px",
     padding: "8px 0",
-    color: "#0f172a",
+    color: text,
   },
-  contactIcon: {
-    color: "#64748b",
-    flexShrink: 0,
-    display: "inline-flex",
-    alignItems: "center",
-  },
-  contactText: {
-    color: "#0f172a",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
+  contactIcon: { color: muted, flexShrink: 0, display: "inline-flex", alignItems: "center" },
+  contactText: { color: text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   contactInput: {
     flex: 1,
     minWidth: 0,
-    border: "1px solid #cbd5e1",
+    border: `1px solid ${border}`,
     borderRadius: "8px",
     padding: "6px 10px",
     fontSize: "14px",
-    color: "#0f172a",
+    color: text,
     fontFamily: "inherit",
     outline: "none",
+    background: "var(--vg-input)",
   },
-  locInputs: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    flex: 1,
-    minWidth: 0,
-  },
-  placeholderText: {
-    color: "#94a3b8",
-    fontStyle: "italic",
-  },
+  locInputs: { display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: 0 },
+  placeholderText: { color: "var(--vg-text-muted)", fontStyle: "italic" },
 
-  // -------- Columna derecha --------
-  rightCol: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    minWidth: 0,
-  },
+  rightCol: { display: "flex", flexDirection: "column", gap: "24px", minWidth: 0 },
 
-  // -------- Datos del trámite --------
   tramiteCard: {
-    backgroundColor: "white",
+    backgroundColor: card,
     borderRadius: "18px",
-    border: "1px solid #e2e8f0",
+    border: `1px solid ${border}`,
     padding: "24px 26px",
     boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
   },
@@ -854,62 +829,33 @@ const s = {
     alignItems: "center",
     marginBottom: "20px",
   },
-  tramiteTitleWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  tramiteTitle: {
-    margin: 0,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
+  tramiteTitleWrap: { display: "flex", alignItems: "center", gap: "10px" },
+  tramiteTitle: { margin: 0, fontWeight: 800, color: text },
   activoPill: {
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    backgroundColor: "#d1fae5",
-    color: "#047857",
+    backgroundColor: "var(--vg-success-bg)",
+    color: "var(--vg-success)",
     padding: "5px 12px",
     borderRadius: "999px",
     fontSize: "11px",
     fontWeight: 700,
     letterSpacing: "0.5px",
   },
-  activoDot: {
-    width: "6px",
-    height: "6px",
-    backgroundColor: "#10b981",
-    borderRadius: "50%",
-  },
-  tramiteGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "14px",
-    marginBottom: "14px",
-  },
+  activoDot: { width: "6px", height: "6px", backgroundColor: "var(--vg-success)", borderRadius: "50%" },
+  tramiteGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" },
   datoCard: {
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    backgroundColor: subtle,
+    border: `1px solid ${border}`,
     borderRadius: "12px",
     padding: "14px 16px",
   },
-  datoLabel: {
-    fontSize: "11px",
-    fontWeight: 700,
-    color: "#94a3b8",
-    letterSpacing: "0.6px",
-    marginBottom: "6px",
-  },
-  datoValor: {
-    fontSize: "16px",
-    fontWeight: 700,
-    color: "#0f172a",
-    lineHeight: 1.3,
-  },
+  datoLabel: { fontSize: "11px", fontWeight: 700, color: "var(--vg-text-muted)", letterSpacing: "0.6px", marginBottom: "6px" },
+  datoValor: { fontSize: "16px", fontWeight: 700, color: text, lineHeight: 1.3 },
   estadoCard: {
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    backgroundColor: subtle,
+    border: `1px solid ${border}`,
     borderRadius: "12px",
     padding: "14px 16px",
     display: "flex",
@@ -917,49 +863,31 @@ const s = {
     alignItems: "center",
     gap: "12px",
   },
-  etapaText: {
-    color: "#e11d48",
-    fontWeight: 700,
-    fontSize: "14px",
-    whiteSpace: "nowrap",
-  },
+  etapaText: { color: "var(--vg-red)", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" },
 
-  // -------- Preferencias --------
   prefCard: {
-    backgroundColor: "white",
+    backgroundColor: card,
     borderRadius: "18px",
-    border: "1px solid #e2e8f0",
+    border: `1px solid ${border}`,
     padding: "24px 26px",
     boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
   },
-  prefTitle: {
-    margin: "0 0 18px 0",
-    fontWeight: 800,
-    color: "#0f172a",
-  },
+  prefTitle: { margin: "0 0 18px 0", fontWeight: 800, color: text },
   prefRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     gap: "20px",
     padding: "16px 18px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    backgroundColor: subtle,
+    border: `1px solid ${border}`,
     borderRadius: "12px",
     marginBottom: "12px",
   },
   prefText: { flex: 1, minWidth: 0 },
-  prefRowTitle: {
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: "4px",
-  },
-  prefRowDesc: {
-    color: "#64748b",
-    lineHeight: 1.4,
-  },
+  prefRowTitle: { fontWeight: 700, color: text, marginBottom: "4px" },
+  prefRowDesc: { color: muted, lineHeight: 1.4 },
 
-  // -------- Toggle --------
   toggle: {
     width: "46px",
     height: "26px",
@@ -977,46 +905,36 @@ const s = {
     width: "22px",
     height: "22px",
     borderRadius: "50%",
-    backgroundColor: "white",
+    backgroundColor: "var(--vg-card)",
     boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
     transition: "transform 0.2s",
   },
 
-  // -------- Select --------
   select: {
-    border: "1px solid #cbd5e1",
+    border: `1px solid ${border}`,
     borderRadius: "10px",
     padding: "8px 14px",
     fontSize: "14px",
     fontWeight: 600,
-    color: "#0f172a",
-    backgroundColor: "white",
+    color: text,
+    backgroundColor: card,
     cursor: "pointer",
     fontFamily: "inherit",
     minWidth: "110px",
   },
 
-  // -------- Aviso amarillo --------
   notice: {
     display: "flex",
     gap: "12px",
     alignItems: "flex-start",
-    backgroundColor: "#fef9e7",
-    border: "1px solid #fde68a",
+    backgroundColor: "var(--vg-amber-bg)",
+    border: "1px solid var(--vg-amber-border)",
     borderRadius: "12px",
     padding: "14px 18px",
   },
-  noticeIcon: {
-    flexShrink: 0,
-    paddingTop: "1px",
-  },
-  noticeText: {
-    margin: 0,
-    color: "#92400e",
-    lineHeight: 1.5,
-  },
+  noticeIcon: { flexShrink: 0, paddingTop: "1px" },
+  noticeText: { margin: 0, color: "var(--vg-amber-text)", lineHeight: 1.5 },
 
-  // -------- FAB Ayuda rápida --------
   helpFab: {
     position: "fixed",
     bottom: "24px",
@@ -1024,7 +942,7 @@ const s = {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    backgroundColor: "#0f172a",
+    backgroundColor: "var(--vg-strong-surface)",
     color: "white",
     border: "none",
     borderRadius: "999px",
@@ -1036,4 +954,5 @@ const s = {
     zIndex: 1000,
     fontFamily: "inherit",
   },
-};
+  };
+}

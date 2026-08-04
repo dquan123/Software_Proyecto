@@ -1,0 +1,15 @@
+.visaguide-logo {
+  display: flex;
+  align-items: center;
+}
+
+.visaguide-logo__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+}
+
+.visaguide-logo__text {
+  display: grid;
+  min-width: 0;
+}

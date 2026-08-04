@@ -1,4 +1,9 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} = require("@aws-sdk/client-s3");
 
 const R2_BUCKET = process.env.R2_BUCKET;
 const R2_ENDPOINT = process.env.R2_ENDPOINT;
@@ -87,9 +92,26 @@ async function deleteObjectFromR2(key) {
   );
 }
 
+async function getObjectFromR2(key) {
+  validateR2Config();
+  const response = await r2Client.send(
+    new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+    })
+  );
+
+  return {
+    stream: response.Body,
+    contentType: response.ContentType,
+    contentLength: response.ContentLength,
+  };
+}
+
 module.exports = {
   r2Client,
   validateR2Config,
   uploadBufferToR2,
   deleteObjectFromR2,
+  getObjectFromR2,
 };
