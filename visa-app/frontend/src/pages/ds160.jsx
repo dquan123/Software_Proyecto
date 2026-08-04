@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
@@ -221,9 +221,9 @@ function CheckCircleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
       style={{ flexShrink: 0, marginTop: "2px" }} aria-hidden="true">
-      <circle cx="12" cy="12" r="11" stroke="#10b981" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="11" stroke="var(--vg-success)" strokeWidth="1.8" />
       <polyline points="7,12.5 10.5,16 17,8.5"
-        stroke="#10b981" strokeWidth="2"
+        stroke="var(--vg-success)" strokeWidth="2"
         strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -233,9 +233,9 @@ function InfoCircleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
       style={{ flexShrink: 0 }} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="#d97706" strokeWidth="1.8" />
-      <line x1="12" y1="8"  x2="12" y2="12" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
-      <line x1="12" y1="16" x2="12.01" y2="16" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="10" stroke="var(--vg-warning)" strokeWidth="1.8" />
+      <line x1="12" y1="8"  x2="12" y2="12" stroke="var(--vg-warning)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="12" y1="16" x2="12.01" y2="16" stroke="var(--vg-warning)" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -252,15 +252,36 @@ function SaveIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 export default function DS160Form() {
   const { isValidating: authValidating } = useRequireAuth();
+  const st = getSt();
   const [seccionActual,   setSeccionActual]   = useState(1);
   const [formData,        setFormData]        = useState({});
   const [errores,         setErrores]         = useState({});
   const [guardando,       setGuardando]       = useState(false);
+  const [descargandoPdf,  setDescargandoPdf]  = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState("");
   const [cargando,        setCargando]        = useState(true);
   const modoSenior = useModoSenior();
+  const formDataRef = useRef(formData);
+  const seccionActualRef = useRef(seccionActual);
+  const dirtyRef = useRef(false);
+  const autosaveControllerRef = useRef(null);
+
+  formDataRef.current = formData;
+  seccionActualRef.current = seccionActual;
 
   const seccion        = secciones.find(s => s.id === seccionActual);
   const totalSecciones = secciones.length;
@@ -271,6 +292,7 @@ export default function DS160Form() {
     !campo.dependeDe || formData[campo.dependeDe.campo] === campo.dependeDe.valor;
 
   useEffect(() => {
+    const controller = new AbortController();
     const cargar = async () => {
       const sessionRaw = localStorage.getItem("visaguide_session");
       const correo = sessionRaw
@@ -278,40 +300,79 @@ export default function DS160Form() {
         : localStorage.getItem("correoUsuario");
       if (!correo) { setCargando(false); return; }
       try {
-        const res  = await fetch(`${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`);
+        const res  = await fetch(`${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error();
         const data = await res.json();
         setFormData(data.datos || {});
         setSeccionActual(data.seccion_actual || 1);
-      } catch { /* ignorar */ } finally { setCargando(false); }
+      } catch (error) {
+        if (error.name !== "AbortError") { /* ignorar errores de carga */ }
+      } finally {
+        if (!controller.signal.aborted) setCargando(false);
+      }
     };
     cargar();
+    return () => controller.abort();
   }, []);
 
-  // Auto-guardado cada 30 segundos
-useEffect(() => {
-  // No iniciar el auto-guardado hasta que termine de cargar
-  if (cargando) return;
-  
-  const intervalo = setInterval(() => {
-    const correo = getCorreo();
-    if (correo && Object.keys(formData).length > 0) {
-      // Guardar silenciosamente (sin mostrar mensaje)
-      fetch(buildApiUrl("/ds160"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          correo, 
-          datos: formData, 
-          seccion_actual: seccionActual, 
-          completado: false 
-        }),
-      }).catch(() => {}); // Ignorar errores silenciosamente
-    }
-  }, 30000); // 30 segundos
+  // Auto-guardado con debounce después de que la persona deja de editar.
+  useEffect(() => {
+    if (cargando || !dirtyRef.current || Object.keys(formData).length === 0) return;
 
-  return () => clearInterval(intervalo);
-}, [formData, seccionActual, cargando]);
+    const timeout = window.setTimeout(async () => {
+      const correo = getCorreo();
+      if (!correo) return;
+      autosaveControllerRef.current?.abort();
+      const controller = new AbortController();
+      autosaveControllerRef.current = controller;
+      try {
+        const response = await fetch(buildApiUrl("/ds160"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
+          signal: controller.signal,
+        });
+        if (response.ok) dirtyRef.current = false;
+      } catch (error) {
+        if (error.name !== "AbortError") { /* el próximo cambio reintentará */ }
+      }
+    }, 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [formData, seccionActual, cargando]);
+
+  // Última escritura al abandonar la página para reducir el riesgo de pérdida de datos.
+  useEffect(() => {
+    const flushPendingChanges = () => {
+      if (!dirtyRef.current || Object.keys(formDataRef.current).length === 0) return;
+      const correo = getCorreo();
+      if (!correo) return;
+      const body = JSON.stringify({
+        correo,
+        datos: formDataRef.current,
+        seccion_actual: seccionActualRef.current,
+        completado: false,
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(buildApiUrl("/ds160"), new Blob([body], { type: "application/json" }));
+      } else {
+        fetch(buildApiUrl("/ds160"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("pagehide", flushPendingChanges);
+    return () => {
+      window.removeEventListener("pagehide", flushPendingChanges);
+      autosaveControllerRef.current?.abort();
+      flushPendingChanges();
+    };
+  }, []);
 
   const getCorreo = () => {
     const sessionRaw = localStorage.getItem("visaguide_session");
@@ -370,7 +431,7 @@ useEffect(() => {
       }
 
       if (v.pattern === "telefono") {
-        const telRegex = /^[\d\s\+\-\(\)]{8,20}$/;
+        const telRegex = /^[\d\s+()-]{8,20}$/;
         if (!telRegex.test(valorStr)) {
           return "Ingresa un número de teléfono válido";
         }
@@ -428,6 +489,7 @@ useEffect(() => {
   };
 
   const handleChange = (name, value) => {
+    dirtyRef.current = true;
     setFormData(p => ({ ...p, [name]: value }));
     
     // Validar en tiempo real
@@ -446,7 +508,7 @@ useEffect(() => {
     }
   };
 
-  const guardarProgreso = async () => {
+  const guardarProgreso = async (seccionParaGuardar = seccionActual) => {
     const correo = getCorreo();
     if (!correo) return;
     setGuardando(true);
@@ -454,15 +516,49 @@ useEffect(() => {
       const res = await fetch(buildApiUrl("/ds160"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: false }),
+        body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionParaGuardar, completado: false }),
       });
       if (!res.ok) throw new Error();
+      dirtyRef.current = false;
       setMensajeGuardado("✓ Progreso guardado");
       setTimeout(() => setMensajeGuardado(""), 3000);
     } catch {
       setMensajeGuardado("Error al guardar. Intenta de nuevo.");
       setTimeout(() => setMensajeGuardado(""), 3000);
     } finally { setGuardando(false); }
+  };
+
+  const descargarPdf = async () => {
+    const correo = getCorreo();
+    if (!correo) {
+      setMensajeGuardado("No se encontro una sesion activa.");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+      return;
+    }
+
+    setDescargandoPdf(true);
+    try {
+      const response = await fetch(`${buildApiUrl("/ds160/pdf")}?correo=${encodeURIComponent(correo)}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo descargar el PDF.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ds160.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMensajeGuardado(error.message || "No se pudo descargar el PDF.");
+      setTimeout(() => setMensajeGuardado(""), 3000);
+    } finally {
+      setDescargandoPdf(false);
+    }
   };
 
   const finalizarFormulario = async () => {
@@ -483,6 +579,7 @@ useEffect(() => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo, datos: formData, seccion_actual: seccionActual, completado: true }),
       });
+      dirtyRef.current = false;
       alert("¡Formulario completado! Los datos han sido guardados.");
       window.location.href = "/dashboard";
     } catch { alert("Error al finalizar el formulario. Intenta de nuevo."); }
@@ -497,9 +594,10 @@ const siguienteSeccion = () => {
       setTimeout(() => setMensajeGuardado(""), 3000);
       return;
     }
+    const nuevaSeccion = seccionActual + 1;
     setErrores({});
-    setSeccionActual(s => s + 1);
-    guardarProgreso();
+    setSeccionActual(nuevaSeccion);
+    guardarProgreso(nuevaSeccion);
     window.scrollTo(0, 0);
   }
 };
@@ -515,14 +613,15 @@ const siguienteSeccion = () => {
   const renderCampo = (campo) => {
     if (!debeMostrar(campo)) return null;
     const tieneError = errores[campo.name];
+    const inputId = `campo-${campo.name}`;
 
     if (campo.type === "radio") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <div id={`${inputId}-label`} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
-        </label>
-        <div style={st.radioGroup}>
+        </div>
+        <div style={st.radioGroup} role="group" aria-labelledby={`${inputId}-label`}>
           {campo.opciones.map(op => (
             <button key={op} type="button"
               style={{ 
@@ -531,41 +630,45 @@ const siguienteSeccion = () => {
                 ...(tieneError && !formData[campo.name] ? st.radioBtnError : {}),
                 fontSize: modoSenior ? "16px" : "14px" 
               }}
+              aria-pressed={formData[campo.name] === op}
               onClick={() => handleChange(campo.name, op)}>{op}</button>
           ))}
         </div>
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     if (campo.type === "select") return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <label htmlFor={inputId} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
         </label>
-        <select 
+        <select
+          id={inputId}
           style={{ 
             ...st.input, 
             fontSize: modoSenior ? "17px" : "15px",
             ...(tieneError ? st.inputError : {})
           }}
           value={formData[campo.name] || ""} 
+          aria-invalid={!!tieneError}
+          aria-describedby={tieneError ? `${inputId}-error` : undefined}
           onChange={e => handleChange(campo.name, e.target.value)}>
           <option value="">Selecciona una opción</option>
           {campo.opciones.map(op => <option key={op} value={op}>{op}</option>)}
         </select>
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span id={`${inputId}-error`} role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
 
     return (
       <div key={campo.name} style={st.campoContainer}>
-        <label style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
+        <label htmlFor={inputId} style={{ ...st.label, fontSize: modoSenior ? "13px" : "11px" }}>
           {campo.label}
           {campo.required && <span style={st.required}>*</span>}
         </label>
-        <input type={campo.type}
+        <input id={inputId} type={campo.type}
           style={{ 
             ...st.input, 
             fontSize: modoSenior ? "17px" : "15px", 
@@ -574,8 +677,10 @@ const siguienteSeccion = () => {
           }}
           placeholder={campo.placeholder || ""} 
           value={formData[campo.name] || ""}
+          aria-invalid={!!tieneError}
+          aria-describedby={tieneError ? `${inputId}-error` : undefined}
           onChange={e => handleChange(campo.name, e.target.value)} />
-        {tieneError && <span style={st.errorText}>{tieneError}</span>}
+        {tieneError && <span id={`${inputId}-error`} role="alert" style={st.errorText}>{tieneError}</span>}
       </div>
     );
   };
@@ -585,32 +690,38 @@ const siguienteSeccion = () => {
   if (authValidating || cargando) return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <div style={st.page}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={st.page}>
         <div style={st.headerCard}>
-          <p style={{ textAlign: "center", color: "#64748b", margin: 0 }}>Cargando formulario...</p>
+          <p style={{ textAlign: "center", color: "var(--vg-text-muted)", margin: 0 }}>Cargando formulario...</p>
         </div>
-      </div>
+      </main>
     </div>
   );
 
   return (
     <div style={st.layout}>
       <Sidebar currentPage="ds160" />
-      <div style={st.page}>
+      <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={st.page}>
 
         {/* HEADER */}
         <div style={st.headerCard}>
           <div style={st.headerRow}>
             <div>
-              <h1 style={{ ...st.titulo, fontSize: modoSenior ? "28px" : "22px" }}>Formulario DS-160</h1>
-              <p style={{ ...st.subtitulo, fontSize: modoSenior ? "15px" : "13px" }}>
+              <h1 style={{ ...st.titulo, fontSize: modoSenior ? "40px" : "var(--vg-page-title)" }}>Formulario DS-160</h1>
+              <p style={{ ...st.subtitulo, fontSize: modoSenior ? "18px" : "var(--vg-body-size)" }}>
                 Sección {seccionActual}: {seccion?.titulo} ({seccionActual} de {totalSecciones})
               </p>
             </div>
-            <button style={st.guardarBtn} onClick={guardarProgreso} disabled={guardando} aria-label="Guardar progreso">
-              <SaveIcon />
-              {guardando ? "Guardando..." : "Guardar progreso"}
-            </button>
+            <div style={st.headerActions}>
+              <button style={st.guardarBtn} onClick={descargarPdf} disabled={descargandoPdf} aria-label="Descargar PDF">
+                <DownloadIcon />
+                {descargandoPdf ? "Descargando..." : "Descargar PDF"}
+              </button>
+              <button style={st.guardarBtn} onClick={() => guardarProgreso()} disabled={guardando} aria-label="Guardar progreso">
+                <SaveIcon />
+                {guardando ? "Guardando..." : "Guardar progreso"}
+              </button>
+            </div>
           </div>
           <div style={st.barTrack} role="progressbar" aria-valuenow={Math.round(progreso)} aria-valuemin={0} aria-valuemax={100}>
             <div style={{ ...st.barFill, width: `${progreso}%` }} />
@@ -618,7 +729,7 @@ const siguienteSeccion = () => {
         </div>
 
         {mensajeGuardado && (
-          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("✓") ? "#f0fdf4" : "#fef2f2", borderColor: mensajeGuardado.startsWith("✓") ? "#bbf7d0" : "#fecaca", color: mensajeGuardado.startsWith("✓") ? "#15803d" : "#dc2626" }}>
+          <div style={{ ...st.toast, background: mensajeGuardado.startsWith("✓") ? "var(--vg-success-bg)" : "var(--vg-danger-bg)", borderColor: "var(--vg-border)", color: mensajeGuardado.startsWith("✓") ? "var(--vg-success)" : "var(--vg-danger-text)" }}>
             {mensajeGuardado}
           </div>
         )}
@@ -690,7 +801,7 @@ const siguienteSeccion = () => {
                     }}>
                     {sc.id < seccionActual && (
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                        stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                        stroke="var(--vg-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
                         style={{ marginRight: "6px", flexShrink: 0 }} aria-hidden="true">
                         <polyline points="20,6 9,17 4,12" />
                       </svg>
@@ -703,31 +814,38 @@ const siguienteSeccion = () => {
 
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-const st = {
+function getSt() {
+  const bg      = "var(--vg-bg)";
+  const card    = "var(--vg-card)";
+  const border  = "var(--vg-border)";
+  const text    = "var(--vg-text)";
+  const muted   = "var(--vg-text-muted)";
+
+  return {
   layout: { display: "flex", minHeight: "100vh" },
 
   page: {
-    marginLeft: "250px",
+    marginLeft: "var(--vg-sidebar-w)",
     flex: 1,
     minHeight: "100vh",
-    background: "#f1f3f6",
-    padding: "28px 32px",
-    fontFamily: "'Segoe UI', sans-serif",
+    background: bg,
+    padding: "var(--vg-page-pad-top) var(--vg-page-pad-x) var(--vg-page-pad-bottom)",
+    fontFamily: "var(--vg-font)",
     boxSizing: "border-box",
   },
 
   headerCard: {
-    background: "#ffffff",
+    background: card,
     borderRadius: "14px",
     padding: "20px 26px 16px",
-    boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
+    boxShadow: "var(--vg-shadow-sm)",
     marginBottom: "20px",
-    border: "1px solid #e2e8f0",
+    border: `1px solid ${border}`,
   },
 
   headerRow: {
@@ -737,28 +855,36 @@ const st = {
     marginBottom: "14px",
   },
 
-  titulo:   { margin: 0, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" },
-  subtitulo:{ margin: "3px 0 0 0", color: "#64748b" },
+  headerActions: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+
+  titulo:   { margin: 0, fontWeight: 700, color: text, letterSpacing: "-0.3px" },
+  subtitulo:{ margin: "3px 0 0 0", color: muted },
 
   guardarBtn: {
     display: "flex",
     alignItems: "center",
     gap: "7px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
+    background: card,
+    border: `1px solid ${border}`,
     borderRadius: "10px",
     padding: "9px 16px",
     fontSize: "13px",
     fontWeight: 500,
-    color: "#475569",
+    color: muted,
     cursor: "pointer",
     boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     flexShrink: 0,
   },
 
-  barTrack: { width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "99px", overflow: "hidden" },
-  barFill:  { height: "100%", background: "#e11d48", borderRadius: "99px", transition: "width 0.4s ease" },
+  barTrack: { width: "100%", height: "5px", background: border, borderRadius: "99px", overflow: "hidden" },
+  barFill:  { height: "100%", background: "var(--vg-red)", borderRadius: "99px", transition: "width 0.4s ease" },
 
   toast: {
     padding: "10px 16px",
@@ -773,11 +899,11 @@ const st = {
 
   formCard: {
     flex: 1,
-    background: "#ffffff",
+    background: card,
     borderRadius: "14px",
     padding: "28px 28px 24px",
-    boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
-    border: "1px solid #e2e8f0",
+    boxShadow: "var(--vg-shadow-sm)",
+    border: `1px solid ${border}`,
   },
 
   helpSidebar: { width: "300px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px" },
@@ -788,41 +914,38 @@ const st = {
     display: "block",
     fontSize: "11px",
     fontWeight: 600,
-    color: "#64748b",
+    color: muted,
     marginBottom: "7px",
     letterSpacing: "0.5px",
     textTransform: "uppercase",
   },
 
-  required: {
-    color: "#e11d48",
-    marginLeft: "4px",
-  },
+  required: { color: "var(--vg-red)", marginLeft: "4px" },
 
   input: {
     width: "100%",
     padding: "12px 16px",
     fontSize: "15px",
-    border: "1.5px solid #e2e8f0",
+    border: `1.5px solid ${border}`,
     borderRadius: "10px",
     boxSizing: "border-box",
     outline: "none",
     transition: "border-color 0.2s",
-    fontFamily: "'Segoe UI', sans-serif",
-    color: "#0f172a",
-    background: "#ffffff",
+    fontFamily: "var(--vg-font)",
+    color: text,
+    background: "var(--vg-input)",
   },
 
   inputError: {
-    borderColor: "#e11d48",
-    background: "#fef2f2",
+    borderColor: "var(--vg-red)",
+    background: "var(--vg-danger-bg)",
   },
 
   errorText: {
     display: "block",
     marginTop: "6px",
     fontSize: "12px",
-    color: "#dc2626",
+    color: "var(--vg-danger-text)",
     fontWeight: 500,
   },
 
@@ -832,19 +955,18 @@ const st = {
     flex: 1,
     padding: "12px 20px",
     fontSize: "14px",
-    border: "1.5px solid #e2e8f0",
+    border: `1.5px solid ${border}`,
     borderRadius: "10px",
-    background: "#ffffff",
+    background: "var(--vg-input)",
     cursor: "pointer",
     transition: "all 0.15s",
-    fontFamily: "'Segoe UI', sans-serif",
-    color: "#0f172a",
+    fontFamily: "var(--vg-font)",
+    color: text,
     fontWeight: 500,
   },
 
-  radioBtnSel: { background: "#0f172a", color: "#ffffff", borderColor: "#0f172a" },
-
-  radioBtnError: { borderColor: "#e11d48" },
+  radioBtnSel: { background: "var(--vg-red)", color: "#ffffff", borderColor: "var(--vg-red)" },
+  radioBtnError: { borderColor: "var(--vg-red)" },
 
   navegacion: {
     display: "flex",
@@ -852,7 +974,7 @@ const st = {
     alignItems: "center",
     marginTop: "28px",
     paddingTop: "18px",
-    borderTop: "1px solid #f1f5f9",
+    borderTop: `1px solid ${border}`,
   },
 
   navBtn: {
@@ -861,45 +983,42 @@ const st = {
     borderRadius: "99px",
     cursor: "pointer",
     transition: "all 0.2s",
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "var(--vg-font)",
     border: "none",
   },
 
   navNext: { background: "linear-gradient(135deg,#e11d48 0%,#f43f5e 100%)", color: "#fff", boxShadow: "0 4px 14px rgba(225,29,72,0.28)" },
-  navBack: { background: "transparent", color: "#64748b", padding: "12px 4px", fontWeight: 400 },
+  navBack: { background: "transparent", color: muted, padding: "12px 4px", fontWeight: 400 },
 
-  /* Caja amarilla */
   helpBox: {
-    background: "#fffbeb",
+    background: "var(--vg-amber-bg)",
     borderRadius: "12px",
     padding: "16px 18px",
-    border: "1px solid #fde68a",
+    border: "1px solid var(--vg-amber-border)",
   },
 
   helpTitleRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
-  helpTitle:    { margin: 0, fontWeight: 700, color: "#92400e" },
-  helpText:     { margin: 0, color: "#78350f", lineHeight: 1.65 },
+  helpTitle:    { margin: 0, fontWeight: 700, color: "var(--vg-amber-text)" },
+  helpText:     { margin: 0, color: "var(--vg-amber-text)", lineHeight: 1.65 },
 
-  /* Caja navy con borde rojo */
   tipBox: {
-    background: "#0f172a",
+    background: "var(--vg-strong-surface)",
     borderRadius: "12px",
     padding: "18px 20px",
-    border: "2px solid #e11d48",
+    border: "2px solid var(--vg-red)",
   },
 
   tipTitleRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" },
-  tipTitle:    { margin: 0, fontWeight: 700, color: "#f8fafc" },
+  tipTitle:    { margin: 0, fontWeight: 700, color: "var(--vg-on-strong)" },
   tipItem:     { display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "10px" },
-  tipText:     { margin: 0, color: "#94a3b8", lineHeight: 1.6 },
+  tipText:     { margin: 0, color: "var(--vg-strong-muted)", lineHeight: 1.6 },
 
-  /* Lista de secciones */
-  seccionesBox: { background: "#1e3a5f", borderRadius: "12px", padding: "18px 20px" },
+  seccionesBox: { background: "var(--vg-navy-blue)", borderRadius: "12px", padding: "18px 20px" },
 
   seccionesTitle: {
     margin: "0 0 12px 0",
     fontWeight: 700,
-    color: "#e2e8f0",
+    color: "var(--vg-on-strong)",
     letterSpacing: "0.5px",
   },
 
@@ -916,6 +1035,7 @@ const st = {
     lineHeight: 1.4,
   },
 
-  seccionActual: { color: "#ffffff", fontWeight: 700 },
-  seccionDone:   { color: "#34d399" },
-};
+  seccionActual: { color: "var(--vg-on-strong)", fontWeight: 700 },
+  seccionDone:   { color: "var(--vg-success)" },
+  };
+}

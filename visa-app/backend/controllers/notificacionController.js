@@ -1,0 +1,95 @@
+function createNotificacionController(notificacionService) {
+  function handleError(res, error) {
+    const status = error.statusCode || 500;
+    const message =
+      status === 500 ? "Error interno al procesar notificaciones" : error.message;
+
+    if (status === 500) {
+      console.error("NOTIFICACION ERROR:", error);
+    }
+
+    return res.status(status).json({ error: message });
+  }
+
+  async function listar(req, res) {
+    try {
+      const notificaciones = await notificacionService.listarPorUsuario(req.params.userId);
+      return res.json({ notificaciones });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function contarNoLeidas(req, res) {
+    try {
+      const total = await notificacionService.contarNoLeidas(req.params.userId);
+      return res.json({ total });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function marcarLeida(req, res) {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      const notificacion = await notificacionService.marcarLeida(req.params.id, userId);
+      return res.json({ message: "Notificación marcada como leída", notificacion });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function marcarTodasLeidas(req, res) {
+    try {
+      const actualizadas = await notificacionService.marcarTodasLeidas(req.params.userId);
+      return res.json({
+        message: "Notificaciones marcadas como leídas",
+        actualizadas,
+      });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function crear(req, res) {
+    try {
+      const { userId, titulo, mensaje, tipo, etapaRelacionada } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido" });
+      }
+      const notificacion = await notificacionService.crearNotificacion({
+        userId,
+        titulo,
+        mensaje,
+        tipo,
+        etapaRelacionada,
+      });
+      return res.status(201).json({
+        message: "Notificación creada correctamente",
+        notificacion,
+      });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function eliminar(req, res) {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      await notificacionService.eliminar(req.params.id, userId);
+      return res.json({ message: "Notificación eliminada correctamente" });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  return { listar, contarNoLeidas, marcarLeida, marcarTodasLeidas, crear, eliminar };
+}
+
+module.exports = createNotificacionController;

@@ -1,31 +1,35 @@
-version: '3.8'
-
 services:
 
   backend:
     build: ./backend
     env_file:
       - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOCAL_UPLOAD_DIR: /app/local_uploads
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - local_uploads:/app/local_uploads
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     build:
        context: ./frontend
        args:
-         - VITE_API_URL=http://3.14.12.212:3000
+         - VITE_API_URL=${FRONTEND_API_URL:-/api}
+         - VITE_API_PORT=${VITE_API_PORT:-3000}
+         - VITE_WHATSAPP_PHONE=${VITE_WHATSAPP_PHONE:-}
 
     ports:
-      - "5173:5173"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
 
   db:
     image: postgres:15
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -33,4 +37,14 @@ services:
     ports:
       - "5433:5432"
     volumes:
-    - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  local_uploads:
+  db_data:

@@ -1,11 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
-import {
-  getInterviewFeedbackSession,
-  getLatestInterviewFeedbackSession,
-} from "../utils/interviewFeedbackStorage";
 import "../styles/interview.css";
 
 function formatDate(value) {
@@ -51,26 +48,74 @@ function PendingIcon() {
   );
 }
 
+function getResponses(session) {
+  return Array.isArray(session?.responses) ? session.responses : [];
+}
+
 export default function InterviewFeedback() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
+  const [feedbackSession, setFeedbackSession] = useState(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+  const [sessionError, setSessionError] = useState("");
 
-  const feedbackSession = useMemo(() => {
-    if (isValidating) return null;
+  useEffect(() => {
+    if (isValidating) return;
+    const controller = new AbortController();
 
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session");
+    const fetchFeedbackSession = async () => {
+      try {
+        setLoadingSession(true);
+        setSessionError("");
 
-    return sessionId
-      ? getInterviewFeedbackSession(sessionId, session?.id)
-      : getLatestInterviewFeedbackSession(session?.id);
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get("session");
+        const endpoint = sessionId
+          ? `/interview-sessions/${sessionId}`
+          : `/interview-sessions/user/${session?.id}`;
+
+        const response = await fetch(buildApiUrl(endpoint), { signal: controller.signal });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "No se pudo cargar la retroalimentación."
+          );
+        }
+
+        if (sessionId) {
+          setFeedbackSession(data.session || null);
+          return;
+        }
+
+        setFeedbackSession(
+          Array.isArray(data.sessions) && data.sessions.length > 0
+            ? data.sessions[0]
+            : null
+        );
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        setSessionError(
+          error.message || "No se pudo cargar la retroalimentación."
+        );
+      } finally {
+        if (!controller.signal.aborted) setLoadingSession(false);
+      }
+    };
+
+    fetchFeedbackSession();
+    return () => controller.abort();
   }, [isValidating, session?.id]);
+
+  const responses = useMemo(() => getResponses(feedbackSession), [feedbackSession]);
+  const recordedCount = responses.filter((response) => response.recorded).length;
+  const isReviewed = feedbackSession?.status === "reviewed";
 
   if (isValidating) {
     return (
       <div className="interview-shell">
         <Sidebar currentPage="entrevista" />
-        <main className="interview-main">
+        <main id="main-content" tabIndex="-1" className="interview-main">
           <p className="interview-loading">Verificando sesión...</p>
         </main>
       </div>
@@ -81,6 +126,7 @@ export default function InterviewFeedback() {
     <div className="interview-shell">
       <Sidebar currentPage="entrevista" />
       <main
+        id="main-content" tabIndex="-1"
         className={`interview-main feedback-main${
           modoSenior ? " interview-main--senior" : ""
         }`}
@@ -93,7 +139,18 @@ export default function InterviewFeedback() {
           </p>
         </header>
 
-        {!feedbackSession ? (
+        {loadingSession ? (
+          <p className="interview-loading">Cargando sesión...</p>
+        ) : sessionError ? (
+          <section className="feedback-empty">
+            <PendingIcon />
+            <h2>No pudimos cargar la sesión</h2>
+            <p>{sessionError}</p>
+            <button type="button" onClick={() => window.location.reload()}>
+              Reintentar
+            </button>
+          </section>
+        ) : !feedbackSession ? (
           <section className="feedback-empty">
             <PendingIcon />
             <h2>No hay entrevistas enviadas</h2>
@@ -110,35 +167,57 @@ export default function InterviewFeedback() {
           </section>
         ) : (
           <>
-            <section className="feedback-status-card">
+            <section
+              className={`feedback-status-card${
+                isReviewed ? " feedback-status-card--reviewed" : ""
+              }`}
+            >
               <div className="feedback-status-card__icon">
                 <PendingIcon />
               </div>
               <div>
-                <span>Pendiente de retroalimentación</span>
-                <h2>Tu entrevista fue enviada correctamente</h2>
+                <span>
+                  {isReviewed
+                    ? "Retroalimentación lista"
+                    : "Pendiente de retroalimentación"}
+                </span>
+                <h2>
+                  {isReviewed
+                    ? "Tu entrevista ya fue revisada"
+                    : "Tu entrevista fue enviada correctamente"}
+                </h2>
                 <p>
-                  Aún no ha sido procesada. Cuando el asesor revise tus
-                  respuestas, aquí aparecerán observaciones y recomendaciones.
+                  {isReviewed
+                    ? "El asesor dejó observaciones para que puedas mejorar tus próximas respuestas."
+                    : "Aún no ha sido procesada. Cuando el asesor revise tus respuestas, aquí aparecerán observaciones y recomendaciones."}
                 </p>
               </div>
             </section>
 
+            {isReviewed && (
+              <section className="feedback-review-card">
+                <span>Feedback del asesor</span>
+                <p>{feedbackSession.feedback}</p>
+                {feedbackSession.rating && (
+                  <strong>Calificación: {feedbackSession.rating}/5</strong>
+                )}
+              </section>
+            )}
+
             <section className="feedback-summary-grid" aria-label="Resumen">
               <article>
                 <span>Estado</span>
-                <strong>Pendiente</strong>
+                <strong>{isReviewed ? "Revisada" : "Pendiente"}</strong>
               </article>
               <article>
                 <span>Respuestas grabadas</span>
                 <strong>
-                  {feedbackSession.recordedCount} de{" "}
-                  {feedbackSession.questionCount}
+                  {recordedCount} de {responses.length}
                 </strong>
               </article>
               <article>
                 <span>Fecha de envío</span>
-                <strong>{formatDate(feedbackSession.createdAt)}</strong>
+                <strong>{formatDate(feedbackSession.created_at)}</strong>
               </article>
             </section>
 
@@ -148,27 +227,30 @@ export default function InterviewFeedback() {
                 <p>Referencia de la sesión que queda pendiente de revisión.</p>
               </div>
 
-              {feedbackSession.questions.map((question, index) => (
-                <article className="feedback-question-row" key={question.id}>
+              {responses.map((response, index) => (
+                <article className="feedback-question-row" key={response.id}>
                   <span>{index + 1}</span>
                   <div>
-                    <h3>{question.text}</h3>
+                    <h3>{response.text}</h3>
                     <p>
-                      {question.recorded
+                      {response.recorded
                         ? `Respuesta grabada · Duración ${formatTime(
-                            question.duration
+                            response.duration
                           )}`
                         : "Sin grabación"}
                     </p>
+                    {response.audio?.url && (
+                      <audio controls src={response.audio.url} />
+                    )}
                   </div>
                   <strong
                     className={
-                      question.recorded
+                      response.recorded
                         ? "feedback-question-row__done"
                         : "feedback-question-row__missing"
                     }
                   >
-                    {question.recorded ? "Lista" : "Pendiente"}
+                    {response.recorded ? "Lista" : "Pendiente"}
                   </strong>
                 </article>
               ))}
