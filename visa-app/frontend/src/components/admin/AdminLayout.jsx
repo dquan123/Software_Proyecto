@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import VisaGuideLogo from "../VisaGuideLogo";
-import useRequireAuth from "../../hooks/useRequireAuth";
+import { useAdminSession } from "./AdminSessionContext";
 import "../../styles/admin.css";
 
 const adminNavItems = [
@@ -34,7 +34,7 @@ const pageTitles = {
 };
 
 export default function AdminLayout({ children }) {
-  const { isValidating, session } = useRequireAuth();
+  const session = useAdminSession();
   const location = useLocation();
   const navigate = useNavigate();
   const title = pageTitles[location.pathname] || "Panel administrador";
@@ -46,17 +46,6 @@ export default function AdminLayout({ children }) {
     localStorage.removeItem("perfilUsuario");
     navigate("/login", { replace: true });
   };
-
-  if (isValidating) {
-    return (
-      <main id="main-content" tabIndex="-1" className="route-loading">
-        <span className="route-loading__spinner" aria-hidden="true" />
-        <span className="visually-hidden" role="status" aria-live="polite">
-          Cargando panel administrador...
-        </span>
-      </main>
-    );
-  }
 
   return (
     <div className="admin-shell">

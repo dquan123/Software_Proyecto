@@ -8,6 +8,7 @@ describe("DS-160 navigation persistence", () => {
     const user = userEvent.setup();
     localStorage.setItem("visaguide_session", JSON.stringify({
       id: 7,
+      token: "signed-session-token",
       nombre: "Usuario Prueba",
       correo: "usuario@example.com",
       perfil: "turismo_negocios",

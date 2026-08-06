@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Navigate, Routes, Route, useNavigate } from "react
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { buildApiUrl } from "./config/api";
 import AuthLayout from "./components/auth/AuthLayout";
+import RequireAdmin from "./components/admin/RequireAdmin";
 import "./components/auth/auth.css";
 
 const Upload = lazy(() => import("./Upload"));
@@ -37,18 +38,19 @@ const getUserId = (userData) => userData.id_usuario || userData.id;
 
 const getLoginDestination = (userData) => {
   if (userData?.rol === "admin") return "/admin";
-  if (userData?.rol === "cliente") return "/dashboard";
+  if (userData?.rol === "asesor") return "/dashboard";
   return userData?.perfil ? "/dashboard" : "/seleccion-perfil";
 };
 
 const SessionManager = {
-  saveSession: (userData) => {
+  saveSession: (userData, token) => {
     localStorage.setItem("visaguide_session", JSON.stringify({
       id: getUserId(userData),
       nombre: userData.nombre,
       correo: userData.correo,
       perfil: userData.perfil || null,
       rol: userData.rol || "cliente",
+      token: token || userData.token || null,
       loginTime: new Date().toISOString(),
     }));
   },
@@ -66,11 +68,11 @@ const SessionManager = {
 };
 
 const validateSession = async (session) => {
-  if (!session?.correo) return false;
+  if (!session?.token) return false;
   try {
-    const res = await fetch(
-      `${buildApiUrl("/validar-sesion")}?correo=${encodeURIComponent(session.correo)}`
-    );
+    const res = await fetch(buildApiUrl("/validar-sesion"), {
+      headers: { Authorization: `Bearer ${session.token}` },
+    });
     if (!res.ok) { SessionManager.clearSession(); return false; }
     const data = await res.json();
     return data.valid;
@@ -97,14 +99,14 @@ function App() {
         <Route path="/entrevista"                     element={<Entrevista />} />
         <Route path="/entrevista/simulador"           element={<InterviewSimulator />} />
         <Route path="/entrevista/retroalimentacion"   element={<InterviewFeedback />} />
-        <Route path="/admin"                          element={<AdminDashboard />} />
-        <Route path="/admin/users"                    element={<AdminUsers />} />
-        <Route path="/admin/documents"                element={<AdminDocuments />} />
-        <Route path="/admin/interviews"               element={<AdminInterviews />} />
-        <Route path="/admin/processes"                element={<AdminProcesses />} />
-        <Route path="/admin/reports"                  element={<AdminReports />} />
-        <Route path="/admin/settings"                 element={<AdminSettings />} />
-        <Route path="/admin/questions"                element={<QuestionBank />} />
+        <Route path="/admin"                          element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+        <Route path="/admin/users"                    element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
+        <Route path="/admin/documents"                element={<RequireAdmin><AdminDocuments /></RequireAdmin>} />
+        <Route path="/admin/interviews"               element={<RequireAdmin><AdminInterviews /></RequireAdmin>} />
+        <Route path="/admin/processes"                element={<RequireAdmin><AdminProcesses /></RequireAdmin>} />
+        <Route path="/admin/reports"                  element={<RequireAdmin><AdminReports /></RequireAdmin>} />
+        <Route path="/admin/settings"                 element={<RequireAdmin><AdminSettings /></RequireAdmin>} />
+        <Route path="/admin/questions"                element={<RequireAdmin><QuestionBank /></RequireAdmin>} />
         <Route path="/questions"                      element={<QuestionBank />} />
         <Route path="/documents"                      element={<Documents />} />
         <Route path="/ds160"                          element={<DS160Form />} />
@@ -171,7 +173,7 @@ function Login() {
       const data = await res.json();
       if (res.ok) {
         const usuario = data.usuario || data.user;
-        SessionManager.saveSession(usuario);
+        SessionManager.saveSession(usuario, data.token);
         localStorage.setItem("correoUsuario", correo);
         navigate(getLoginDestination(usuario), { replace: true });
       } else {
@@ -270,7 +272,7 @@ function Registro() {
       const data = await res.json();
       if (res.ok) {
         setSuccess("¡Registro exitoso! Continuando a la selección de perfil...");
-        SessionManager.saveSession(data.data);
+        SessionManager.saveSession(data.data, data.token);
         localStorage.setItem("correoUsuario", data.data.correo);
         navigate("/seleccion-perfil", { replace: true });
       } else {

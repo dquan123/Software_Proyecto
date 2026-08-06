@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS usuario (
   nombre TEXT NOT NULL,
   correo TEXT NOT NULL UNIQUE,
   contrasena TEXT NOT NULL,
-  rol VARCHAR(20) DEFAULT 'cliente'
+  rol VARCHAR(20) DEFAULT 'cliente' CHECK (rol IN ('cliente', 'asesor', 'admin'))
 );
 
 ALTER TABLE usuario
@@ -11,6 +11,23 @@ ADD COLUMN IF NOT EXISTS perfil VARCHAR(100);
 
 ALTER TABLE usuario
 ADD COLUMN IF NOT EXISTS rol VARCHAR(20) DEFAULT 'cliente';
+
+UPDATE usuario SET rol = 'cliente'
+WHERE rol IS NULL OR rol NOT IN ('cliente', 'asesor', 'admin');
+
+ALTER TABLE usuario
+  ALTER COLUMN rol SET DEFAULT 'cliente',
+  ALTER COLUMN rol SET NOT NULL;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'usuario_rol_check' AND conrelid = 'usuario'::regclass
+  ) THEN
+    ALTER TABLE usuario ADD CONSTRAINT usuario_rol_check
+    CHECK (rol IN ('cliente', 'asesor', 'admin'));
+  END IF;
+END $$;
 
 -- Columnas extra para la pantalla "Perfil de Usuario"
 ALTER TABLE usuario
@@ -20,33 +37,14 @@ ALTER TABLE usuario
   ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS idioma              VARCHAR(10)  DEFAULT 'es';
 
-INSERT INTO usuario (nombre, correo, contrasena, rol)
-SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
-FROM (
-  VALUES
-    ('Norman', 'norman@prueba.cliente', '123456', 'cliente'),
-    ('Juanfri', 'juanfri@prueba.cliente', '123456', 'cliente'),
-    ('Yaya', 'yaya@prueba.cliente', '123456', 'cliente'),
-    ('Quan', 'quan@prueba.cliente', '123456', 'cliente'),
-    ('Usuario Prueba', 'usuario@prueba.com', '123456', 'cliente'),
-    ('Admin Norman', 'admin.norman@prueba.com', '123456', 'admin'),
-    ('Admin Juanfri', 'admin.juanfri@prueba.com', '123456', 'admin'),
-    ('Admin Yaya', 'admin.yaya@prueba.com', '123456', 'admin'),
-    ('Admin Quan', 'admin.quan@prueba.com', '123456', 'admin'),
-    ('Admin General', 'admin@prueba.com', '123456', 'admin')
-) AS seed(nombre, correo, contrasena, rol)
-WHERE NOT EXISTS (
-  SELECT 1 FROM usuario u WHERE u.correo = seed.correo
-);
-
 CREATE TABLE IF NOT EXISTS tramite (
   id_tramite SERIAL PRIMARY KEY,
-  id_usuario INT REFERENCES usuario(id_usuario),
+  id_usuario INT UNIQUE REFERENCES usuario(id_usuario),
   estado VARCHAR(100) DEFAULT 'En proceso',
-  etapa_actual VARCHAR(200) DEFAULT 'Formulario DS-160',
-  progreso INT DEFAULT 10,
-  siguiente_paso VARCHAR(200) DEFAULT 'Completar formulario DS-160',
-  mensaje TEXT DEFAULT 'Tu trámite ha comenzado correctamente'
+  etapa_actual VARCHAR(200) DEFAULT 'Configuración de perfil',
+  progreso INT DEFAULT 0,
+  siguiente_paso VARCHAR(200) DEFAULT 'Seleccionar perfil de visa',
+  mensaje TEXT DEFAULT 'Configura tu perfil para comenzar'
 );
 
 -- Tabla para guardar el formulario DS-160

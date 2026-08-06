@@ -8,6 +8,7 @@ const adminSession = {
   nombre: "Admin General",
   correo: "admin@prueba.com",
   rol: "admin",
+  token: "signed-admin-token",
 };
 
 function mockAdminSession() {
@@ -17,7 +18,7 @@ function mockAdminSession() {
     if (String(url).includes("/validar-sesion")) {
       return Promise.resolve({
         ok: true,
-        json: async () => ({ valid: true }),
+        json: async () => ({ valid: true, user: adminSession }),
       });
     }
     if (String(url).endsWith("/interview-sessions")) {
@@ -66,10 +67,28 @@ describe("panel de administracion", () => {
 
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Vista general administrativa" })).toBeInTheDocument();
-    expect(screen.getByText("Usuarios registrados")).toBeInTheDocument();
+    expect(await screen.findByText("Usuarios registrados")).toBeInTheDocument();
     expect(screen.getByText("Documentos pendientes")).toBeInTheDocument();
     expect(screen.getByText("Tramites activos")).toBeInTheDocument();
     expect(screen.getByText("Actividad reciente")).toBeInTheDocument();
+    const validationCalls = globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"));
+    expect(validationCalls).toHaveLength(1);
+  });
+
+  it("rechaza una sesión local fabricada con correo de administrador", async () => {
+    localStorage.setItem("visaguide_session", JSON.stringify({
+      id: 1,
+      nombre: "Admin falso",
+      correo: "admin@prueba.com",
+      rol: "admin",
+    }));
+    window.history.pushState({}, "", "/admin");
+
+    render(<App />);
+
+    await waitFor(() => expect(localStorage.getItem("visaguide_session")).toBeNull());
+    expect(screen.queryByRole("heading", { name: "Vista general administrativa" })).not.toBeInTheDocument();
+    expect(globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"))).toHaveLength(0);
   });
 
   it.each([
@@ -77,7 +96,7 @@ describe("panel de administracion", () => {
     ["/admin/documents", "Documentos", "Gestion de documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
     ["/admin/processes", "Tramites", "Gestion de tramites"],
-    ["/admin/reports", "Reportes", "Reportes administrativos"],
+    ["/admin/reports", "Reportes", "Resumen de trámites"],
     ["/admin/settings", "Configuracion", "Configuracion"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
     window.history.pushState({}, "", path);
@@ -89,7 +108,7 @@ describe("panel de administracion", () => {
     if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
-    } else {
+    } else if (path !== "/admin/reports") {
       expect(screen.getByText(/Este modulo sera implementado/)).toBeInTheDocument();
     }
   });

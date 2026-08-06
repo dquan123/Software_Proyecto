@@ -42,9 +42,9 @@ function defaultQueryHandler(sql, values) {
     return Promise.resolve({ rows: [{ total: 1 }] });
   }
 
-  if (normalized.includes("SELECT id_usuario FROM usuario WHERE correo = $1")) {
+  if (normalized.includes("FROM usuario WHERE correo = $1")) {
     if (values?.[0] === "valido@example.com") {
-      return Promise.resolve({ rows: [{ id_usuario: 1 }] });
+      return Promise.resolve({ rows: [{ id_usuario: 1, nombre: "Valido", correo: values[0], perfil: "turismo_negocios", rol: "cliente" }] });
     }
     const ds160Users = {
       "ds160-con-form@example.com": 10,
@@ -61,6 +61,10 @@ function defaultQueryHandler(sql, values) {
       return Promise.resolve({ rows: [{ id_usuario: ds160Users[values[0]] }] });
     }
     return Promise.resolve({ rows: [] });
+  }
+
+  if (normalized.includes("FROM usuario WHERE id_usuario = $1")) {
+    return Promise.resolve({ rows: [{ id_usuario: values[0], nombre: "Admin", correo: "admin@test.dev", perfil: null, rol: "admin" }] });
   }
 
   if (normalized.includes("INSERT INTO usuario")) {
@@ -552,10 +556,12 @@ function createIntegrationFlowQueryHandler() {
 }
 
 let app;
+let adminToken;
 
 beforeAll(() => {
   mockQuery.mockImplementation(defaultQueryHandler);
   app = require("../app");
+  adminToken = require("../auth").issueSessionToken({ id_usuario: 99, correo: "admin@test.dev", rol: "admin" });
 });
 
 beforeEach(() => {
@@ -568,37 +574,23 @@ beforeEach(() => {
 });
 
 describe("app endpoints", () => {
-  test("GET /validar-sesion devuelve valid true cuando existe el correo", async () => {
+  test("GET /validar-sesion devuelve la sesión obtenida del token", async () => {
     const response = await request(app)
       .get("/validar-sesion")
-      .query({ correo: "valido@example.com" });
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ valid: true });
+    expect(response.body).toMatchObject({ valid: true, user: { correo: "admin@test.dev", rol: "admin" } });
   });
 
-  test("GET /validar-sesion devuelve valid false cuando no existe el correo", async () => {
-    const response = await request(app)
-      .get("/validar-sesion")
-      .query({ correo: "invalido@example.com" });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ valid: false });
-  });
-
-  test("GET /validar-sesion devuelve 400 cuando falta el correo", async () => {
+  test("GET /validar-sesion devuelve 401 cuando falta el token", async () => {
     const response = await request(app).get("/validar-sesion");
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      valid: false,
-      error: "Correo requerido",
-    });
+    expect(response.status).toBe(401);
   });
 
   test("GET /validar-sesion devuelve 500 ante error simulado de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).includes("SELECT id_usuario FROM usuario WHERE correo = $1")) {
+      if (String(sql).includes("FROM usuario WHERE id_usuario = $1")) {
         return Promise.reject(new Error("database unavailable"));
       }
       return defaultQueryHandler(sql, values);
@@ -606,12 +598,11 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .get("/validar-sesion")
-      .query({ correo: "valido@example.com" });
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
-      valid: false,
-      error: "database unavailable",
+      error: "No fue posible validar la autorización",
     });
   });
 
@@ -685,7 +676,6 @@ describe("app endpoints", () => {
     expect(response.body.data).toMatchObject({
       nombre: "Usuario Invalido",
       correo: "correo-sin-formato",
-      contrasena: "",
     });
   });
 
@@ -1080,7 +1070,7 @@ describe("app endpoints", () => {
   });
 
   test("POST /questions crea una pregunta valida", async () => {
-    const response = await request(app).post("/questions").send({
+    const response = await request(app).post("/questions").set("Authorization", `Bearer ${adminToken}`).send({
       question: "Quien financiara su viaje?",
       category: "Finanzas",
       difficulty: "Media",
@@ -1098,7 +1088,7 @@ describe("app endpoints", () => {
   });
 
   test("PUT /questions/:id actualiza una pregunta existente", async () => {
-    const response = await request(app).put("/questions/11").send({
+    const response = await request(app).put("/questions/11").set("Authorization", `Bearer ${adminToken}`).send({
       question: "Cuanto tiempo permanecera en el pais?",
       category: "Viaje",
       difficulty: "Media",
@@ -1111,7 +1101,7 @@ describe("app endpoints", () => {
   });
 
   test("DELETE /questions/:id elimina una pregunta existente", async () => {
-    const response = await request(app).delete("/questions/11");
+    const response = await request(app).delete("/questions/11").set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -1180,6 +1170,7 @@ describe("app endpoints", () => {
   test("PUT /interview-sessions/:id/feedback guarda retroalimentacion valida", async () => {
     const response = await request(app)
       .put("/interview-sessions/30/feedback")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ feedback: "Respuesta clara y concreta.", rating: 5 });
 
     expect(response.status).toBe(200);

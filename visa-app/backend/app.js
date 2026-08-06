@@ -9,6 +9,8 @@ const upload = require("./upload");
 const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
 const createNotificacionRoutes = require("./routes/notificacionRoutes");
+const createAdminMetricsRoutes = require("./routes/adminMetricsRoutes");
+const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = require("./auth");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
@@ -49,6 +51,8 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   port: Number(process.env.DB_PORT),
 });
+const requireAdmin = createRoleMiddleware(pool, ["admin"]);
+const requireSession = createSessionMiddleware(pool);
 
 pool
   .connect()
@@ -86,23 +90,50 @@ async function ensureUserSchema() {
       ADD COLUMN IF NOT EXISTS idioma               VARCHAR(10)  DEFAULT 'es',
       ADD COLUMN IF NOT EXISTS rol                  VARCHAR(20)  DEFAULT 'cliente'
   `);
+  await pool.query(`
+    UPDATE usuario SET rol = 'cliente'
+    WHERE rol IS NULL OR rol NOT IN ('cliente', 'asesor', 'admin')
+  `);
+  await pool.query("ALTER TABLE usuario ALTER COLUMN rol SET DEFAULT 'cliente', ALTER COLUMN rol SET NOT NULL");
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'usuario_rol_check' AND conrelid = 'usuario'::regclass
+      ) THEN
+        ALTER TABLE usuario ADD CONSTRAINT usuario_rol_check
+        CHECK (rol IN ('cliente', 'asesor', 'admin'));
+      END IF;
+    END $$
+  `);
+}
+
+async function ensureTramiteSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tramite (
+      id_tramite SERIAL PRIMARY KEY,
+      id_usuario INT UNIQUE REFERENCES usuario(id_usuario),
+      estado VARCHAR(100) DEFAULT 'En proceso',
+      etapa_actual VARCHAR(200) DEFAULT 'Configuración de perfil',
+      progreso INT DEFAULT 0,
+      siguiente_paso VARCHAR(200) DEFAULT 'Seleccionar perfil de visa',
+      mensaje TEXT DEFAULT 'Configura tu perfil para comenzar'
+    )
+  `);
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS tramite_usuario_idx ON tramite(id_usuario)");
 }
  
 const userSchemaReady = ensureUserSchema().catch((error) => {
   console.error("ERROR USER SCHEMA:", error);
 });
+const tramiteSchemaReady = userSchemaReady.then(ensureTramiteSchema).catch((error) => {
+  console.error("ERROR TRAMITE SCHEMA:", error);
+});
 
 const testUsers = [
-  ["Norman", "norman@prueba.cliente", "123456", "cliente"],
-  ["Juanfri", "juanfri@prueba.cliente", "123456", "cliente"],
-  ["Yaya", "yaya@prueba.cliente", "123456", "cliente"],
-  ["Quan", "quan@prueba.cliente", "123456", "cliente"],
-  ["Usuario Prueba", "usuario@prueba.com", "123456", "cliente"],
-  ["Admin Norman", "admin.norman@prueba.com", "123456", "admin"],
-  ["Admin Juanfri", "admin.juanfri@prueba.com", "123456", "admin"],
-  ["Admin Yaya", "admin.yaya@prueba.com", "123456", "admin"],
-  ["Admin Quan", "admin.quan@prueba.com", "123456", "admin"],
-  ["Admin General", "admin@prueba.com", "123456", "admin"],
+  ["Cliente Desarrollo", "cliente.dev@visaguide.test", "VisaGuide-Dev-2026!", "cliente"],
+  ["Asesor Desarrollo", "asesor.dev@visaguide.test", "VisaGuide-Dev-2026!", "asesor"],
+  ["Admin Desarrollo", "admin.dev@visaguide.test", "VisaGuide-Dev-2026!", "admin"],
 ];
 
 async function seedTestUsers() {
@@ -126,7 +157,7 @@ async function seedTestUsers() {
   );
 }
 
-const testUsersReady = seedTestUsers().catch((error) => {
+const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestUsers() : Promise.resolve()).catch((error) => {
   console.error("ERROR TEST USERS SEED:", error);
 });
 
@@ -259,33 +290,14 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-app.use("/interview-sessions", createInterviewSessionRoutes(pool));
-app.use("/questions", createQuestionBankRoutes(pool));
+app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin }));
+app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
+app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
-app.get("/validar-sesion", async (req, res) => {
-  const { correo } = req.query;
-
-  if (!correo) {
-    return res.status(400).json({ valid: false, error: "Correo requerido" });
-  }
-
-  try {
-    const result = await pool.query(
-      "SELECT id_usuario FROM usuario WHERE correo = $1",
-      [correo]
-    );
-
-    if (result.rows.length > 0) {
-      res.json({ valid: true });
-    } else {
-      res.json({ valid: false });
-    }
-  } catch (error) {
-    console.log("ERROR VALIDAR SESION:", error);
-    res.status(500).json({ valid: false, error: error.message });
-  }
+app.get("/validar-sesion", requireSession, (req, res) => {
+  res.json({ valid: true, user: presentLoginUser(req.auth) });
 });
 
 // ENDPOINT: estado del trámite
@@ -297,9 +309,10 @@ app.get("/estado-tramite", async (req, res) => {
   }
 
   try {
+    await tramiteSchemaReady;
     // Buscar usuario
     const userResult = await pool.query(
-      "SELECT id_usuario FROM usuario WHERE correo = $1",
+      "SELECT id_usuario, perfil FROM usuario WHERE correo = $1",
       [correo]
     );
 
@@ -308,6 +321,7 @@ app.get("/estado-tramite", async (req, res) => {
     }
 
     const userId = userResult.rows[0].id_usuario;
+    const hasProfile = Boolean(userResult.rows[0].perfil);
 
     // Buscar trámite del usuario
     let tramiteResult = await pool.query(
@@ -320,10 +334,12 @@ app.get("/estado-tramite", async (req, res) => {
     // Si no tiene trámite, crear uno nuevo
     if (tramiteResult.rows.length === 0) {
       const nuevo = await pool.query(
-        `INSERT INTO tramite (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje) 
-         VALUES ($1, 'En proceso', 'Formulario DS-160', 10, 'Completar formulario DS-160', 'Tu trámite ha comenzado correctamente') 
+        `INSERT INTO tramite (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje)
+         VALUES ($1, 'En proceso', $2, $3, $4, $5)
          RETURNING *`,
-        [userId]
+        hasProfile
+          ? [userId, "Formulario DS-160", 17, "Completar formulario DS-160", "Tu trámite ha comenzado correctamente"]
+          : [userId, "Configuración de perfil", 0, "Seleccionar perfil de visa", "Configura tu perfil para comenzar"]
       );
       tramite = nuevo.rows[0];
     } else {
@@ -349,14 +365,23 @@ app.post("/register", async (req, res) => {
 
   try {
     await userSchemaReady;
+    await tramiteSchemaReady;
     const result = await pool.query(
       "INSERT INTO usuario(nombre, correo, contrasena, rol) VALUES($1,$2,$3,'cliente') RETURNING *",
       [nombre, correo, contrasena]
     );
 
+    const usuario = presentLoginUser(result.rows[0]);
+    await pool.query(
+      `INSERT INTO tramite (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje)
+       VALUES ($1, 'En proceso', 'Configuración de perfil', 0, 'Seleccionar perfil de visa', 'Configura tu perfil para comenzar')
+       ON CONFLICT DO NOTHING`,
+      [usuario.id_usuario]
+    );
     res.json({
       message: "Usuario guardado en BD",
-      data: result.rows[0],
+      data: usuario,
+      token: issueSessionToken(usuario),
     });
   } catch (error) {
     console.log("ERROR REGISTER:", error);
@@ -384,6 +409,7 @@ app.post("/login", async (req, res) => {
         message: "Login exitoso",
         usuario,
         user: usuario,
+        token: issueSessionToken(usuario),
       });
     } else {
       res.status(401).json({ error: "Credenciales incorrectas" });
