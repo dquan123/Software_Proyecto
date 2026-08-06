@@ -22,6 +22,14 @@ const CATEGORIES = [
 const DIFFICULTIES = ["Fácil", "Media", "Alta"];
 const ITEMS_PER_PAGE = 6;
 
+function getAdminHeaders(json = false) {
+  const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
+  return {
+    ...(json ? { "Content-Type": "application/json" } : {}),
+    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+  };
+}
+
 function SearchIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
@@ -147,7 +155,7 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
       setSessionsLoading(true);
       setSessionsError("");
 
-      const response = await fetch(buildApiUrl("/interview-sessions"), { signal });
+      const response = await fetch(buildApiUrl("/interview-sessions"), { signal, headers: getAdminHeaders() });
       const data = await response.json();
 
       if (!response.ok) {
@@ -272,7 +280,7 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
 
       const response = await fetch(buildApiUrl(endpoint), {
         method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAdminHeaders(true),
         body: JSON.stringify(form),
       });
       const data = await response.json();
@@ -318,7 +326,7 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
 
       const response = await fetch(
         buildApiUrl(`/questions/${questionToDelete.id}`),
-        { method: "DELETE" }
+        { method: "DELETE", headers: getAdminHeaders() }
       );
       const data = await response.json();
 
@@ -358,7 +366,7 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
         buildApiUrl(`/interview-sessions/${selectedInterviewSession.id}/feedback`),
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getAdminHeaders(true),
           body: JSON.stringify({
             feedback: feedbackDraft,
             rating: ratingDraft || null,

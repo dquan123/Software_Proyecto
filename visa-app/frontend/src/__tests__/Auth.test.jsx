@@ -91,7 +91,7 @@ describe("pantallas de autenticación", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({ success: true, usuario: loggedUser }),
+          json: async () => ({ success: true, usuario: loggedUser, token: "signed-admin-token" }),
         });
       }
       if (String(url).includes("/validar-sesion")) {
@@ -129,7 +129,7 @@ describe("pantallas de autenticación", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({ success: true, usuario: loggedUser }),
+          json: async () => ({ success: true, usuario: loggedUser, token: "signed-client-token" }),
         });
       }
       if (String(url).includes("/validar-sesion")) {
@@ -155,7 +155,7 @@ describe("pantallas de autenticación", () => {
       });
     });
     expect(localStorage.getItem("correoUsuario")).toBe(loggedUser.correo);
-    expect(window.location.pathname).toBe("/dashboard");
+    expect(window.location.pathname).toBe("/seleccion-perfil");
     expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -233,7 +233,7 @@ describe("pantallas de autenticación", () => {
     };
     vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
       if (String(url).endsWith("/register")) {
-        return Promise.resolve({ ok: true, json: async () => ({ data: newUser }) });
+        return Promise.resolve({ ok: true, json: async () => ({ data: newUser, token: "signed-registration-token" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
     });
@@ -269,6 +269,7 @@ describe("pantallas de autenticación", () => {
       nombre: "Usuario Sesión",
       correo: "sesion@example.com",
       perfil,
+      token: "signed-session-token",
     }));
     vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
       if (String(url).includes("/validar-sesion")) {
@@ -283,4 +284,3 @@ describe("pantallas de autenticación", () => {
     await waitFor(() => expect(window.location.pathname).toBe(destination));
   });
 });
-

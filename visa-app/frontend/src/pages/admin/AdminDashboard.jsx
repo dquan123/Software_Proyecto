@@ -4,31 +4,29 @@ import {
   FileClock,
   Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { buildApiUrl } from "../../config/api";
 
-const stats = [
+const statDefinitions = [
   {
     label: "Usuarios registrados",
-    value: "128",
-    note: "Posteriormente consumira informacion del backend.",
+    key: "usuarios_total",
     icon: <Users size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
     label: "Documentos pendientes",
-    value: "34",
-    note: "Posteriormente consumira informacion del backend.",
+    key: "documentos_pendientes",
     icon: <FileClock size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
     label: "Tramites activos",
-    value: "57",
-    note: "Posteriormente consumira informacion del backend.",
+    key: "tramites_activos",
     icon: <ClipboardList size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
-    label: "Reportes",
-    value: "12",
-    note: "Posteriormente consumira informacion del backend.",
+    label: "Entrevistas pendientes",
+    key: "entrevistas_pendientes",
     icon: <BarChart3 size={22} strokeWidth={2} aria-hidden="true" />,
   },
 ];
@@ -41,6 +39,27 @@ const activity = [
 ];
 
 export default function AdminDashboard() {
+  const [metrics, setMetrics] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
+    fetch(buildApiUrl("/admin/metrics/overview"), {
+      signal: controller.signal,
+      headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("No fue posible cargar los indicadores");
+        return response.json();
+      })
+      .then(setMetrics)
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") setError(requestError.message);
+      });
+    return () => controller.abort();
+  }, []);
+
   return (
     <AdminLayout>
       <section className="admin-hero">
@@ -55,15 +74,16 @@ export default function AdminDashboard() {
       </section>
 
       <section className="admin-stats-grid" aria-label="Indicadores administrativos">
-        {stats.map(({ label, value, note, icon }) => (
+        {error && <p role="alert">{error}</p>}
+        {!metrics && !error && <p role="status">Cargando indicadores…</p>}
+        {metrics && statDefinitions.map(({ label, key, icon }) => (
           <article className="admin-stat-card" key={label}>
             <span className="admin-stat-card__icon">
               {icon}
             </span>
             <div>
-              <strong>{value}</strong>
+              <strong>{metrics[key]}</strong>
               <h3>{label}</h3>
-              <p>{note}</p>
             </div>
           </article>
         ))}

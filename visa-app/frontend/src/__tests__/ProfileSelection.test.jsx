@@ -12,6 +12,7 @@ describe("ProfileSelection", () => {
       "visaguide_session",
       JSON.stringify({
         id: 1,
+        token: "signed-session-token",
         nombre: "Norman Aguirre",
         correo: "norman@example.com",
       })
@@ -19,7 +20,7 @@ describe("ProfileSelection", () => {
 
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
       if (String(url).includes("/validar-sesion")) {
-        return Promise.resolve({ json: async () => ({ valid: true }) });
+        return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
       }
 
       if (String(url).endsWith("/guardar-perfil")) {

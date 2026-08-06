@@ -17,14 +17,17 @@ export default function useRequireAuth() {
 
       try {
         const sessionData = JSON.parse(sessionRaw);
+        if (!sessionData.token) {
+          throw new Error("Sesión sin token");
+        }
 
-        const res = await fetch(
-          `${buildApiUrl("/validar-sesion")}?correo=${encodeURIComponent(sessionData.correo)}`,
-          { signal: controller.signal }
-        );
+        const res = await fetch(buildApiUrl("/validar-sesion"), {
+          signal: controller.signal,
+          headers: { Authorization: `Bearer ${sessionData.token}` },
+        });
         const data = await res.json();
 
-        if (!data.valid) {
+        if (!res.ok || !data.valid) {
           localStorage.removeItem("visaguide_session");
           localStorage.removeItem("correoUsuario");
           localStorage.removeItem("perfilUsuario");
@@ -32,10 +35,15 @@ export default function useRequireAuth() {
           return;
         }
 
-        setSession(sessionData);
+        const currentSession = data.user ? { ...sessionData, ...data.user } : sessionData;
+        localStorage.setItem("visaguide_session", JSON.stringify(currentSession));
+        setSession(currentSession);
       } catch (err) {
         if (err.name === "AbortError") return;
         console.error("Error validando sesión:", err);
+        localStorage.removeItem("visaguide_session");
+        localStorage.removeItem("correoUsuario");
+        localStorage.removeItem("perfilUsuario");
         window.location.href = "/login";
         return;
       }

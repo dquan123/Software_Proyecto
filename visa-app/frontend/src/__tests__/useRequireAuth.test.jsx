@@ -9,11 +9,12 @@ describe("useRequireAuth", () => {
       id: 7,
       nombre: "Norman Aguirre",
       correo: "norman@example.com",
+      token: "signed-token",
     };
     localStorage.setItem("visaguide_session", JSON.stringify(session));
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue({ json: async () => ({ valid: true }) });
+      .mockResolvedValue({ ok: true, json: async () => ({ valid: true }) });
 
     const { result, unmount } = renderHook(() => useRequireAuth());
 
@@ -21,8 +22,8 @@ describe("useRequireAuth", () => {
 
     expect(result.current.session).toEqual(session);
     expect(fetchMock).toHaveBeenCalledWith(
-      `${buildApiUrl("/validar-sesion")}?correo=norman%40example.com`,
-      { signal: expect.any(AbortSignal) }
+      buildApiUrl("/validar-sesion"),
+      { signal: expect.any(AbortSignal), headers: { Authorization: "Bearer signed-token" } }
     );
     const requestSignal = fetchMock.mock.calls[0][1].signal;
     expect(requestSignal.aborted).toBe(false);
@@ -33,11 +34,12 @@ describe("useRequireAuth", () => {
   it("limpia la sesion local cuando el backend la reporta como invalida", async () => {
     localStorage.setItem(
       "visaguide_session",
-      JSON.stringify({ id: 8, correo: "expirada@example.com" })
+      JSON.stringify({ id: 8, correo: "expirada@example.com", token: "expired-token" })
     );
     localStorage.setItem("correoUsuario", "expirada@example.com");
     localStorage.setItem("perfilUsuario", "turismo_negocios");
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
       json: async () => ({ valid: false }),
     });
 
