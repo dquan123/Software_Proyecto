@@ -198,6 +198,24 @@ describe("panel de administracion", () => {
     );
   });
 
+  it("rechaza un documento usando el estado de correccion que entiende el cliente", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/documents");
+
+    render(<App />);
+
+    expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Rechazar" }));
+
+    expect(await screen.findByText("Documento rechazado correctamente.")).toBeInTheDocument();
+    expect(screen.getByText(/Correcci/)).toBeInTheDocument();
+
+    const statusCall = globalThis.fetch.mock.calls.find(([url]) =>
+      String(url).includes("/admin/documents/41/status")
+    );
+    expect(JSON.parse(statusCall[1].body)).toEqual({ estado: "correction" });
+  });
+
   it("navega entre Dashboard y Entrevistas desde el sidebar", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/admin");

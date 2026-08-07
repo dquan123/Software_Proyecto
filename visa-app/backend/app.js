@@ -201,9 +201,11 @@ function presentDocumento(document) {
   if (!document) return document;
 
   const { storage_key, ...safeDocument } = document;
+  const estado = safeDocument.estado === "rejected" ? "correction" : safeDocument.estado;
 
   return {
     ...safeDocument,
+    estado,
     archivo_url: storage_key
       ? buildStoredDocumentUrl(document.id)
       : safeDocument.archivo_url,

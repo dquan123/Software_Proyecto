@@ -73,7 +73,8 @@ export function summarizeDocuments(documents) {
 
   const summary = list.reduce(
     (summary, document) => {
-      const status = document?.estado || document?.status || "pending";
+      const rawStatus = document?.estado || document?.status || "pending";
+      const status = rawStatus === "rejected" ? "correction" : rawStatus;
       return {
         ...summary,
         total: summary.total + 1,
