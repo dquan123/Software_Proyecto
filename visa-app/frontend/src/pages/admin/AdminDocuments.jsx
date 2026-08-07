@@ -46,8 +46,28 @@ function getStatusLabel(status) {
   return statusLabels[status] || status || "Pendiente";
 }
 
+function isDocumentFileRoute(url) {
+  try {
+    const parsedUrl = new URL(
+      url,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost"
+    );
+    return /^\/documentos\/\d+\/archivo$/.test(parsedUrl.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function getDocumentPreviewUrl(document) {
   if (!document.archivo_url) return "";
+  if (isDocumentFileRoute(document.archivo_url)) {
+    const parsedUrl = new URL(
+      document.archivo_url,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost"
+    );
+    return buildApiUrl(parsedUrl.pathname);
+  }
+
   return document.archivo_url.startsWith("/")
     ? buildApiUrl(document.archivo_url)
     : document.archivo_url;

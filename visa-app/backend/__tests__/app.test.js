@@ -1534,6 +1534,40 @@ describe("app endpoints", () => {
     expect(mockGetStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
   });
 
+  test("GET /documentos/:id/archivo no redirige a la misma ruta frontend si falta storage_key", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      const normalized = String(sql).replace(/\s+/g, " ").trim();
+
+      if (
+        normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
+        normalized.includes("FROM documentos") &&
+        normalized.includes("WHERE id = $1")
+      ) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: values[0],
+              nombre: "pasaporte.pdf",
+              tipo: "application/pdf",
+              archivo_url: `/documentos/${values[0]}/archivo`,
+              storage_key: null,
+            },
+          ],
+        });
+      }
+
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).get("/documentos/41/archivo");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: "El archivo no esta disponible para vista previa",
+    });
+    expect(mockGetStoredFile).not.toHaveBeenCalled();
+  });
+
   test("GET /documentos/:usuarioId devuelve lista vacia cuando el usuario no tiene documentos", async () => {
     const response = await request(app).get("/documentos/4");
 

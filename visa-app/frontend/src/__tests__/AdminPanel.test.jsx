@@ -61,7 +61,7 @@ function mockAdminSession() {
               estado: adminDocumentStatus,
               feedback: adminDocumentFeedback,
               creado_en: "2026-08-01T10:00:00.000Z",
-              archivo_url: "/documentos/41/archivo",
+              archivo_url: "http://localhost:8080/documentos/41/archivo",
               usuario: {
                 nombre: "Usuario Demo",
                 correo: "demo@example.com",
@@ -94,7 +94,7 @@ function mockAdminSession() {
             feedback: adminDocumentFeedback,
             creado_en: "2026-08-01T10:00:00.000Z",
             actualizado_en: "2026-08-02T10:00:00.000Z",
-            archivo_url: "/documentos/41/archivo",
+            archivo_url: "http://localhost:8080/documentos/41/archivo",
             usuario: {
               nombre: "Usuario Demo",
               correo: "demo@example.com",
