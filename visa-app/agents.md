@@ -52,6 +52,40 @@ visa-app/
 
 Evita modificar `backend/coverage/`, `frontend/coverage/` y `docs/entregables/` salvo que el usuario pida regenerar entregables.
 
+## Sprint 6 - Administracion de Documentos
+
+Estado actual antes de SCRUM-127:
+
+- SCRUM-125 (`DocumentsListAdmin`) dejo implementada la pantalla `/admin/documents` para administradores, reutilizando `AdminLayout`, Sidebar y Header del panel admin.
+- SCRUM-125 agrego listado administrativo con `GET /admin/documents`, protegido por `requireAdmin`, para listar documentos de todos los usuarios con datos del solicitante.
+- SCRUM-126 (`DocumentsReviewAdmin`) agrego acciones en la tabla: `Ver documento`, `Aprobar` y `Rechazar`.
+- SCRUM-126 agrego `PUT /admin/documents/:id/status`, protegido por `requireAdmin`, para actualizar estados a `approved` o `correction`.
+- El cliente usa `GET /documentos/:usuarioId` para ver sus documentos. Los estados `rejected` legados se presentan como `correction` para que el cliente muestre "Requiere Correccion".
+- El backend ya tiene `GET /documentos/:id/archivo` para servir archivos desde `storage_key` o redirigir a `archivo_url` externo.
+- Los documentos se almacenan en la tabla `documentos` con `archivo_url`, `storage_key`, `estado`, `feedback`, `creado_en` y `actualizado_en`.
+- En desarrollo/test, `storage.js` usa fallback local y sirve archivos mediante `/local-files`; en produccion usa R2 cuando esta configurado.
+
+Al implementar SCRUM-127:
+
+- No crear pantalla nueva; extender solo `frontend/src/pages/admin/AdminDocuments.jsx`.
+- Reutilizar `GET /documentos/:id/archivo` para visualizar documentos; no crear rutas duplicadas para archivos.
+- Reutilizar la columna `feedback` existente para observaciones del administrador.
+- Solo crear endpoints nuevos si no existe una forma segura de persistir observaciones administrativas.
+- Mantener los cambios en la rama `DocumentsReviewAdmin`; no hacer merge, rebase ni push.
+
+Estado posterior a SCRUM-127:
+
+- Rama de trabajo: `DocumentsReviewAdmin`.
+- Ruta frontend afectada: `/admin/documents`.
+- Pantalla afectada: `frontend/src/pages/admin/AdminDocuments.jsx`, dentro de `AdminLayout`.
+- Componentes reutilizados: `AdminLayout`, Sidebar/Header administrativo, tabla y estilos de `frontend/src/styles/admin.css`, botones con iconos `lucide-react`.
+- Visualizacion de documentos: el boton `Ver documento` abre una URL absoluta construida con `buildApiUrl` cuando `archivo_url` es relativo, evitando que React Router intente resolver `/documentos/:id/archivo` como ruta frontend.
+- Endpoint de archivo reutilizado: `GET /documentos/:id/archivo`. Sirve PDFs e imagenes con `Content-Disposition: inline`; otros tipos quedan como descarga mediante `attachment`.
+- Observaciones administrativas: se guardan en `documentos.feedback` y se muestran en la columna `Observaciones` con indicador `Comentario agregado`.
+- Endpoint reutilizado para revision: `PUT /admin/documents/:id/status`, protegido por `requireAdmin`. Acepta `estado`, `feedback` o ambos; `rejected` se normaliza a `correction` para mantener compatibilidad con el cliente.
+- Flujo administrador: listar documentos, abrir archivo, aprobar, rechazar, editar observaciones, guardar sin recargar la pagina y refrescar la fila con la respuesta del backend.
+- Estados UI implementados: loading de listado, error, empty state, mensajes de exito/error, bloqueo de acciones mientras se actualiza estado o se guardan observaciones.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:

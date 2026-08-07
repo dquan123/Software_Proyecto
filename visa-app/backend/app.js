@@ -229,6 +229,50 @@ function buildDownloadFilename(document) {
   return sanitizedName || `documento-${document.id}`;
 }
 
+function inferDocumentContentType(document, storedFile = {}) {
+  if (document.tipo?.includes("/")) return document.tipo;
+  if (storedFile.contentType && storedFile.contentType !== "application/octet-stream") {
+    return storedFile.contentType;
+  }
+
+  const candidates = [
+    document.nombre,
+    document.archivo_url,
+    document.storage_key,
+  ].filter(Boolean);
+
+  const extension = candidates
+    .map((value) => path.extname(String(value)).toLowerCase())
+    .find(Boolean);
+
+  const mimeTypes = {
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+  };
+
+  return mimeTypes[extension] || storedFile.contentType || "application/octet-stream";
+}
+
+function canPreviewInline(contentType) {
+  return contentType === "application/pdf" || contentType.startsWith("image/");
+}
+
+function getUrlPathname(url) {
+  try {
+    return new URL(url, "http://visaguide.local").pathname;
+  } catch {
+    return "";
+  }
+}
+
+function isSelfDocumentFileUrl(document) {
+  return getUrlPathname(document.archivo_url) === buildStoredDocumentUrl(document.id);
+}
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -794,16 +838,24 @@ app.get("/documentos/:id/archivo", async (req, res) => {
     }
 
     if (!document.storage_key) {
+      if (isSelfDocumentFileUrl(document)) {
+        return res.status(404).json({
+          error: "El archivo no esta disponible para vista previa",
+        });
+      }
+
       return res.redirect(document.archivo_url);
     }
 
     const storedFile = await getStoredFile(document.storage_key);
-    const contentType = storedFile.contentType || document.tipo || "application/octet-stream";
+    const contentType = inferDocumentContentType(document, storedFile);
+    const dispositionType = canPreviewInline(contentType) ? "inline" : "attachment";
 
     res.setHeader("Content-Type", contentType);
+    res.setHeader("Link", '</favicon.svg>; rel="icon"; type="image/svg+xml"');
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${buildDownloadFilename(document)}"`
+      `${dispositionType}; filename="${buildDownloadFilename(document)}"`
     );
 
     if (storedFile.contentLength) {

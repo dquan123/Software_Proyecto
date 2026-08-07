@@ -1,4 +1,5 @@
 const request = require("supertest");
+const { Readable } = require("stream");
 
 const mockQuery = jest.fn();
 const mockConnect = jest.fn(() => Promise.resolve());
@@ -28,11 +29,17 @@ const storedFileResult = {
 };
 const mockUploadStoredFile = jest.fn(() => Promise.resolve(storedFileResult));
 const mockDeleteStoredFile = jest.fn(() => Promise.resolve());
+const mockGetStoredFile = jest.fn(() => Promise.resolve({
+  stream: Readable.from(["pdf de prueba"]),
+  contentType: "application/octet-stream",
+  contentLength: 13,
+}));
 
 jest.mock("../storage", () => ({
   LOCAL_STORAGE_DIR: "/tmp/visa-app-test-uploads",
   uploadStoredFile: mockUploadStoredFile,
   deleteStoredFile: mockDeleteStoredFile,
+  getStoredFile: mockGetStoredFile,
 }));
 
 function defaultQueryHandler(sql, values) {
@@ -268,6 +275,24 @@ function defaultQueryHandler(sql, values) {
   }
 
   if (
+    normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
+    normalized.includes("FROM documentos") &&
+    normalized.includes("WHERE id = $1")
+  ) {
+    return Promise.resolve({
+      rows: [
+        {
+          id: values[0],
+          nombre: "pasaporte.pdf",
+          tipo: "application/pdf",
+          archivo_url: "http://localhost/local-files/mock-document.pdf",
+          storage_key: "local/mock-document.pdf",
+        },
+      ],
+    });
+  }
+
+  if (
     normalized.includes("SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key") &&
     normalized.includes("FROM documentos") &&
     normalized.includes("WHERE usuario_id = $1")
@@ -316,17 +341,28 @@ function defaultQueryHandler(sql, values) {
   }
 
   if (normalized.includes("WITH updated AS") && normalized.includes("UPDATE documentos")) {
+    const statusIndex = normalized.includes("estado = $1")
+      ? 0
+      : normalized.includes("estado = $2")
+        ? 1
+        : -1;
+    const feedbackIndex = normalized.includes("feedback = $1")
+      ? 0
+      : normalized.includes("feedback = $2")
+        ? 1
+        : -1;
+
     return Promise.resolve({
       rows: [
         {
-          id: values[1],
+          id: values[values.length - 1],
           nombre: "Pasaporte",
           tipo: "application/pdf",
           archivo_url: "http://localhost/local-files/mock-document.pdf",
           usuario_id: 3,
           documento_key: "passport",
-          estado: values[0],
-          feedback: null,
+          estado: statusIndex >= 0 ? values[statusIndex] : "review",
+          feedback: feedbackIndex >= 0 ? values[feedbackIndex] : null,
           creado_en: "2026-07-07T00:00:00.000Z",
           actualizado_en: "2026-07-08T00:00:00.000Z",
           storage_key: "local/mock-document.pdf",
@@ -615,6 +651,12 @@ beforeEach(() => {
   mockUploadStoredFile.mockResolvedValue(storedFileResult);
   mockDeleteStoredFile.mockReset();
   mockDeleteStoredFile.mockResolvedValue();
+  mockGetStoredFile.mockReset();
+  mockGetStoredFile.mockResolvedValue({
+    stream: Readable.from(["pdf de prueba"]),
+    contentType: "application/octet-stream",
+    contentLength: 13,
+  });
 });
 
 describe("app endpoints", () => {
@@ -1483,6 +1525,49 @@ describe("app endpoints", () => {
     });
   });
 
+  test("GET /documentos/:id/archivo sirve PDF almacenado para vista previa inline", async () => {
+    const response = await request(app).get("/documentos/41/archivo");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.headers["content-disposition"]).toContain("inline");
+    expect(mockGetStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
+  });
+
+  test("GET /documentos/:id/archivo no redirige a la misma ruta frontend si falta storage_key", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      const normalized = String(sql).replace(/\s+/g, " ").trim();
+
+      if (
+        normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
+        normalized.includes("FROM documentos") &&
+        normalized.includes("WHERE id = $1")
+      ) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: values[0],
+              nombre: "pasaporte.pdf",
+              tipo: "application/pdf",
+              archivo_url: `/documentos/${values[0]}/archivo`,
+              storage_key: null,
+            },
+          ],
+        });
+      }
+
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).get("/documentos/41/archivo");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: "El archivo no esta disponible para vista previa",
+    });
+    expect(mockGetStoredFile).not.toHaveBeenCalled();
+  });
+
   test("GET /documentos/:usuarioId devuelve lista vacia cuando el usuario no tiene documentos", async () => {
     const response = await request(app).get("/documentos/4");
 
@@ -1565,6 +1650,48 @@ describe("app endpoints", () => {
       id: 41,
       estado: "correction",
     });
+  });
+
+  test("PUT /admin/documents/:id/status guarda observaciones administrativas", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ feedback: "Documento ilegible. Vuelva a cargarlo." });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Observaciones del documento actualizadas correctamente");
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "review",
+      feedback: "Documento ilegible. Vuelva a cargarlo.",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status permite rechazar con observaciones", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        estado: "correction",
+        feedback: "Falta la segunda pagina del pasaporte.",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "correction",
+      feedback: "Falta la segunda pagina del pasaporte.",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status exige estado u observaciones", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Debe enviar estado u observaciones" });
   });
 
   test("PUT /admin/documents/:id/status rechaza estados invalidos", async () => {
