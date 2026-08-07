@@ -261,6 +261,18 @@ function canPreviewInline(contentType) {
   return contentType === "application/pdf" || contentType.startsWith("image/");
 }
 
+function getUrlPathname(url) {
+  try {
+    return new URL(url, "http://visaguide.local").pathname;
+  } catch {
+    return "";
+  }
+}
+
+function isSelfDocumentFileUrl(document) {
+  return getUrlPathname(document.archivo_url) === buildStoredDocumentUrl(document.id);
+}
+
 async function insertDocumento({
   nombre,
   tipo,
@@ -826,6 +838,12 @@ app.get("/documentos/:id/archivo", async (req, res) => {
     }
 
     if (!document.storage_key) {
+      if (isSelfDocumentFileUrl(document)) {
+        return res.status(404).json({
+          error: "El archivo no esta disponible para vista previa",
+        });
+      }
+
       return res.redirect(document.archivo_url);
     }
 
