@@ -1,4 +1,5 @@
 const request = require("supertest");
+const { Readable } = require("stream");
 
 const mockQuery = jest.fn();
 const mockConnect = jest.fn(() => Promise.resolve());
@@ -28,11 +29,17 @@ const storedFileResult = {
 };
 const mockUploadStoredFile = jest.fn(() => Promise.resolve(storedFileResult));
 const mockDeleteStoredFile = jest.fn(() => Promise.resolve());
+const mockGetStoredFile = jest.fn(() => Promise.resolve({
+  stream: Readable.from(["pdf de prueba"]),
+  contentType: "application/octet-stream",
+  contentLength: 13,
+}));
 
 jest.mock("../storage", () => ({
   LOCAL_STORAGE_DIR: "/tmp/visa-app-test-uploads",
   uploadStoredFile: mockUploadStoredFile,
   deleteStoredFile: mockDeleteStoredFile,
+  getStoredFile: mockGetStoredFile,
 }));
 
 function defaultQueryHandler(sql, values) {
@@ -265,6 +272,24 @@ function defaultQueryHandler(sql, values) {
 
   if (normalized.includes("SELECT id, storage_key FROM documentos")) {
     return Promise.resolve({ rows: [] });
+  }
+
+  if (
+    normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
+    normalized.includes("FROM documentos") &&
+    normalized.includes("WHERE id = $1")
+  ) {
+    return Promise.resolve({
+      rows: [
+        {
+          id: values[0],
+          nombre: "pasaporte.pdf",
+          tipo: "application/pdf",
+          archivo_url: "http://localhost/local-files/mock-document.pdf",
+          storage_key: "local/mock-document.pdf",
+        },
+      ],
+    });
   }
 
   if (
@@ -615,6 +640,12 @@ beforeEach(() => {
   mockUploadStoredFile.mockResolvedValue(storedFileResult);
   mockDeleteStoredFile.mockReset();
   mockDeleteStoredFile.mockResolvedValue();
+  mockGetStoredFile.mockReset();
+  mockGetStoredFile.mockResolvedValue({
+    stream: Readable.from(["pdf de prueba"]),
+    contentType: "application/octet-stream",
+    contentLength: 13,
+  });
 });
 
 describe("app endpoints", () => {
@@ -1481,6 +1512,15 @@ describe("app endpoints", () => {
       id: 41,
       estado: "correction",
     });
+  });
+
+  test("GET /documentos/:id/archivo sirve PDF almacenado para vista previa inline", async () => {
+    const response = await request(app).get("/documentos/41/archivo");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.headers["content-disposition"]).toContain("inline");
+    expect(mockGetStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
   });
 
   test("GET /documentos/:usuarioId devuelve lista vacia cuando el usuario no tiene documentos", async () => {

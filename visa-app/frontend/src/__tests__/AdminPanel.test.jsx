@@ -198,6 +198,24 @@ describe("panel de administracion", () => {
     );
   });
 
+  it("abre documentos con la URL del backend y evita navegar por React Router", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    window.history.pushState({}, "", "/admin/documents");
+
+    render(<App />);
+
+    expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver documento" }));
+
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^http:\/\/localhost:3000\/documentos\/41\/archivo$/),
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(window.location.pathname).toBe("/admin/documents");
+  });
+
   it("rechaza un documento usando el estado de correccion que entiende el cliente", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/admin/documents");
