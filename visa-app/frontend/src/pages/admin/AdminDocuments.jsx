@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Eye, X } from "lucide-react";
+import { Check, Eye, MessageSquareText, Save, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { buildApiUrl } from "../../config/api";
 
@@ -9,6 +9,7 @@ const tableHeaders = [
   "Estado",
   "Fecha de carga",
   "Archivo",
+  "Observaciones",
   "Acciones",
 ];
 
@@ -45,9 +46,51 @@ function getStatusLabel(status) {
   return statusLabels[status] || status || "Pendiente";
 }
 
+function isDocumentFileRoute(url) {
+  try {
+    const parsedUrl = new URL(
+      url,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost"
+    );
+    return /^\/documentos\/\d+\/archivo$/.test(parsedUrl.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function getDocumentPreviewUrl(document) {
+  if (!document.archivo_url) return "";
+  if (isDocumentFileRoute(document.archivo_url)) {
+    const parsedUrl = new URL(
+      document.archivo_url,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost"
+    );
+    return buildApiUrl(parsedUrl.pathname);
+  }
+
+  return document.archivo_url.startsWith("/")
+    ? buildApiUrl(document.archivo_url)
+    : document.archivo_url;
+}
+
 function openDocument(document) {
-  if (!document.archivo_url) return;
-  window.open(document.archivo_url, "_blank", "noopener,noreferrer");
+  const previewUrl = getDocumentPreviewUrl(document);
+  if (!previewUrl) return;
+  window.open(previewUrl, "_blank", "noopener,noreferrer");
+}
+
+function buildFeedbackDrafts(documentList) {
+  return Object.fromEntries(
+    documentList.map((document) => [document.id, document.feedback || ""])
+  );
+}
+
+function getUpdatedDocument(data, fallbackMessage) {
+  if (!data.documento) {
+    throw new Error(fallbackMessage);
+  }
+
+  return data.documento;
 }
 
 export default function AdminDocuments() {
@@ -56,6 +99,8 @@ export default function AdminDocuments() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [savingFeedbackId, setSavingFeedbackId] = useState(null);
+  const [feedbackDrafts, setFeedbackDrafts] = useState({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -72,6 +117,7 @@ export default function AdminDocuments() {
       .then((data) => {
         const nextDocuments = Array.isArray(data) ? data : data.documentos || [];
         setDocuments(nextDocuments);
+        setFeedbackDrafts(buildFeedbackDrafts(nextDocuments));
         setError("");
       })
       .catch((requestError) => {
@@ -85,6 +131,18 @@ export default function AdminDocuments() {
 
     return () => controller.abort();
   }, []);
+
+  const replaceDocument = (updatedDocument) => {
+    setDocuments((currentDocuments) =>
+      currentDocuments.map((document) =>
+        document.id === updatedDocument.id ? updatedDocument : document
+      )
+    );
+    setFeedbackDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [updatedDocument.id]: updatedDocument.feedback || "",
+    }));
+  };
 
   const updateDocumentStatus = async (documentId, status) => {
     const token = getAdminToken();
@@ -107,11 +165,7 @@ export default function AdminDocuments() {
         throw new Error(data.error || "No fue posible actualizar el documento.");
       }
 
-      setDocuments((currentDocuments) =>
-        currentDocuments.map((document) =>
-          document.id === documentId ? data.documento : document
-        )
-      );
+      replaceDocument(getUpdatedDocument(data, "No fue posible actualizar el documento."));
       setNotice({
         type: "success",
         text: status === "approved"
@@ -125,6 +179,49 @@ export default function AdminDocuments() {
       });
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const updateFeedbackDraft = (documentId, value) => {
+    setFeedbackDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [documentId]: value,
+    }));
+  };
+
+  const saveDocumentFeedback = async (documentId) => {
+    const token = getAdminToken();
+    setSavingFeedbackId(documentId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ feedback: feedbackDrafts[documentId] || "" }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "No fue posible guardar las observaciones.");
+      }
+
+      replaceDocument(getUpdatedDocument(data, "No fue posible guardar las observaciones."));
+      setNotice({
+        type: "success",
+        text: "Observaciones guardadas correctamente.",
+      });
+    } catch (requestError) {
+      setNotice({
+        type: "error",
+        text: requestError.message || "No fue posible guardar las observaciones.",
+      });
+    } finally {
+      setSavingFeedbackId(null);
     }
   };
 
@@ -181,64 +278,110 @@ export default function AdminDocuments() {
                 </tr>
               )}
 
-              {!isLoading && !error && documents.map((document) => (
-                <tr key={document.id}>
-                  <td>
-                    <strong className="admin-table-primary">
-                      {document.usuario?.nombre || "Usuario sin nombre"}
-                    </strong>
-                    <span className="admin-table-secondary">
-                      {document.usuario?.correo || "Correo no disponible"}
-                    </span>
-                  </td>
-                  <td>{getDocumentType(document)}</td>
-                  <td>
-                    <span className={`admin-status admin-status--${document.estado || "pending"}`}>
-                      {getStatusLabel(document.estado)}
-                    </span>
-                  </td>
-                  <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
-                  <td>
-                    <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
-                    <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
-                  </td>
-                  <td>
-                    <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
-                      <button
-                        type="button"
-                        className="admin-action-button admin-action-button--approve"
-                        disabled={updatingId === document.id || document.estado === "approved"}
-                        onClick={() => updateDocumentStatus(document.id, "approved")}
-                      >
-                        <Check size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Aprobar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-action-button admin-action-button--reject"
-                        disabled={
-                          updatingId === document.id ||
-                          document.estado === "correction" ||
-                          document.estado === "rejected"
-                        }
-                        onClick={() => updateDocumentStatus(document.id, "correction")}
-                      >
-                        <X size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Rechazar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-action-button"
-                        disabled={!document.archivo_url}
-                        onClick={() => openDocument(document)}
-                      >
-                        <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Ver documento</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {!isLoading && !error && documents.map((document) => {
+                const feedbackDraft = feedbackDrafts[document.id] ?? document.feedback ?? "";
+                const savedFeedback = document.feedback || "";
+                const hasFeedback = Boolean(savedFeedback.trim());
+                const isUpdating = updatingId === document.id;
+                const isSavingFeedback = savingFeedbackId === document.id;
+                const isRowBusy = isUpdating || isSavingFeedback;
+                const hasFeedbackChanges = feedbackDraft.trim() !== savedFeedback.trim();
+
+                return (
+                  <tr key={document.id}>
+                    <td>
+                      <strong className="admin-table-primary">
+                        {document.usuario?.nombre || "Usuario sin nombre"}
+                      </strong>
+                      <span className="admin-table-secondary">
+                        {document.usuario?.correo || "Correo no disponible"}
+                      </span>
+                    </td>
+                    <td>{getDocumentType(document)}</td>
+                    <td>
+                      <span className={`admin-status admin-status--${document.estado || "pending"}`}>
+                        {getStatusLabel(document.estado)}
+                      </span>
+                    </td>
+                    <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
+                    <td>
+                      <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
+                      <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
+                    </td>
+                    <td>
+                      <div className="admin-observation-cell">
+                        <label
+                          className="visually-hidden"
+                          htmlFor={`document-feedback-${document.id}`}
+                        >
+                          Observaciones de {document.nombre || "documento"}
+                        </label>
+                        <textarea
+                          id={`document-feedback-${document.id}`}
+                          className="admin-observation-input"
+                          rows={3}
+                          value={feedbackDraft}
+                          placeholder="Ej. Documento ilegible."
+                          disabled={isRowBusy}
+                          onChange={(event) => updateFeedbackDraft(document.id, event.target.value)}
+                        />
+                        <div className="admin-observation-footer">
+                          {hasFeedback && (
+                            <span className="admin-comment-indicator">
+                              <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
+                              Comentario agregado
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--save"
+                            disabled={isRowBusy || !hasFeedbackChanges}
+                            onClick={() => saveDocumentFeedback(document.id)}
+                          >
+                            <Save size={15} strokeWidth={2.4} aria-hidden="true" />
+                            <span>{isSavingFeedback ? "Guardando..." : "Guardar"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--approve"
+                          disabled={isRowBusy || document.estado === "approved"}
+                          onClick={() => updateDocumentStatus(document.id, "approved")}
+                        >
+                          <Check size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Aprobar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--reject"
+                          disabled={
+                            isRowBusy ||
+                            document.estado === "correction" ||
+                            document.estado === "rejected"
+                          }
+                          onClick={() => updateDocumentStatus(document.id, "correction")}
+                        >
+                          <X size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Rechazar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button"
+                          disabled={isRowBusy || !document.archivo_url}
+                          onClick={() => openDocument(document)}
+                        >
+                          <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Ver documento</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

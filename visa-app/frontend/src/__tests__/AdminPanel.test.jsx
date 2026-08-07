@@ -14,6 +14,8 @@ const adminSession = {
 function mockAdminSession() {
   localStorage.setItem("visaguide_session", JSON.stringify(adminSession));
   localStorage.setItem("correoUsuario", adminSession.correo);
+  let adminDocumentStatus = "review";
+  let adminDocumentFeedback = "Documento ilegible.";
   vi.spyOn(globalThis, "fetch").mockImplementation((url, options = {}) => {
     if (String(url).includes("/validar-sesion")) {
       return Promise.resolve({
@@ -56,9 +58,10 @@ function mockAdminSession() {
               nombre: "pasaporte.pdf",
               tipo: "application/pdf",
               documento_key: "Pasaporte",
-              estado: "review",
+              estado: adminDocumentStatus,
+              feedback: adminDocumentFeedback,
               creado_en: "2026-08-01T10:00:00.000Z",
-              archivo_url: "/documentos/41/archivo",
+              archivo_url: "http://localhost:8080/documentos/41/archivo",
               usuario: {
                 nombre: "Usuario Demo",
                 correo: "demo@example.com",
@@ -69,20 +72,29 @@ function mockAdminSession() {
       });
     }
     if (String(url).endsWith("/admin/documents/41/status")) {
-      const { estado } = JSON.parse(options.body || "{}");
+      const payload = JSON.parse(options.body || "{}");
+      if (Object.prototype.hasOwnProperty.call(payload, "estado")) {
+        adminDocumentStatus = payload.estado;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, "feedback")) {
+        adminDocumentFeedback = payload.feedback.trim();
+      }
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          message: "Estado del documento actualizado correctamente",
+          message: payload.estado
+            ? "Estado del documento actualizado correctamente"
+            : "Observaciones del documento actualizadas correctamente",
           documento: {
             id: 41,
             nombre: "pasaporte.pdf",
             tipo: "application/pdf",
             documento_key: "Pasaporte",
-            estado,
+            estado: adminDocumentStatus,
+            feedback: adminDocumentFeedback,
             creado_en: "2026-08-01T10:00:00.000Z",
             actualizado_en: "2026-08-02T10:00:00.000Z",
-            archivo_url: "/documentos/41/archivo",
+            archivo_url: "http://localhost:8080/documentos/41/archivo",
             usuario: {
               nombre: "Usuario Demo",
               correo: "demo@example.com",
@@ -153,12 +165,16 @@ describe("panel de administracion", () => {
     if (path === "/admin/documents") {
       expect(screen.getByRole("columnheader", { name: "Usuario" })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: "Tipo de documento" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Observaciones" })).toBeInTheDocument();
       expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
       expect(screen.getByText("Pasaporte")).toBeInTheDocument();
+      expect(screen.getByText("Comentario agregado")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Documento ilegible.")).toBeInTheDocument();
       expect(screen.getByText("En revisión")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Aprobar" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Rechazar" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Ver documento" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Guardar" })).toBeInTheDocument();
     } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
@@ -196,6 +212,51 @@ describe("panel de administracion", () => {
       expect.stringContaining("/admin/documents/41/status"),
       expect.objectContaining({ method: "PUT" })
     );
+  });
+
+  it("abre documentos con la URL del backend y evita navegar por React Router", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    window.history.pushState({}, "", "/admin/documents");
+
+    render(<App />);
+
+    expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver documento" }));
+
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^http:\/\/localhost:3000\/documentos\/41\/archivo$/),
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(window.location.pathname).toBe("/admin/documents");
+  });
+
+  it("permite editar y guardar observaciones administrativas", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/documents");
+
+    render(<App />);
+
+    const feedbackInput = await screen.findByRole("textbox", {
+      name: "Observaciones de pasaporte.pdf",
+    });
+    await user.clear(feedbackInput);
+    await user.type(feedbackInput, "Falta la segunda pagina.");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByText("Observaciones guardadas correctamente.")).toBeInTheDocument();
+    expect(screen.getByText("Comentario agregado")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Falta la segunda pagina.")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/admin/documents");
+
+    const feedbackCall = globalThis.fetch.mock.calls.find(([url, options]) =>
+      String(url).includes("/admin/documents/41/status") &&
+      JSON.parse(options?.body || "{}").feedback === "Falta la segunda pagina."
+    );
+    expect(JSON.parse(feedbackCall[1].body)).toEqual({
+      feedback: "Falta la segunda pagina.",
+    });
   });
 
   it("rechaza un documento usando el estado de correccion que entiende el cliente", async () => {

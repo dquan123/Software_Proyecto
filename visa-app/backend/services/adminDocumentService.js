@@ -19,6 +19,34 @@ function presentAdminDocument(document) {
   };
 }
 
+function normalizeDocumentUpdatePayload(payload = {}) {
+  const hasStatus = Object.prototype.hasOwnProperty.call(payload, "status");
+  const hasFeedback = Object.prototype.hasOwnProperty.call(payload, "feedback");
+  const normalizedStatus = payload.status === "rejected" ? "correction" : payload.status;
+  const normalizedFeedback = hasFeedback
+    ? String(payload.feedback || "").trim() || null
+    : null;
+
+  if (!hasStatus && !hasFeedback) {
+    const error = new Error("Debe enviar estado u observaciones");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (hasStatus && !["approved", "correction"].includes(normalizedStatus)) {
+    const error = new Error("Estado de documento invalido");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    hasStatus,
+    hasFeedback,
+    normalizedStatus,
+    normalizedFeedback,
+  };
+}
+
 function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = {}) {
   async function listDocuments() {
     await schemaReady;
@@ -46,24 +74,33 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
     return result.rows.map(presentAdminDocument);
   }
 
-  async function updateDocumentStatus(documentId, status) {
+  async function updateDocumentStatus(documentId, payload = {}) {
     await schemaReady;
 
-    const normalizedStatus = status === "rejected" ? "correction" : status;
+    const updatePayload = normalizeDocumentUpdatePayload(payload);
+    const updates = [];
+    const values = [];
 
-    if (!["approved", "correction"].includes(normalizedStatus)) {
-      const error = new Error("Estado de documento invalido");
-      error.statusCode = 400;
-      throw error;
+    if (updatePayload.hasStatus) {
+      values.push(updatePayload.normalizedStatus);
+      updates.push(`estado = $${values.length}`);
     }
+
+    if (updatePayload.hasFeedback) {
+      values.push(updatePayload.normalizedFeedback);
+      updates.push(`feedback = $${values.length}`);
+    }
+
+    updates.push("actualizado_en = CURRENT_TIMESTAMP");
+    values.push(documentId);
+    const documentIdParam = values.length;
 
     const result = await pool.query(
       `
         WITH updated AS (
           UPDATE documentos
-          SET estado = $1,
-              actualizado_en = CURRENT_TIMESTAMP
-          WHERE id = $2
+          SET ${updates.join(",\n              ")}
+          WHERE id = $${documentIdParam}
           RETURNING id, nombre, tipo, archivo_url, usuario_id, documento_key, estado,
                     feedback, creado_en, actualizado_en, storage_key
         )
@@ -74,7 +111,7 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
         FROM updated
         LEFT JOIN usuario u ON u.id_usuario = updated.usuario_id
       `,
-      [normalizedStatus, documentId]
+      values
     );
 
     const document = result.rows[0];
