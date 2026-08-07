@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check, Eye, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { buildApiUrl } from "../../config/api";
 
@@ -42,6 +43,11 @@ function getDocumentType(document) {
 
 function getStatusLabel(status) {
   return statusLabels[status] || status || "Pendiente";
+}
+
+function openDocument(document) {
+  if (!document.archivo_url) return;
+  window.open(document.archivo_url, "_blank", "noopener,noreferrer");
 }
 
 export default function AdminDocuments() {
@@ -144,7 +150,25 @@ export default function AdminDocuments() {
                     <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
                   </td>
                   <td>
-                    <span className="admin-table-secondary">Revision pendiente</span>
+                    <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
+                      <button type="button" className="admin-action-button admin-action-button--approve">
+                        <Check size={16} strokeWidth={2.4} aria-hidden="true" />
+                        <span>Aprobar</span>
+                      </button>
+                      <button type="button" className="admin-action-button admin-action-button--reject">
+                        <X size={16} strokeWidth={2.4} aria-hidden="true" />
+                        <span>Rechazar</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-button"
+                        disabled={!document.archivo_url}
+                        onClick={() => openDocument(document)}
+                      >
+                        <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
+                        <span>Ver documento</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
