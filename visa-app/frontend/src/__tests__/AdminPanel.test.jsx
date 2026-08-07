@@ -14,7 +14,7 @@ const adminSession = {
 function mockAdminSession() {
   localStorage.setItem("visaguide_session", JSON.stringify(adminSession));
   localStorage.setItem("correoUsuario", adminSession.correo);
-  vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((url, options = {}) => {
     if (String(url).includes("/validar-sesion")) {
       return Promise.resolve({
         ok: true,
@@ -65,6 +65,29 @@ function mockAdminSession() {
               },
             },
           ],
+        }),
+      });
+    }
+    if (String(url).endsWith("/admin/documents/41/status")) {
+      const { estado } = JSON.parse(options.body || "{}");
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          message: "Estado del documento actualizado correctamente",
+          documento: {
+            id: 41,
+            nombre: "pasaporte.pdf",
+            tipo: "application/pdf",
+            documento_key: "Pasaporte",
+            estado,
+            creado_en: "2026-08-01T10:00:00.000Z",
+            actualizado_en: "2026-08-02T10:00:00.000Z",
+            archivo_url: "/documentos/41/archivo",
+            usuario: {
+              nombre: "Usuario Demo",
+              correo: "demo@example.com",
+            },
+          },
         }),
       });
     }
@@ -155,6 +178,24 @@ describe("panel de administracion", () => {
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/users"));
     expect(screen.getByRole("heading", { name: "Gestion de usuarios" })).toBeInTheDocument();
+  });
+
+  it("permite aprobar un documento sin recargar la pagina", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/documents");
+
+    render(<App />);
+
+    expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Aprobar" }));
+
+    expect(await screen.findByText("Documento aprobado correctamente.")).toBeInTheDocument();
+    expect(screen.getByText("Aprobado")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/admin/documents");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/documents/41/status"),
+      expect.objectContaining({ method: "PUT" })
+    );
   });
 
   it("navega entre Dashboard y Entrevistas desde el sidebar", async () => {

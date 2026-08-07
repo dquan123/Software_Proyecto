@@ -54,6 +54,8 @@ export default function AdminDocuments() {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -84,6 +86,48 @@ export default function AdminDocuments() {
     return () => controller.abort();
   }, []);
 
+  const updateDocumentStatus = async (documentId, status) => {
+    const token = getAdminToken();
+    setUpdatingId(documentId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ estado: status }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "No fue posible actualizar el documento.");
+      }
+
+      setDocuments((currentDocuments) =>
+        currentDocuments.map((document) =>
+          document.id === documentId ? data.documento : document
+        )
+      );
+      setNotice({
+        type: "success",
+        text: status === "approved"
+          ? "Documento aprobado correctamente."
+          : "Documento rechazado correctamente.",
+      });
+    } catch (requestError) {
+      setNotice({
+        type: "error",
+        text: requestError.message || "No fue posible actualizar el documento.",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   return (
     <AdminLayout>
       <section className="admin-panel-card admin-documents">
@@ -97,6 +141,15 @@ export default function AdminDocuments() {
             </p>
           </div>
         </div>
+
+        {notice && (
+          <p
+            className={`admin-feedback admin-feedback--${notice.type}`}
+            role={notice.type === "error" ? "alert" : "status"}
+          >
+            {notice.text}
+          </p>
+        )}
 
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -151,11 +204,21 @@ export default function AdminDocuments() {
                   </td>
                   <td>
                     <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
-                      <button type="button" className="admin-action-button admin-action-button--approve">
+                      <button
+                        type="button"
+                        className="admin-action-button admin-action-button--approve"
+                        disabled={updatingId === document.id || document.estado === "approved"}
+                        onClick={() => updateDocumentStatus(document.id, "approved")}
+                      >
                         <Check size={16} strokeWidth={2.4} aria-hidden="true" />
                         <span>Aprobar</span>
                       </button>
-                      <button type="button" className="admin-action-button admin-action-button--reject">
+                      <button
+                        type="button"
+                        className="admin-action-button admin-action-button--reject"
+                        disabled={updatingId === document.id || document.estado === "rejected"}
+                        onClick={() => updateDocumentStatus(document.id, "rejected")}
+                      >
                         <X size={16} strokeWidth={2.4} aria-hidden="true" />
                         <span>Rechazar</span>
                       </button>
