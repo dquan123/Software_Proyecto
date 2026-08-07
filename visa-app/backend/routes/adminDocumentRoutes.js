@@ -8,6 +8,7 @@ module.exports = function createAdminDocumentRoutes(pool, { requireAdmin, schema
   const adminDocumentController = createAdminDocumentController(adminDocumentService);
 
   router.get("/", requireAdmin, adminDocumentController.listDocuments);
+  router.put("/:id/status", requireAdmin, adminDocumentController.updateDocumentStatus);
 
   return router;
 };

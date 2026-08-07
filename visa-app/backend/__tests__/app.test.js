@@ -315,6 +315,28 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
+  if (normalized.includes("WITH updated AS") && normalized.includes("UPDATE documentos")) {
+    return Promise.resolve({
+      rows: [
+        {
+          id: values[1],
+          nombre: "Pasaporte",
+          tipo: "application/pdf",
+          archivo_url: "http://localhost/local-files/mock-document.pdf",
+          usuario_id: 3,
+          documento_key: "passport",
+          estado: values[0],
+          feedback: null,
+          creado_en: "2026-07-07T00:00:00.000Z",
+          actualizado_en: "2026-07-08T00:00:00.000Z",
+          storage_key: "local/mock-document.pdf",
+          usuario_nombre: "Usuario Login",
+          usuario_correo: "login@example.com",
+        },
+      ],
+    });
+  }
+
   if (normalized.includes("INSERT INTO documentos")) {
     return Promise.resolve({
       rows: [{
@@ -1476,6 +1498,31 @@ describe("app endpoints", () => {
         correo: "login@example.com",
       },
     });
+  });
+
+  test("PUT /admin/documents/:id/status actualiza el estado del documento", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ estado: "approved" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Estado del documento actualizado correctamente");
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "approved",
+      archivo_url: "/documentos/41/archivo",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status rechaza estados invalidos", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ estado: "review" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Estado de documento invalido" });
   });
 
   test("DELETE /documentos/:id elimina el registro y el archivo almacenado", async () => {

@@ -322,6 +322,27 @@
   background: var(--vg-card);
 }
 
+.admin-feedback {
+  border: 1px solid var(--vg-border);
+  border-radius: var(--vg-radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+}
+
+.admin-feedback--success {
+  border-color: rgba(22, 101, 52, 0.22);
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-feedback--error {
+  border-color: rgba(153, 27, 27, 0.22);
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .admin-table {
   width: 100%;
   min-width: 760px;
