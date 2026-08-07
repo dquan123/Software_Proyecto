@@ -93,7 +93,7 @@ describe("panel de administracion", () => {
 
   it.each([
     ["/admin/users", "Usuarios", "Gestion de usuarios"],
-    ["/admin/documents", "Documentos", "Gestion de documentos"],
+    ["/admin/documents", "Documentos", "Gestión de Documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
     ["/admin/processes", "Tramites", "Gestion de tramites"],
     ["/admin/reports", "Reportes", "Resumen de trámites"],
@@ -105,7 +105,11 @@ describe("panel de administracion", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: header })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 2, name: pageTitle })).toBeInTheDocument();
-    if (path === "/admin/interviews") {
+    if (path === "/admin/documents") {
+      expect(screen.getByRole("columnheader", { name: "Usuario" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Tipo de documento" })).toBeInTheDocument();
+      expect(screen.getByText("Todavía no hay documentos enviados por los usuarios.")).toBeInTheDocument();
+    } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
     } else if (path !== "/admin/reports") {
