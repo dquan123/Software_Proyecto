@@ -1,16 +1,82 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { buildApiUrl } from "../../config/api";
 
 const tableHeaders = [
   "Usuario",
   "Tipo de documento",
   "Estado",
   "Fecha de carga",
+  "Archivo",
   "Acciones",
 ];
 
+const statusLabels = {
+  approved: "Aprobado",
+  review: "En revisión",
+  rejected: "Rechazado",
+  correction: "Corrección",
+  pending: "Pendiente",
+};
+
+function getAdminToken() {
+  const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
+  return session?.token || "";
+}
+
+function formatDate(value) {
+  if (!value) return "Sin fecha";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+
+  return new Intl.DateTimeFormat("es-GT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function getDocumentType(document) {
+  return document.documento_key || document.tipo || "Documento";
+}
+
+function getStatusLabel(status) {
+  return statusLabels[status] || status || "Pendiente";
+}
+
 export default function AdminDocuments() {
-  const isLoading = false;
-  const documents = [];
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const token = getAdminToken();
+
+    fetch(buildApiUrl("/admin/documents"), {
+      signal: controller.signal,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("No fue posible cargar los documentos.");
+        return response.json();
+      })
+      .then((data) => {
+        const nextDocuments = Array.isArray(data) ? data : data.documentos || [];
+        setDocuments(nextDocuments);
+        setError("");
+      })
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") {
+          setError(requestError.message || "No fue posible cargar los documentos.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   return (
     <AdminLayout>
@@ -49,12 +115,39 @@ export default function AdminDocuments() {
               {!isLoading && documents.length === 0 && (
                 <tr>
                   <td colSpan={tableHeaders.length}>
-                    <p className="admin-table-state">
-                      Todavía no hay documentos enviados por los usuarios.
+                    <p className={`admin-table-state${error ? " admin-table-state--error" : ""}`}>
+                      {error || "Todavía no hay documentos enviados por los usuarios."}
                     </p>
                   </td>
                 </tr>
               )}
+
+              {!isLoading && !error && documents.map((document) => (
+                <tr key={document.id}>
+                  <td>
+                    <strong className="admin-table-primary">
+                      {document.usuario?.nombre || "Usuario sin nombre"}
+                    </strong>
+                    <span className="admin-table-secondary">
+                      {document.usuario?.correo || "Correo no disponible"}
+                    </span>
+                  </td>
+                  <td>{getDocumentType(document)}</td>
+                  <td>
+                    <span className={`admin-status admin-status--${document.estado || "pending"}`}>
+                      {getStatusLabel(document.estado)}
+                    </span>
+                  </td>
+                  <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
+                  <td>
+                    <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
+                    <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
+                  </td>
+                  <td>
+                    <span className="admin-table-secondary">Revision pendiente</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

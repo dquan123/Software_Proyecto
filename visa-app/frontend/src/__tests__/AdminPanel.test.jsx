@@ -46,6 +46,28 @@ function mockAdminSession() {
         }),
       });
     }
+    if (String(url).endsWith("/admin/documents")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          documentos: [
+            {
+              id: 41,
+              nombre: "pasaporte.pdf",
+              tipo: "application/pdf",
+              documento_key: "Pasaporte",
+              estado: "review",
+              creado_en: "2026-08-01T10:00:00.000Z",
+              archivo_url: "/documentos/41/archivo",
+              usuario: {
+                nombre: "Usuario Demo",
+                correo: "demo@example.com",
+              },
+            },
+          ],
+        }),
+      });
+    }
     return Promise.resolve({
       ok: true,
       json: async () => ({}),
@@ -108,7 +130,9 @@ describe("panel de administracion", () => {
     if (path === "/admin/documents") {
       expect(screen.getByRole("columnheader", { name: "Usuario" })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: "Tipo de documento" })).toBeInTheDocument();
-      expect(screen.getByText("Todavía no hay documentos enviados por los usuarios.")).toBeInTheDocument();
+      expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+      expect(screen.getByText("Pasaporte")).toBeInTheDocument();
+      expect(screen.getByText("En revisión")).toBeInTheDocument();
     } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);

@@ -293,6 +293,28 @@ function defaultQueryHandler(sql, values) {
     return Promise.resolve({ rows: [] });
   }
 
+  if (normalized.includes("FROM documentos d") && normalized.includes("LEFT JOIN usuario u")) {
+    return Promise.resolve({
+      rows: [
+        {
+          id: 41,
+          nombre: "Pasaporte",
+          tipo: "application/pdf",
+          archivo_url: "http://localhost/local-files/mock-document.pdf",
+          usuario_id: 3,
+          documento_key: "passport",
+          estado: "review",
+          feedback: null,
+          creado_en: "2026-07-07T00:00:00.000Z",
+          actualizado_en: "2026-07-07T00:00:00.000Z",
+          storage_key: "local/mock-document.pdf",
+          usuario_nombre: "Usuario Login",
+          usuario_correo: "login@example.com",
+        },
+      ],
+    });
+  }
+
   if (normalized.includes("INSERT INTO documentos")) {
     return Promise.resolve({
       rows: [{
@@ -1436,6 +1458,24 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "No se pudieron cargar los documentos" });
+  });
+
+  test("GET /admin/documents lista todos los documentos para administradores", async () => {
+    const response = await request(app)
+      .get("/admin/documents")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.documentos).toHaveLength(1);
+    expect(response.body.documentos[0]).toMatchObject({
+      id: 41,
+      nombre: "Pasaporte",
+      archivo_url: "/documentos/41/archivo",
+      usuario: {
+        nombre: "Usuario Login",
+        correo: "login@example.com",
+      },
+    });
   });
 
   test("DELETE /documentos/:id elimina el registro y el archivo almacenado", async () => {

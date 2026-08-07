@@ -10,6 +10,7 @@ const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
 const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createAdminMetricsRoutes = require("./routes/adminMetricsRoutes");
+const createAdminDocumentRoutes = require("./routes/adminDocumentRoutes");
 const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = require("./auth");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
@@ -294,6 +295,7 @@ app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
+app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {

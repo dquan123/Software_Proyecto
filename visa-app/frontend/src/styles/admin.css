@@ -361,6 +361,57 @@
   text-align: center;
 }
 
+.admin-table-state--error {
+  color: var(--vg-red);
+}
+
+.admin-table-primary,
+.admin-table-secondary {
+  display: block;
+}
+
+.admin-table-primary {
+  color: var(--vg-text);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.admin-table-secondary {
+  margin-top: 4px;
+  color: var(--vg-text-muted);
+  font-size: 12px;
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--vg-bg);
+  color: var(--vg-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.admin-status--approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-status--review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-status--rejected,
+.admin-status--correction {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 @media (max-width: 1100px) {
   .admin-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
