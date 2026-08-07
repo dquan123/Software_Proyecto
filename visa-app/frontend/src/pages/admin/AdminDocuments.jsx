@@ -65,6 +65,14 @@ function buildFeedbackDrafts(documentList) {
   );
 }
 
+function getUpdatedDocument(data, fallbackMessage) {
+  if (!data.documento) {
+    throw new Error(fallbackMessage);
+  }
+
+  return data.documento;
+}
+
 export default function AdminDocuments() {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,7 +145,7 @@ export default function AdminDocuments() {
         throw new Error(data.error || "No fue posible actualizar el documento.");
       }
 
-      replaceDocument(data.documento);
+      replaceDocument(getUpdatedDocument(data, "No fue posible actualizar el documento."));
       setNotice({
         type: "success",
         text: status === "approved"
@@ -182,7 +190,7 @@ export default function AdminDocuments() {
         throw new Error(data.error || "No fue posible guardar las observaciones.");
       }
 
-      replaceDocument(data.documento);
+      replaceDocument(getUpdatedDocument(data, "No fue posible guardar las observaciones."));
       setNotice({
         type: "success",
         text: "Observaciones guardadas correctamente.",
@@ -260,99 +268,99 @@ export default function AdminDocuments() {
                 const hasFeedbackChanges = feedbackDraft.trim() !== savedFeedback.trim();
 
                 return (
-                <tr key={document.id}>
-                  <td>
-                    <strong className="admin-table-primary">
-                      {document.usuario?.nombre || "Usuario sin nombre"}
-                    </strong>
-                    <span className="admin-table-secondary">
-                      {document.usuario?.correo || "Correo no disponible"}
-                    </span>
-                  </td>
-                  <td>{getDocumentType(document)}</td>
-                  <td>
-                    <span className={`admin-status admin-status--${document.estado || "pending"}`}>
-                      {getStatusLabel(document.estado)}
-                    </span>
-                  </td>
-                  <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
-                  <td>
-                    <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
-                    <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
-                  </td>
-                  <td>
-                    <div className="admin-observation-cell">
-                      <label
-                        className="visually-hidden"
-                        htmlFor={`document-feedback-${document.id}`}
-                      >
-                        Observaciones de {document.nombre || "documento"}
-                      </label>
-                      <textarea
-                        id={`document-feedback-${document.id}`}
-                        className="admin-observation-input"
-                        rows={3}
-                        value={feedbackDraft}
-                        placeholder="Ej. Documento ilegible."
-                        disabled={isRowBusy}
-                        onChange={(event) => updateFeedbackDraft(document.id, event.target.value)}
-                      />
-                      <div className="admin-observation-footer">
-                        {hasFeedback && (
-                          <span className="admin-comment-indicator">
-                            <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
-                            Comentario agregado
-                          </span>
-                        )}
+                  <tr key={document.id}>
+                    <td>
+                      <strong className="admin-table-primary">
+                        {document.usuario?.nombre || "Usuario sin nombre"}
+                      </strong>
+                      <span className="admin-table-secondary">
+                        {document.usuario?.correo || "Correo no disponible"}
+                      </span>
+                    </td>
+                    <td>{getDocumentType(document)}</td>
+                    <td>
+                      <span className={`admin-status admin-status--${document.estado || "pending"}`}>
+                        {getStatusLabel(document.estado)}
+                      </span>
+                    </td>
+                    <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
+                    <td>
+                      <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
+                      <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
+                    </td>
+                    <td>
+                      <div className="admin-observation-cell">
+                        <label
+                          className="visually-hidden"
+                          htmlFor={`document-feedback-${document.id}`}
+                        >
+                          Observaciones de {document.nombre || "documento"}
+                        </label>
+                        <textarea
+                          id={`document-feedback-${document.id}`}
+                          className="admin-observation-input"
+                          rows={3}
+                          value={feedbackDraft}
+                          placeholder="Ej. Documento ilegible."
+                          disabled={isRowBusy}
+                          onChange={(event) => updateFeedbackDraft(document.id, event.target.value)}
+                        />
+                        <div className="admin-observation-footer">
+                          {hasFeedback && (
+                            <span className="admin-comment-indicator">
+                              <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
+                              Comentario agregado
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="admin-action-button admin-action-button--save"
+                            disabled={isRowBusy || !hasFeedbackChanges}
+                            onClick={() => saveDocumentFeedback(document.id)}
+                          >
+                            <Save size={15} strokeWidth={2.4} aria-hidden="true" />
+                            <span>{isSavingFeedback ? "Guardando..." : "Guardar"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
                         <button
                           type="button"
-                          className="admin-action-button admin-action-button--save"
-                          disabled={isRowBusy || !hasFeedbackChanges}
-                          onClick={() => saveDocumentFeedback(document.id)}
+                          className="admin-action-button admin-action-button--approve"
+                          disabled={isRowBusy || document.estado === "approved"}
+                          onClick={() => updateDocumentStatus(document.id, "approved")}
                         >
-                          <Save size={15} strokeWidth={2.4} aria-hidden="true" />
-                          <span>{isSavingFeedback ? "Guardando..." : "Guardar"}</span>
+                          <Check size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Aprobar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--reject"
+                          disabled={
+                            isRowBusy ||
+                            document.estado === "correction" ||
+                            document.estado === "rejected"
+                          }
+                          onClick={() => updateDocumentStatus(document.id, "correction")}
+                        >
+                          <X size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Rechazar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button"
+                          disabled={isRowBusy || !document.archivo_url}
+                          onClick={() => openDocument(document)}
+                        >
+                          <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Ver documento</span>
                         </button>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
-                      <button
-                        type="button"
-                        className="admin-action-button admin-action-button--approve"
-                        disabled={isRowBusy || document.estado === "approved"}
-                        onClick={() => updateDocumentStatus(document.id, "approved")}
-                      >
-                        <Check size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Aprobar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-action-button admin-action-button--reject"
-                        disabled={
-                          isRowBusy ||
-                          document.estado === "correction" ||
-                          document.estado === "rejected"
-                        }
-                        onClick={() => updateDocumentStatus(document.id, "correction")}
-                      >
-                        <X size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Rechazar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-action-button"
-                        disabled={isRowBusy || !document.archivo_url}
-                        onClick={() => openDocument(document)}
-                      >
-                        <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
-                        <span>Ver documento</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
+                    </td>
+                  </tr>
+                );
               })}
             </tbody>
           </table>

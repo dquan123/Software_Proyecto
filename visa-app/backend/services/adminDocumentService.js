@@ -19,6 +19,34 @@ function presentAdminDocument(document) {
   };
 }
 
+function normalizeDocumentUpdatePayload(payload = {}) {
+  const hasStatus = Object.prototype.hasOwnProperty.call(payload, "status");
+  const hasFeedback = Object.prototype.hasOwnProperty.call(payload, "feedback");
+  const normalizedStatus = payload.status === "rejected" ? "correction" : payload.status;
+  const normalizedFeedback = hasFeedback
+    ? String(payload.feedback || "").trim() || null
+    : null;
+
+  if (!hasStatus && !hasFeedback) {
+    const error = new Error("Debe enviar estado u observaciones");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (hasStatus && !["approved", "correction"].includes(normalizedStatus)) {
+    const error = new Error("Estado de documento invalido");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    hasStatus,
+    hasFeedback,
+    normalizedStatus,
+    normalizedFeedback,
+  };
+}
+
 function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = {}) {
   async function listDocuments() {
     await schemaReady;
@@ -49,39 +77,21 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
   async function updateDocumentStatus(documentId, payload = {}) {
     await schemaReady;
 
-    const hasStatus = Object.prototype.hasOwnProperty.call(payload, "status");
-    const hasFeedback = Object.prototype.hasOwnProperty.call(payload, "feedback");
-    const status = payload.status;
-    const normalizedStatus = status === "rejected" ? "correction" : status;
-    const normalizedFeedback = hasFeedback
-      ? String(payload.feedback || "").trim() || null
-      : null;
-
-    if (!hasStatus && !hasFeedback) {
-      const error = new Error("Debe enviar estado u observaciones");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (hasStatus && !["approved", "correction"].includes(normalizedStatus)) {
-      const error = new Error("Estado de documento invalido");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const updates = ["actualizado_en = CURRENT_TIMESTAMP"];
+    const updatePayload = normalizeDocumentUpdatePayload(payload);
+    const updates = [];
     const values = [];
 
-    if (hasStatus) {
-      values.push(normalizedStatus);
-      updates.unshift(`estado = $${values.length}`);
+    if (updatePayload.hasStatus) {
+      values.push(updatePayload.normalizedStatus);
+      updates.push(`estado = $${values.length}`);
     }
 
-    if (hasFeedback) {
-      values.push(normalizedFeedback);
-      updates.unshift(`feedback = $${values.length}`);
+    if (updatePayload.hasFeedback) {
+      values.push(updatePayload.normalizedFeedback);
+      updates.push(`feedback = $${values.length}`);
     }
 
+    updates.push("actualizado_en = CURRENT_TIMESTAMP");
     values.push(documentId);
     const documentIdParam = values.length;
 
