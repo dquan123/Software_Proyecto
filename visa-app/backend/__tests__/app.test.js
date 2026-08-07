@@ -1444,6 +1444,45 @@ describe("app endpoints", () => {
     });
   });
 
+  test("GET /documentos/:usuarioId presenta rechazos legados como correccion", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      const normalized = String(sql).replace(/\s+/g, " ").trim();
+
+      if (
+        normalized.includes("SELECT id, nombre, tipo, archivo_url, usuario_id, documento_key") &&
+        normalized.includes("FROM documentos") &&
+        normalized.includes("WHERE usuario_id = $1")
+      ) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: 41,
+              nombre: "Pasaporte",
+              tipo: "application/pdf",
+              archivo_url: "http://localhost/local-files/mock-document.pdf",
+              usuario_id: values[0],
+              documento_key: "passport",
+              estado: "rejected",
+              feedback: null,
+              creado_en: "2026-07-07T00:00:00.000Z",
+              actualizado_en: "2026-07-07T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).get("/documentos/3");
+
+    expect(response.status).toBe(200);
+    expect(response.body[0]).toMatchObject({
+      id: 41,
+      estado: "correction",
+    });
+  });
+
   test("GET /documentos/:usuarioId devuelve lista vacia cuando el usuario no tiene documentos", async () => {
     const response = await request(app).get("/documentos/4");
 
@@ -1512,6 +1551,19 @@ describe("app endpoints", () => {
       id: 41,
       estado: "approved",
       archivo_url: "/documentos/41/archivo",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status guarda rechazos como correccion para el cliente", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ estado: "rejected" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "correction",
     });
   });
 

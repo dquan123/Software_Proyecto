@@ -49,7 +49,9 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
   async function updateDocumentStatus(documentId, status) {
     await schemaReady;
 
-    if (!["approved", "rejected"].includes(status)) {
+    const normalizedStatus = status === "rejected" ? "correction" : status;
+
+    if (!["approved", "correction"].includes(normalizedStatus)) {
       const error = new Error("Estado de documento invalido");
       error.statusCode = 400;
       throw error;
@@ -72,7 +74,7 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
         FROM updated
         LEFT JOIN usuario u ON u.id_usuario = updated.usuario_id
       `,
-      [status, documentId]
+      [normalizedStatus, documentId]
     );
 
     const document = result.rows[0];

@@ -216,8 +216,12 @@ export default function AdminDocuments() {
                       <button
                         type="button"
                         className="admin-action-button admin-action-button--reject"
-                        disabled={updatingId === document.id || document.estado === "rejected"}
-                        onClick={() => updateDocumentStatus(document.id, "rejected")}
+                        disabled={
+                          updatingId === document.id ||
+                          document.estado === "correction" ||
+                          document.estado === "rejected"
+                        }
+                        onClick={() => updateDocumentStatus(document.id, "correction")}
                       >
                         <X size={16} strokeWidth={2.4} aria-hidden="true" />
                         <span>Rechazar</span>

@@ -66,14 +66,15 @@ describe("DashboardStats", () => {
         { estado: "approved" },
         { estado: "review" },
         { estado: "correction" },
+        { estado: "rejected" },
         { estado: "pending" },
         { status: "pending" },
       ])
     ).toMatchObject({
-      total: 5,
+      total: 6,
       approved: 1,
       review: 1,
-      correction: 1,
+      correction: 2,
       pending: 2,
     });
   });
