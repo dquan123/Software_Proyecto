@@ -439,6 +439,52 @@
   gap: 8px;
 }
 
+.admin-observation-cell {
+  display: grid;
+  min-width: 220px;
+  gap: 8px;
+}
+
+.admin-observation-input {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  border: 1px solid var(--vg-border);
+  border-radius: var(--vg-radius-sm);
+  background: var(--vg-card);
+  color: var(--vg-text);
+  font: inherit;
+  line-height: 1.35;
+  padding: 9px 10px;
+}
+
+.admin-observation-input:focus {
+  border-color: var(--vg-info-text);
+  outline: 2px solid rgba(37, 99, 235, 0.16);
+}
+
+.admin-observation-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.admin-observation-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-comment-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--vg-success);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .admin-action-button {
   display: inline-flex;
   min-height: 36px;
@@ -475,6 +521,11 @@
 .admin-action-button--reject {
   border-color: rgba(153, 27, 27, 0.22);
   color: #991b1b;
+}
+
+.admin-action-button--save {
+  border-color: rgba(37, 99, 235, 0.22);
+  color: var(--vg-info-text);
 }
 
 @media (max-width: 1100px) {

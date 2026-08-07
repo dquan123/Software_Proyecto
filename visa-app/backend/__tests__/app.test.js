@@ -341,17 +341,28 @@ function defaultQueryHandler(sql, values) {
   }
 
   if (normalized.includes("WITH updated AS") && normalized.includes("UPDATE documentos")) {
+    const statusIndex = normalized.includes("estado = $1")
+      ? 0
+      : normalized.includes("estado = $2")
+        ? 1
+        : -1;
+    const feedbackIndex = normalized.includes("feedback = $1")
+      ? 0
+      : normalized.includes("feedback = $2")
+        ? 1
+        : -1;
+
     return Promise.resolve({
       rows: [
         {
-          id: values[1],
+          id: values[values.length - 1],
           nombre: "Pasaporte",
           tipo: "application/pdf",
           archivo_url: "http://localhost/local-files/mock-document.pdf",
           usuario_id: 3,
           documento_key: "passport",
-          estado: values[0],
-          feedback: null,
+          estado: statusIndex >= 0 ? values[statusIndex] : "review",
+          feedback: feedbackIndex >= 0 ? values[feedbackIndex] : null,
           creado_en: "2026-07-07T00:00:00.000Z",
           actualizado_en: "2026-07-08T00:00:00.000Z",
           storage_key: "local/mock-document.pdf",
@@ -1605,6 +1616,48 @@ describe("app endpoints", () => {
       id: 41,
       estado: "correction",
     });
+  });
+
+  test("PUT /admin/documents/:id/status guarda observaciones administrativas", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ feedback: "Documento ilegible. Vuelva a cargarlo." });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Observaciones del documento actualizadas correctamente");
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "review",
+      feedback: "Documento ilegible. Vuelva a cargarlo.",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status permite rechazar con observaciones", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        estado: "correction",
+        feedback: "Falta la segunda pagina del pasaporte.",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "correction",
+      feedback: "Falta la segunda pagina del pasaporte.",
+    });
+  });
+
+  test("PUT /admin/documents/:id/status exige estado u observaciones", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Debe enviar estado u observaciones" });
   });
 
   test("PUT /admin/documents/:id/status rechaza estados invalidos", async () => {
