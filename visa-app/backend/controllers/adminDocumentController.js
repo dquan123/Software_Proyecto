@@ -17,12 +17,21 @@ function createAdminDocumentController(adminDocumentService) {
     }
 
     try {
-      const documento = await adminDocumentService.updateDocumentStatus(
-        documentId,
-        req.body?.estado
-      );
+      const payload = {};
+
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, "estado")) {
+        payload.status = req.body.estado;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, "feedback")) {
+        payload.feedback = req.body.feedback;
+      }
+
+      const documento = await adminDocumentService.updateDocumentStatus(documentId, payload);
       return res.json({
-        message: "Estado del documento actualizado correctamente",
+        message: req.body?.estado
+          ? "Estado del documento actualizado correctamente"
+          : "Observaciones del documento actualizadas correctamente",
         documento,
       });
     } catch (error) {
