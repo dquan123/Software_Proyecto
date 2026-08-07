@@ -52,6 +52,27 @@ visa-app/
 
 Evita modificar `backend/coverage/`, `frontend/coverage/` y `docs/entregables/` salvo que el usuario pida regenerar entregables.
 
+## Sprint 6 - Administracion de Documentos
+
+Estado actual antes de SCRUM-127:
+
+- SCRUM-125 (`DocumentsListAdmin`) dejo implementada la pantalla `/admin/documents` para administradores, reutilizando `AdminLayout`, Sidebar y Header del panel admin.
+- SCRUM-125 agrego listado administrativo con `GET /admin/documents`, protegido por `requireAdmin`, para listar documentos de todos los usuarios con datos del solicitante.
+- SCRUM-126 (`DocumentsReviewAdmin`) agrego acciones en la tabla: `Ver documento`, `Aprobar` y `Rechazar`.
+- SCRUM-126 agrego `PUT /admin/documents/:id/status`, protegido por `requireAdmin`, para actualizar estados a `approved` o `correction`.
+- El cliente usa `GET /documentos/:usuarioId` para ver sus documentos. Los estados `rejected` legados se presentan como `correction` para que el cliente muestre "Requiere Correccion".
+- El backend ya tiene `GET /documentos/:id/archivo` para servir archivos desde `storage_key` o redirigir a `archivo_url` externo.
+- Los documentos se almacenan en la tabla `documentos` con `archivo_url`, `storage_key`, `estado`, `feedback`, `creado_en` y `actualizado_en`.
+- En desarrollo/test, `storage.js` usa fallback local y sirve archivos mediante `/local-files`; en produccion usa R2 cuando esta configurado.
+
+Al implementar SCRUM-127:
+
+- No crear pantalla nueva; extender solo `frontend/src/pages/admin/AdminDocuments.jsx`.
+- Reutilizar `GET /documentos/:id/archivo` para visualizar documentos; no crear rutas duplicadas para archivos.
+- Reutilizar la columna `feedback` existente para observaciones del administrador.
+- Solo crear endpoints nuevos si no existe una forma segura de persistir observaciones administrativas.
+- Mantener los cambios en la rama `DocumentsReviewAdmin`; no hacer merge, rebase ni push.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:

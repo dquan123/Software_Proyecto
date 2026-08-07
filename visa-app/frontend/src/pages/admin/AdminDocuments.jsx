@@ -45,9 +45,17 @@ function getStatusLabel(status) {
   return statusLabels[status] || status || "Pendiente";
 }
 
+function getDocumentPreviewUrl(document) {
+  if (!document.archivo_url) return "";
+  return document.archivo_url.startsWith("/")
+    ? buildApiUrl(document.archivo_url)
+    : document.archivo_url;
+}
+
 function openDocument(document) {
-  if (!document.archivo_url) return;
-  window.open(document.archivo_url, "_blank", "noopener,noreferrer");
+  const previewUrl = getDocumentPreviewUrl(document);
+  if (!previewUrl) return;
+  window.open(previewUrl, "_blank", "noopener,noreferrer");
 }
 
 export default function AdminDocuments() {
