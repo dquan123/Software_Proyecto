@@ -133,6 +133,9 @@ describe("panel de administracion", () => {
       expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
       expect(screen.getByText("Pasaporte")).toBeInTheDocument();
       expect(screen.getByText("En revisión")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Aprobar" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Rechazar" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Ver documento" })).toBeInTheDocument();
     } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
