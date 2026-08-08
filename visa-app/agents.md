@@ -108,8 +108,10 @@ Estado posterior a `audios-entrevistas-admin`:
 - El simulador sigue enviando audios como `FormData` a `POST /interview-sessions`.
 - `backend/services/interviewSessionService.js` usa `uploadStoredFile` de `backend/storage.js` para guardar audios, con fallback local en desarrollo/Docker y R2 cuando este configurado.
 - Los metadatos del audio quedan en `interview_sessions.responses[].audio` con `key`, `provider`, `mimetype`, `size` y una `url` presentada como endpoint backend.
-- Endpoint nuevo protegido para administradores: `GET /interview-sessions/:id/audio/:questionId`.
+- Endpoint de audio: `GET /interview-sessions/:id/audio/:questionId`.
 - `frontend/src/components/InterviewReviewPanel.jsx` convierte rutas relativas de audio con `buildApiUrl`, por lo que el reproductor del admin apunta al backend y no a React Router.
+- `frontend/src/pages/InterviewFeedback.jsx` tambien convierte rutas relativas de audio con `buildApiUrl`, para que el cliente pueda volver a escuchar sus grabaciones desde el backend.
+- El endpoint de audio debe seguir siendo cargable directamente por `<audio src="...">`; no depender de headers `Authorization`, porque el elemento HTML no los envia.
 - No guardar audio en base64 dentro de Postgres; mantener archivos en storage y metadatos en JSONB.
 
 ## Instalacion y ejecucion
