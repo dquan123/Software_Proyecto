@@ -11,6 +11,7 @@ const createQuestionBankRoutes = require("./routes/questionBankRoutes");
 const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createAdminMetricsRoutes = require("./routes/adminMetricsRoutes");
 const createAdminDocumentRoutes = require("./routes/adminDocumentRoutes");
+const createAdminProcessRoutes = require("./routes/adminProcessRoutes");
 const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = require("./auth");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
@@ -122,6 +123,8 @@ async function ensureTramiteSchema() {
     )
   `);
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS tramite_usuario_idx ON tramite(id_usuario)");
+  await pool.query("ALTER TABLE tramite ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario)");
+  await pool.query("CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor)");
 }
  
 const userSchemaReady = ensureUserSchema().catch((error) => {
@@ -352,6 +355,7 @@ app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
 app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady }));
+app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {

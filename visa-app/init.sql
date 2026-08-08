@@ -62,8 +62,12 @@ CREATE TABLE IF NOT EXISTS tramite (
   etapa_actual VARCHAR(200) DEFAULT 'Configuración de perfil',
   progreso INT DEFAULT 0,
   siguiente_paso VARCHAR(200) DEFAULT 'Seleccionar perfil de visa',
-  mensaje TEXT DEFAULT 'Configura tu perfil para comenzar'
+  mensaje TEXT DEFAULT 'Configura tu perfil para comenzar',
+  id_asesor INT REFERENCES usuario(id_usuario)
 );
+
+ALTER TABLE tramite ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario);
+CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor);
 
 -- Tabla para guardar el formulario DS-160
 CREATE TABLE IF NOT EXISTS formulario_ds160 (

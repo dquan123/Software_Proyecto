@@ -19,7 +19,7 @@ const adminNavItems = [
   { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Tramites", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Todas las solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Configuracion", path: "/admin/settings", icon: <Settings size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
@@ -29,7 +29,7 @@ const pageTitles = {
   "/admin/users": "Usuarios",
   "/admin/documents": "Documentos",
   "/admin/interviews": "Entrevistas",
-  "/admin/processes": "Tramites",
+  "/admin/processes": "Todas las solicitudes",
   "/admin/reports": "Reportes",
   "/admin/settings": "Configuracion",
 };
