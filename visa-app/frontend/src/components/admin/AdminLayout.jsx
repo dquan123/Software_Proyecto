@@ -15,21 +15,21 @@ import { useAdminSession } from "./AdminSessionContext";
 import "../../styles/admin.css";
 
 const adminNavItems = [
-  { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
-  { label: "Todas las solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
   { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Tramites", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Configuracion", path: "/admin/settings", icon: <Settings size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
 
 const pageTitles = {
-  "/admin": "Inicio",
+  "/admin": "Dashboard",
   "/admin/users": "Usuarios",
   "/admin/documents": "Documentos",
   "/admin/interviews": "Entrevistas",
-  "/admin/processes": "Todas las solicitudes",
+  "/admin/processes": "Tramites",
   "/admin/reports": "Reportes",
   "/admin/settings": "Configuracion",
 };

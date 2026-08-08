@@ -122,7 +122,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Panel de Administración Global" })).toBeInTheDocument();
     expect(await screen.findByText("Solicitudes activas")).toBeInTheDocument();
     expect(screen.getByText("Sin asignar")).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe("panel de administracion", () => {
     ["/admin/users", "Usuarios", "Gestion de usuarios"],
     ["/admin/documents", "Documentos", "Gestión de Documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
-    ["/admin/processes", "Todas las solicitudes", "Gestion de tramites"],
+    ["/admin/processes", "Tramites", "Gestion de tramites"],
     ["/admin/reports", "Reportes", "Resumen de trámites"],
     ["/admin/settings", "Configuracion", "Configuracion"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
@@ -179,6 +179,10 @@ describe("panel de administracion", () => {
     } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
+      expect(screen.getByRole("link", { name: /Entrevistas/ })).toHaveClass("admin-sidebar__link--active");
+      expect(screen.queryByRole("heading", { name: "Banco de Preguntas" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Nueva pregunta" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     } else if (path !== "/admin/reports") {
       expect(screen.getByText(/Este modulo sera implementado/)).toBeInTheDocument();
     }
@@ -190,7 +194,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Dashboard" });
     await user.click(screen.getByRole("link", { name: /Usuarios/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/users"));
@@ -284,14 +288,14 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Dashboard" });
     await user.click(screen.getByRole("link", { name: /Entrevistas/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/interviews"));
     expect(screen.getByRole("heading", { level: 1, name: "Entrevistas" })).toBeInTheDocument();
     expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole("link", { name: /^Inicio$/ }));
+    await user.click(screen.getByRole("link", { name: /^Dashboard$/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin"));
     expect(screen.getByRole("heading", { name: "Panel de Administración Global" })).toBeInTheDocument();

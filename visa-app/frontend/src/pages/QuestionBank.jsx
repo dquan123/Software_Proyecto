@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QuestionBankCard from "../components/QuestionBankCard";
 import QuestionBankConfirmDialog from "../components/QuestionBankConfirmDialog";
+import InterviewReviewPanel from "../components/InterviewReviewPanel";
 import QuestionBankModal from "../components/QuestionBankModal";
 import QuestionBankToast from "../components/QuestionBankToast";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { getAdminHeaders } from "../utils/adminHeaders";
 import "../styles/questionBank.css";
 
 const CATEGORIES = [
@@ -21,14 +23,6 @@ const CATEGORIES = [
 
 const DIFFICULTIES = ["Fácil", "Media", "Alta"];
 const ITEMS_PER_PAGE = 6;
-
-function getAdminHeaders(json = false) {
-  const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
-  return {
-    ...(json ? { "Content-Type": "application/json" } : {}),
-    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
-  };
-}
 
 function SearchIcon() {
   return (
@@ -67,32 +61,9 @@ function getErrorMessage(data, fallback) {
   return data?.error || data?.message || fallback;
 }
 
-function getSessionResponses(session) {
-  return Array.isArray(session?.responses) ? session.responses : [];
-}
-
-function getRecordedCount(session) {
-  return getSessionResponses(session).filter((response) => response.recorded)
-    .length;
-}
-
-function formatSessionDate(value) {
-  if (!value) return "Sin fecha";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sin fecha";
-
-  return new Intl.DateTimeFormat("es-GT", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-export default function QuestionBank({ embedded = false, mode = "full" }) {
+export default function QuestionBank() {
   const { isValidating } = useRequireAuth();
   const modoSenior = useModoSenior();
-  const isInterviewOnly = mode === "interviews";
-  const ContentTag = embedded ? "section" : "main";
-  const HeadingTag = embedded ? "h2" : "h1";
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,14 +81,6 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
   });
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const [interviewSessions, setInterviewSessions] = useState([]);
-  const [sessionsLoading, setSessionsLoading] = useState(true);
-  const [sessionsError, setSessionsError] = useState("");
-  const [selectedInterviewSession, setSelectedInterviewSession] =
-    useState(null);
-  const [feedbackDraft, setFeedbackDraft] = useState("");
-  const [ratingDraft, setRatingDraft] = useState("");
-  const [savingFeedback, setSavingFeedback] = useState(false);
 
   const showToast = useCallback((toast) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -150,51 +113,12 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
     }
   }, []);
 
-  const fetchInterviewSessions = useCallback(async (signal) => {
-    try {
-      setSessionsLoading(true);
-      setSessionsError("");
-
-      const response = await fetch(buildApiUrl("/interview-sessions"), { signal, headers: getAdminHeaders() });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          getErrorMessage(data, "No se pudieron cargar las entrevistas.")
-        );
-      }
-
-      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-      setInterviewSessions(sessions);
-      setSelectedInterviewSession((current) => {
-        if (sessions.length === 0) return null;
-        if (!current) return sessions[0];
-        return sessions.find((item) => item.id === current.id) || sessions[0];
-      });
-    } catch (fetchError) {
-      if (fetchError.name === "AbortError") return;
-      setSessionsError(
-        fetchError.message || "No se pudieron cargar las entrevistas."
-      );
-    } finally {
-      if (!signal?.aborted) setSessionsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (isValidating) return;
     const controller = new AbortController();
-    if (!isInterviewOnly) fetchQuestions(controller.signal);
-    fetchInterviewSessions(controller.signal);
+    fetchQuestions(controller.signal);
     return () => controller.abort();
-  }, [fetchInterviewSessions, fetchQuestions, isInterviewOnly, isValidating]);
-
-  useEffect(() => {
-    setFeedbackDraft(selectedInterviewSession?.feedback || "");
-    setRatingDraft(
-      selectedInterviewSession?.rating ? String(selectedInterviewSession.rating) : ""
-    );
-  }, [selectedInterviewSession]);
+  }, [fetchQuestions, isValidating]);
 
   useEffect(() => {
     setPage(1);
@@ -208,17 +132,6 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
       high: questions.filter((question) => question.difficulty === "Alta").length,
     };
   }, [questions]);
-  const pendingInterviewSessions = useMemo(
-    () => interviewSessions.filter((item) => item.status !== "reviewed"),
-    [interviewSessions]
-  );
-  const selectedResponses = useMemo(
-    () => getSessionResponses(selectedInterviewSession),
-    [selectedInterviewSession]
-  );
-  const selectedRecordedCount = selectedResponses.filter(
-    (response) => response.recorded
-  ).length;
 
   const filteredQuestions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -304,14 +217,14 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
         title: isEdit ? "Pregunta actualizada" : "Pregunta creada",
         message: isEdit
           ? "Los cambios se guardaron correctamente."
-          : "La nueva pregunta ya está disponible en el banco.",
+          : "La nueva pregunta ya esta disponible en el banco.",
       });
       closeModal();
     } catch (saveError) {
       showToast({
         type: "error",
         title: "No se pudo guardar",
-        message: saveError.message || "Revisa los datos e inténtalo de nuevo.",
+        message: saveError.message || "Revisa los datos e intentalo de nuevo.",
       });
     } finally {
       setSaving(false);
@@ -349,95 +262,43 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
       showToast({
         type: "error",
         title: "No se pudo eliminar",
-        message: deleteError.message || "Inténtalo de nuevo en unos segundos.",
+        message: deleteError.message || "Intentalo de nuevo en unos segundos.",
       });
     } finally {
       setDeleting(false);
     }
   };
 
-  const handleSaveFeedback = async () => {
-    if (!selectedInterviewSession) return;
-
-    try {
-      setSavingFeedback(true);
-
-      const response = await fetch(
-        buildApiUrl(`/interview-sessions/${selectedInterviewSession.id}/feedback`),
-        {
-          method: "PUT",
-          headers: getAdminHeaders(true),
-          body: JSON.stringify({
-            feedback: feedbackDraft,
-            rating: ratingDraft || null,
-          }),
-        }
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          getErrorMessage(data, "No se pudo guardar la retroalimentación.")
-        );
-      }
-
-      setInterviewSessions((current) =>
-        current.map((item) =>
-          item.id === data.session.id ? data.session : item
-        )
-      );
-      setSelectedInterviewSession(data.session);
-      showToast({
-        type: "success",
-        title: "Retroalimentacion guardada",
-        message: "El usuario ya puede consultar las observaciones.",
-      });
-    } catch (feedbackError) {
-      showToast({
-        type: "error",
-        title: "No se pudo guardar",
-        message:
-          feedbackError.message ||
-          "Revisa el contenido de la retroalimentación e inténtalo de nuevo.",
-      });
-    } finally {
-      setSavingFeedback(false);
-    }
-  };
-
   return (
-    <div className={`question-bank-shell${embedded ? " question-bank-shell--embedded" : ""}`}>
-      <ContentTag
-        {...(!embedded ? { id: "main-content", tabIndex: "-1" } : {})}
-        className={`question-bank-main${embedded ? " question-bank-main--embedded" : ""}${
+    <div className="question-bank-shell">
+      <main
+        id="main-content"
+        tabIndex="-1"
+        className={`question-bank-main${
           modoSenior ? " question-bank-main--senior" : ""
         }`}
       >
         {isValidating ? (
-          <p className="question-bank-message">Verificando sesión...</p>
+          <p className="question-bank-message">Verificando sesion...</p>
         ) : (
           <>
             <section className="question-bank-header">
               <div>
                 <span className="question-bank-eyebrow">
-                  Administración consular
+                  Administracion consular
                 </span>
-                <HeadingTag>{isInterviewOnly ? "Entrevistas" : "Banco de Preguntas"}</HeadingTag>
+                <h1>Banco de Preguntas</h1>
                 <p>
-                  {isInterviewOnly
-                    ? "Revisa sesiones enviadas desde el simulador y registra retroalimentacion para los usuarios."
-                    : "Gestiona preguntas reutilizables para entrevistas migratorias con filtros, dificultad y prioridad operativa."}
+                  Gestiona preguntas reutilizables para entrevistas migratorias
+                  con filtros, dificultad y prioridad operativa.
                 </p>
               </div>
-              {!isInterviewOnly && (
-                <button type="button" onClick={openCreateModal}>
-                  <PlusIcon />
-                  Nueva pregunta
-                </button>
-              )}
+              <button type="button" onClick={openCreateModal}>
+                <PlusIcon />
+                Nueva pregunta
+              </button>
             </section>
 
-            {!isInterviewOnly && (
             <section className="question-bank-stats" aria-label="Resumen">
               <article>
                 <span>Total</span>
@@ -450,9 +311,9 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
                 <small>prioridad alta para sesiones</small>
               </article>
               <article>
-                <span>Categorías</span>
+                <span>Categorias</span>
                 <strong>{stats.categories}</strong>
-                <small>áreas de evaluación</small>
+                <small>areas de evaluacion</small>
               </article>
               <article>
                 <span>Dificultad alta</span>
@@ -460,139 +321,9 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
                 <small>preguntas sensibles</small>
               </article>
             </section>
-            )}
 
-            <section className="question-feedback-reference">
-              <div className="question-feedback-reference__summary">
-                <span>Historial de entrevistas</span>
-                <strong>{interviewSessions.length}</strong>
-                <p>
-                  {pendingInterviewSessions.length} sesiones pendientes por
-                  retroalimentar desde el simulador.
-                </p>
-              </div>
+            <InterviewReviewPanel onToast={showToast} />
 
-              <div className="question-feedback-reference__list">
-                {sessionsLoading ? (
-                  <p>Cargando historial de entrevistas...</p>
-                ) : sessionsError ? (
-                  <p>{sessionsError}</p>
-                ) : interviewSessions.length === 0 ? (
-                  <p>No hay sesiones de entrevista registradas.</p>
-                ) : (
-                  interviewSessions.slice(0, 8).map((item) => (
-                    <button
-                      className={
-                        selectedInterviewSession?.id === item.id
-                          ? "is-active"
-                          : ""
-                      }
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelectedInterviewSession(item)}
-                    >
-                      <strong>{item.user_name || "Usuario"}</strong>
-                      <span>{item.user_email || "Sin correo"}</span>
-                      <small>
-                        {item.status === "reviewed"
-                          ? "Retroalimentada"
-                          : "Pendiente"}{" "}
-                        - {getRecordedCount(item)} de{" "}
-                        {getSessionResponses(item).length} respuestas
-                      </small>
-                    </button>
-                  ))
-                )}
-              </div>
-
-              {selectedInterviewSession && (
-                <div className="question-feedback-reference__detail">
-                  <div className="question-feedback-reference__detail-heading">
-                    <div>
-                      <span>Sesión seleccionada</span>
-                      <strong>
-                        {selectedInterviewSession.user_name || "Usuario"}
-                      </strong>
-                      <p>
-                        {selectedInterviewSession.user_email || "Sin correo"} -{" "}
-                        {formatSessionDate(selectedInterviewSession.created_at)}
-                      </p>
-                    </div>
-                    <em
-                      className={
-                        selectedInterviewSession.status === "reviewed"
-                          ? "is-reviewed"
-                          : ""
-                      }
-                    >
-                      {selectedInterviewSession.status === "reviewed"
-                        ? "Retroalimentada"
-                        : "Pendiente"}
-                    </em>
-                  </div>
-
-                  <div className="question-feedback-reference__responses">
-                    <strong>
-                      Respuestas grabadas ({selectedRecordedCount} de{" "}
-                      {selectedResponses.length})
-                    </strong>
-                    {selectedResponses.map((response, index) => (
-                      <article key={`${selectedInterviewSession.id}-${response.id}`}>
-                        <div>
-                          <span>Pregunta {index + 1}</span>
-                          <p>{response.text}</p>
-                        </div>
-                        {response.audio?.url ? (
-                          <audio controls src={response.audio.url}>
-                            Tu navegador no puede reproducir este audio.
-                          </audio>
-                        ) : (
-                          <small>Sin audio grabado</small>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-
-                  <label>
-                    Retroalimentación del administrador
-                    <textarea
-                      value={feedbackDraft}
-                      onChange={(event) => setFeedbackDraft(event.target.value)}
-                      placeholder="Escribe observaciones claras para el usuario..."
-                    />
-                  </label>
-
-                  <div className="question-feedback-reference__actions">
-                    <label>
-                      Calificación
-                      <select
-                        value={ratingDraft}
-                        onChange={(event) => setRatingDraft(event.target.value)}
-                      >
-                        <option value="">Sin calificación</option>
-                        <option value="1">1 - Necesita mejorar</option>
-                        <option value="2">2 - Básica</option>
-                        <option value="3">3 - Aceptable</option>
-                        <option value="4">4 - Buena</option>
-                        <option value="5">5 - Excelente</option>
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      disabled={savingFeedback || !feedbackDraft.trim()}
-                      onClick={handleSaveFeedback}
-                    >
-                      {savingFeedback
-                        ? "Guardando..."
-                        : "Guardar retroalimentación"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {!isInterviewOnly && (
-            <>
             <section className="question-bank-toolbar" aria-label="Filtros">
               <label className="question-bank-search">
                 <SearchIcon />
@@ -600,16 +331,16 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Buscar por pregunta, categoría o dificultad..."
+                  placeholder="Buscar por pregunta, categoria o dificultad..."
                 />
               </label>
 
               <select
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                aria-label="Filtrar por categoría"
+                aria-label="Filtrar por categoria"
               >
-                <option value="Todas">Todas las categorías</option>
+                <option value="Todas">Todas las categorias</option>
                 {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
                     {category}
@@ -669,7 +400,7 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
                 <span aria-hidden="true">?</span>
                 <strong>No hay preguntas con estos filtros</strong>
                 <p>
-                  Ajusta la búsqueda o crea una nueva pregunta para este banco.
+                  Ajusta la busqueda o crea una nueva pregunta para este banco.
                 </p>
                 <button type="button" onClick={openCreateModal}>
                   Crear pregunta
@@ -720,13 +451,11 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
                 </section>
               </>
             )}
-            </>
-            )}
           </>
         )}
-      </ContentTag>
+      </main>
 
-      {!isInterviewOnly && modalState.isOpen && (
+      {modalState.isOpen && (
         <QuestionBankModal
           categories={CATEGORIES}
           difficulties={DIFFICULTIES}
@@ -737,14 +466,12 @@ export default function QuestionBank({ embedded = false, mode = "full" }) {
           onSubmit={handleSubmit}
         />
       )}
-      {!isInterviewOnly && (
-        <QuestionBankConfirmDialog
-          isDeleting={deleting}
-          question={questionToDelete}
-          onCancel={() => setQuestionToDelete(null)}
-          onConfirm={handleDelete}
-        />
-      )}
+      <QuestionBankConfirmDialog
+        isDeleting={deleting}
+        question={questionToDelete}
+        onCancel={() => setQuestionToDelete(null)}
+        onConfirm={handleDelete}
+      />
       <QuestionBankToast toasts={toasts} />
     </div>
   );
