@@ -89,6 +89,17 @@ Estado posterior a SCRUM-127 (`DocumentsCommentsAdmin`):
 - Arquitectura de revision: los cambios de estado (`Aprobar`/`Rechazar`) se mantienen separados del guardado de observaciones; el modal envia solo `feedback` al endpoint existente.
 - Estados UI implementados: loading de listado, error, empty state, mensajes de exito/error, bloqueo de acciones mientras se actualiza estado o se guardan observaciones.
 
+## Sprint 6 - Ajustes visuales del Panel Administrador
+
+Estado posterior a `cambios-generales-admin`:
+
+- Rama de trabajo: `cambios-generales-admin`.
+- Pantalla afectada: `/admin/interviews`, usando `frontend/src/components/InterviewReviewPanel.jsx`.
+- Layout afectado: `frontend/src/components/admin/AdminLayout.jsx` y estilos de `frontend/src/styles/admin.css`.
+- La pantalla de entrevistas ya no depende visualmente de la pagina Banco de Preguntas cuando se renderiza dentro de `AdminLayout`; `admin.css` define el hero, tarjetas resumen, lista de sesiones, detalle, respuestas grabadas y formulario de retroalimentacion.
+- El Sidebar administrativo tiene mas separacion entre logo, marca y subtitulo `Administrador`, ademas de un tratamiento visual con gradientes y acentos de color.
+- Mantener cualquier ajuste futuro de apariencia admin dentro de `frontend/src/styles/admin.css` salvo que un modulo tenga un stylesheet propio ya establecido.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
