@@ -26,6 +26,11 @@ function formatSessionDate(value) {
   }).format(date);
 }
 
+function getAudioSource(audio) {
+  if (!audio?.url) return "";
+  return audio.url.startsWith("/") ? buildApiUrl(audio.url) : audio.url;
+}
+
 export default function InterviewReviewPanel({ showHeader = false, onToast }) {
   const [interviewSessions, setInterviewSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -263,8 +268,8 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
                     <span>Pregunta {index + 1}</span>
                     <p>{response.text}</p>
                   </div>
-                  {response.audio?.url ? (
-                    <audio controls src={response.audio.url}>
+                  {getAudioSource(response.audio) ? (
+                    <audio controls src={getAudioSource(response.audio)}>
                       Tu navegador no puede reproducir este audio.
                     </audio>
                   ) : (
