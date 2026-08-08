@@ -1,41 +1,43 @@
 import {
-  BarChart3,
-  ClipboardList,
-  FileClock,
+  BriefcaseBusiness,
+  ClipboardCheck,
+  UserRoundPlus,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { buildApiUrl } from "../../config/api";
 
 const statDefinitions = [
   {
-    label: "Usuarios registrados",
-    key: "usuarios_total",
+    label: "Solicitudes activas",
+    key: "tramites_activos",
+    path: "/admin/processes",
+    tone: "blue",
     icon: <Users size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
-    label: "Documentos pendientes",
-    key: "documentos_pendientes",
-    icon: <FileClock size={22} strokeWidth={2} aria-hidden="true" />,
+    label: "Sin asignar",
+    key: "sin_asignar",
+    path: "/admin/processes",
+    tone: "red",
+    icon: <UserRoundPlus size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
-    label: "Tramites activos",
-    key: "tramites_activos",
-    icon: <ClipboardList size={22} strokeWidth={2} aria-hidden="true" />,
+    label: "Asesores activos",
+    key: "asesores",
+    path: "/admin/users",
+    tone: "green",
+    icon: <BriefcaseBusiness size={22} strokeWidth={2} aria-hidden="true" />,
   },
   {
-    label: "Entrevistas pendientes",
-    key: "entrevistas_pendientes",
-    icon: <BarChart3 size={22} strokeWidth={2} aria-hidden="true" />,
+    label: "DS-160 pendientes",
+    key: "ds160_pendientes",
+    path: "/admin/reports",
+    tone: "amber",
+    icon: <ClipboardCheck size={22} strokeWidth={2} aria-hidden="true" />,
   },
-];
-
-const activity = [
-  "Admin Norman reviso documentos de un solicitante.",
-  "Se registro una nueva cuenta cliente.",
-  "Un tramite cambio a etapa de entrevista.",
-  "Reporte semanal pendiente de configuracion.",
 ];
 
 export default function AdminDashboard() {
@@ -64,46 +66,60 @@ export default function AdminDashboard() {
     <AdminLayout>
       <section className="admin-hero">
         <div>
-          <p className="admin-section-kicker">Panel de control</p>
-          <h2>Vista general administrativa</h2>
-          <p>
-            Base inicial para centralizar usuarios, documentos, tramites y reportes
-            durante el Sprint 6.
-          </p>
+          <h2>Panel de Administración Global</h2>
+          <p>Supervisa el rendimiento, la carga de trabajo y el estado general de la plataforma.</p>
         </div>
       </section>
 
       <section className="admin-stats-grid" aria-label="Indicadores administrativos">
         {error && <p role="alert">{error}</p>}
         {!metrics && !error && <p role="status">Cargando indicadores…</p>}
-        {metrics && statDefinitions.map(({ label, key, icon }) => (
-          <article className="admin-stat-card" key={label}>
+        {metrics && statDefinitions.map(({ label, key, icon, path, tone }) => (
+          <article className={`admin-stat-card admin-stat-card--${tone}`} key={label}>
             <span className="admin-stat-card__icon">
               {icon}
             </span>
             <div>
-              <strong>{metrics[key]}</strong>
+              <strong>{key === "sin_asignar" ? "—" : metrics[key]}</strong>
               <h3>{label}</h3>
+              <Link to={path}>Ver detalles <span aria-hidden="true">→</span></Link>
             </div>
           </article>
         ))}
       </section>
 
-      <section className="admin-panel-card">
-        <div className="admin-panel-card__header">
-          <div>
-            <p className="admin-section-kicker">Seguimiento</p>
-            <h2>Actividad reciente</h2>
+      <div className="admin-dashboard-grid">
+        <section className="admin-panel-card admin-workload-card">
+          <div className="admin-panel-card__header">
+            <h2>Carga de trabajo por asesor (Top 4)</h2>
+            <Link to="/admin/reports">Ver reporte completo</Link>
           </div>
+          <div className="admin-empty-state">
+            <BriefcaseBusiness size={34} aria-hidden="true" />
+            <strong>Aún no hay cargas de trabajo registradas</strong>
+            <p>Este gráfico se habilitará cuando existan asignaciones entre asesores y solicitudes.</p>
+          </div>
+        </section>
+
+        <section className="admin-panel-card admin-platform-activity">
+          <div className="admin-panel-card__header"><h2>Actividad de la plataforma</h2></div>
+          <div className="admin-empty-state">
+            <ClipboardCheck size={34} aria-hidden="true" />
+            <strong>Sin actividad registrada</strong>
+            <p>La actividad aparecerá cuando exista un historial de eventos.</p>
+          </div>
+        </section>
+      </div>
+
+      <section className="admin-panel-card admin-attention-card">
+        <div className="admin-panel-card__header">
+          <h2>Casos que requieren atención</h2>
+          <Link to="/admin/processes">Ver todos</Link>
         </div>
-        <ul className="admin-activity-list">
-          {activity.map((item, index) => (
-            <li key={item}>
-              <span aria-hidden="true">{index + 1}</span>
-              <p>{item}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="admin-empty-state admin-empty-state--compact">
+          <strong>No hay casos que requieran atención</strong>
+          <p>Los casos pendientes o atrasados se mostrarán aquí.</p>
+        </div>
       </section>
     </AdminLayout>
   );

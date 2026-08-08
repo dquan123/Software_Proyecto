@@ -12,6 +12,7 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
           (SELECT COUNT(*) FROM usuario WHERE rol = 'asesor') AS asesores,
           (SELECT COUNT(*) FROM documentos WHERE estado = 'review') AS documentos_pendientes,
           (SELECT COUNT(*) FROM tramite WHERE estado = 'En proceso') AS tramites_activos,
+          (SELECT COUNT(*) FROM formulario_ds160 WHERE completado = false) AS ds160_pendientes,
           (SELECT COUNT(*) FROM interview_sessions WHERE status = 'pending') AS entrevistas_pendientes
       `);
       const row = result.rows[0] || {};

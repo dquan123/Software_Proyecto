@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
+  Bell,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -14,21 +15,21 @@ import { useAdminSession } from "./AdminSessionContext";
 import "../../styles/admin.css";
 
 const adminNavItems = [
-  { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
+  { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
+  { label: "Todas las solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Tramites", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Configuracion", path: "/admin/settings", icon: <Settings size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
 
 const pageTitles = {
-  "/admin": "Dashboard",
+  "/admin": "Inicio",
   "/admin/users": "Usuarios",
   "/admin/documents": "Documentos",
   "/admin/interviews": "Entrevistas",
-  "/admin/processes": "Tramites",
+  "/admin/processes": "Todas las solicitudes",
   "/admin/reports": "Reportes",
   "/admin/settings": "Configuracion",
 };
@@ -53,7 +54,7 @@ export default function AdminLayout({ children }) {
         <VisaGuideLogo
           variant="full"
           className="admin-sidebar__brand"
-          subtitle="Panel administrador"
+          subtitle="Administrador"
         />
 
         <nav className="admin-sidebar__nav" aria-label="Modulos de administracion">
@@ -80,15 +81,18 @@ export default function AdminLayout({ children }) {
 
       <div className="admin-workspace">
         <header className="admin-header">
-          <div>
-            <p className="admin-header__eyebrow">Sprint 6</p>
-            <h1>{title}</h1>
-          </div>
-          <div className="admin-header__user" aria-label="Administrador actual">
-            <span>{userName.slice(0, 2).toUpperCase()}</span>
+          <h1>{title}</h1>
+          <div className="admin-header__actions">
+            <button type="button" className="admin-header__notification" aria-label="Notificaciones">
+              <Bell size={22} strokeWidth={2} aria-hidden="true" />
+              <span aria-hidden="true" />
+            </button>
+            <div className="admin-header__user" aria-label="Administrador actual">
             <div>
               <strong>{userName}</strong>
-              <small>{session?.correo || "Sesion administrativa"}</small>
+              <small>Global</small>
+            </div>
+              <span>{userName.slice(0, 2).toUpperCase()}</span>
             </div>
           </div>
         </header>

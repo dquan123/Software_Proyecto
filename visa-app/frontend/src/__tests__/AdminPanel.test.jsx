@@ -105,7 +105,7 @@ function mockAdminSession() {
     }
     return Promise.resolve({
       ok: true,
-      json: async () => ({}),
+      json: async () => ({ tramites_activos: 4, asesores: 2, ds160_pendientes: 6 }),
     });
   });
 }
@@ -122,12 +122,13 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Vista general administrativa" })).toBeInTheDocument();
-    expect(await screen.findByText("Usuarios registrados")).toBeInTheDocument();
-    expect(screen.getByText("Documentos pendientes")).toBeInTheDocument();
-    expect(screen.getByText("Tramites activos")).toBeInTheDocument();
-    expect(screen.getByText("Actividad reciente")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Panel de Administración Global" })).toBeInTheDocument();
+    expect(await screen.findByText("Solicitudes activas")).toBeInTheDocument();
+    expect(screen.getByText("Sin asignar")).toBeInTheDocument();
+    expect(screen.getByText("Asesores activos")).toBeInTheDocument();
+    expect(screen.getByText("DS-160 pendientes")).toBeInTheDocument();
+    expect(screen.getByText("Actividad de la plataforma")).toBeInTheDocument();
     const validationCalls = globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"));
     expect(validationCalls).toHaveLength(1);
   });
@@ -144,7 +145,7 @@ describe("panel de administracion", () => {
     render(<App />);
 
     await waitFor(() => expect(localStorage.getItem("visaguide_session")).toBeNull());
-    expect(screen.queryByRole("heading", { name: "Vista general administrativa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Panel de Administración Global" })).not.toBeInTheDocument();
     expect(globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"))).toHaveLength(0);
   });
 
@@ -152,7 +153,7 @@ describe("panel de administracion", () => {
     ["/admin/users", "Usuarios", "Gestion de usuarios"],
     ["/admin/documents", "Documentos", "Gestión de Documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
-    ["/admin/processes", "Tramites", "Gestion de tramites"],
+    ["/admin/processes", "Todas las solicitudes", "Gestion de tramites"],
     ["/admin/reports", "Reportes", "Resumen de trámites"],
     ["/admin/settings", "Configuracion", "Configuracion"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
@@ -189,7 +190,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Dashboard" });
+    await screen.findByRole("heading", { name: "Inicio" });
     await user.click(screen.getByRole("link", { name: /Usuarios/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/users"));
@@ -283,16 +284,16 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Dashboard" });
+    await screen.findByRole("heading", { name: "Inicio" });
     await user.click(screen.getByRole("link", { name: /Entrevistas/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/interviews"));
     expect(screen.getByRole("heading", { level: 1, name: "Entrevistas" })).toBeInTheDocument();
     expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole("link", { name: /Dashboard/ }));
+    await user.click(screen.getByRole("link", { name: /^Inicio$/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin"));
-    expect(screen.getByRole("heading", { name: "Vista general administrativa" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Panel de Administración Global" })).toBeInTheDocument();
   });
 });
