@@ -56,12 +56,12 @@ describe("admin authorization and metrics", () => {
     const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin" };
     const { app } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
-      return { rows: [{ usuarios_total: "8", clientes: "5", asesores: "2", documentos_pendientes: "3", tramites_activos: "4", entrevistas_pendientes: "1" }] };
+      return { rows: [{ usuarios_total: "8", clientes: "5", asesores: "2", documentos_pendientes: "3", tramites_activos: "4", ds160_pendientes: "6", entrevistas_pendientes: "1" }] };
     });
     const response = await request(app)
       .get("/admin/metrics/overview")
       .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
       .expect(200);
-    expect(response.body).toEqual({ usuarios_total: 8, clientes: 5, asesores: 2, documentos_pendientes: 3, tramites_activos: 4, entrevistas_pendientes: 1 });
+    expect(response.body).toEqual({ usuarios_total: 8, clientes: 5, asesores: 2, documentos_pendientes: 3, tramites_activos: 4, ds160_pendientes: 6, entrevistas_pendientes: 1 });
   });
 });
