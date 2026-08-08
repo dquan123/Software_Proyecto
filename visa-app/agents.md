@@ -74,17 +74,19 @@ Al implementar SCRUM-127 en `DocumentsCommentsAdmin`:
 - Presentar observaciones desde una accion dedicada en la tabla, idealmente con modal o panel, evitando textareas permanentes por fila.
 - Mantener los cambios en la rama `DocumentsCommentsAdmin`; no hacer merge, rebase ni push.
 
-Estado posterior a SCRUM-127:
+Estado posterior a SCRUM-127 (`DocumentsCommentsAdmin`):
 
-- Rama de trabajo: `DocumentsReviewAdmin`.
+- Rama de trabajo: `DocumentsCommentsAdmin`.
 - Ruta frontend afectada: `/admin/documents`.
 - Pantalla afectada: `frontend/src/pages/admin/AdminDocuments.jsx`, dentro de `AdminLayout`.
 - Componentes reutilizados: `AdminLayout`, Sidebar/Header administrativo, tabla y estilos de `frontend/src/styles/admin.css`, botones con iconos `lucide-react`.
 - Visualizacion de documentos: el boton `Ver documento` abre una URL absoluta construida con `buildApiUrl` cuando `archivo_url` es relativo, evitando que React Router intente resolver `/documentos/:id/archivo` como ruta frontend.
 - Endpoint de archivo reutilizado: `GET /documentos/:id/archivo`. Sirve PDFs e imagenes con `Content-Disposition: inline`; otros tipos quedan como descarga mediante `attachment`.
-- Observaciones administrativas: se guardan en `documentos.feedback` y se muestran en la columna `Observaciones` con indicador `Comentario agregado`.
+- Observaciones administrativas: se guardan en `documentos.feedback`; la tabla muestra un indicador `Tiene observaciones` o `Sin observaciones` y la edicion se hace desde la accion `Observaciones`.
+- Interfaz de comentarios: modal administrativo con textarea, contador de caracteres, botones `Guardar` y `Cancelar`; al abrirlo carga el comentario existente para editarlo.
 - Endpoint reutilizado para revision: `PUT /admin/documents/:id/status`, protegido por `requireAdmin`. Acepta `estado`, `feedback` o ambos; `rejected` se normaliza a `correction` para mantener compatibilidad con el cliente.
-- Flujo administrador: listar documentos, abrir archivo, aprobar, rechazar, editar observaciones, guardar sin recargar la pagina y refrescar la fila con la respuesta del backend.
+- Flujo administrador: listar documentos, abrir archivo, aprobar, rechazar, abrir observaciones, editar comentario, guardar sin recargar la pagina y refrescar la fila con la respuesta del backend.
+- Arquitectura de revision: los cambios de estado (`Aprobar`/`Rechazar`) se mantienen separados del guardado de observaciones; el modal envia solo `feedback` al endpoint existente.
 - Estados UI implementados: loading de listado, error, empty state, mensajes de exito/error, bloqueo de acciones mientras se actualiza estado o se guardan observaciones.
 
 ## Instalacion y ejecucion
