@@ -403,7 +403,7 @@ export default function DocumentCard({
             {doc.category} • Actualizado: {getUpdatedLabel(updatedAt, doc.updatedAt)}
           </p>
 
-          {isCorrection && doc.feedback && (
+          {doc.feedback && (
             <div className="document-feedback" role="status">
               <div className="document-feedback__heading">
                 <AlertIcon />
