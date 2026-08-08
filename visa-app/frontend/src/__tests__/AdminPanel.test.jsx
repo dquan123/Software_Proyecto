@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
@@ -16,6 +16,16 @@ function mockAdminSession() {
   localStorage.setItem("correoUsuario", adminSession.correo);
   let adminDocumentStatus = "review";
   let adminDocumentFeedback = "Documento ilegible.";
+  let managedProcess = {
+    id: 21,
+    estado: "En proceso",
+    etapaActual: "Formulario DS-160",
+    progreso: 17,
+    siguientePaso: "Completar formulario",
+    mensaje: "",
+    solicitante: { id: 8, nombre: "Carlos Mendoza", correo: "carlos@example.com", perfil: "Renovación B1/B2" },
+    asesor: null,
+  };
   vi.spyOn(globalThis, "fetch").mockImplementation((url, options = {}) => {
     if (String(url).includes("/validar-sesion")) {
       return Promise.resolve({
@@ -103,6 +113,25 @@ function mockAdminSession() {
         }),
       });
     }
+    if (String(url).endsWith("/admin/processes") && (!options.method || options.method === "GET")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          tramites: [managedProcess],
+          asesores: [{ id: 5, nombre: "Laura Vásquez", correo: "laura@visaguide.com" }],
+        }),
+      });
+    }
+    if (String(url).endsWith("/admin/processes/21") && options.method === "PUT") {
+      const payload = JSON.parse(options.body || "{}");
+      managedProcess = {
+        ...managedProcess,
+        estado: payload.estado,
+        etapaActual: payload.etapaActual,
+        asesor: payload.asesorId ? { id: Number(payload.asesorId), nombre: "Laura Vásquez", correo: "laura@visaguide.com" } : null,
+      };
+      return Promise.resolve({ ok: true, json: async () => ({ tramite: managedProcess }) });
+    }
     return Promise.resolve({
       ok: true,
       json: async () => ({ tramites_activos: 4, asesores: 2, ds160_pendientes: 6 }),
@@ -153,7 +182,7 @@ describe("panel de administracion", () => {
     ["/admin/users", "Usuarios", "Gestion de usuarios"],
     ["/admin/documents", "Documentos", "Gestión de Documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
-    ["/admin/processes", "Tramites", "Gestion de tramites"],
+    ["/admin/processes", "Todas las solicitudes", "Todas las Solicitudes"],
     ["/admin/reports", "Reportes", "Resumen de trámites"],
     ["/admin/settings", "Configuracion", "Configuracion"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
@@ -182,9 +211,36 @@ describe("panel de administracion", () => {
       expect(screen.queryByRole("heading", { name: "Banco de Preguntas" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Nueva pregunta" })).not.toBeInTheDocument();
       expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    } else if (path === "/admin/processes") {
+      expect(await screen.findByText("Carlos Mendoza")).toBeInTheDocument();
+      expect(screen.getByText("Renovación B1/B2")).toBeInTheDocument();
+      expect(screen.getByText("Sin asignar")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Gestionar" })).toBeInTheDocument();
     } else if (path !== "/admin/reports") {
       expect(screen.getByText(/Este modulo sera implementado/)).toBeInTheDocument();
     }
+  });
+
+  it("permite asignar un asesor y actualizar un trámite", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/processes");
+
+    render(<App />);
+
+    expect(await screen.findByText("Carlos Mendoza")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Gestionar" }));
+    const dialog = screen.getByRole("dialog");
+    await user.selectOptions(within(dialog).getByLabelText("Asesor asignado"), "5");
+    await user.selectOptions(within(dialog).getByLabelText("Estado"), "Pendiente");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("Laura Vásquez")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente", { selector: ".admin-status" })).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/processes/21"),
+      expect.objectContaining({ method: "PUT" })
+    );
   });
 
   it("permite navegar desde el sidebar", async () => {
