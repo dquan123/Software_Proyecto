@@ -135,6 +135,16 @@ const testUsers = [
   ["Cliente Desarrollo", "cliente.dev@visaguide.test", "VisaGuide-Dev-2026!", "cliente"],
   ["Asesor Desarrollo", "asesor.dev@visaguide.test", "VisaGuide-Dev-2026!", "asesor"],
   ["Admin Desarrollo", "admin.dev@visaguide.test", "VisaGuide-Dev-2026!", "admin"],
+  ["Norman", "norman@prueba.cliente", "123456", "cliente"],
+  ["Juanfri", "juanfri@prueba.cliente", "123456", "cliente"],
+  ["Yaya", "yaya@prueba.cliente", "123456", "cliente"],
+  ["Quan", "quan@prueba.cliente", "123456", "cliente"],
+  ["Usuario Prueba", "usuario@prueba.com", "123456", "cliente"],
+  ["Admin Norman", "admin.norman@prueba.com", "123456", "admin"],
+  ["Admin Juanfri", "admin.juanfri@prueba.com", "123456", "admin"],
+  ["Admin Yaya", "admin.yaya@prueba.com", "123456", "admin"],
+  ["Admin Quan", "admin.quan@prueba.com", "123456", "admin"],
+  ["Admin General", "admin@prueba.com", "123456", "admin"],
 ];
 
 async function seedTestUsers() {
