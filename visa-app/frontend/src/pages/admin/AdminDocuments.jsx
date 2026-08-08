@@ -155,11 +155,7 @@ const updateDocumentStatus = async (documentId, status) => {
   setNotice(null);
 
   try {
-    // Construir payload con estado y feedback (si es rechazo)
     const payload = { estado: status };
-    if (status === "correction" && feedbackDrafts[documentId]) {
-      payload.feedback = feedbackDrafts[documentId];
-    }
 
     const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
       method: "PUT",
