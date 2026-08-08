@@ -15,7 +15,8 @@ function createInterviewSessionController(interviewSessionService) {
     try {
       const session = await interviewSessionService.createSession(
         req.body.session,
-        req.files || []
+        req.files || [],
+        { baseUrl: `${req.protocol}://${req.get("host")}` }
       );
 
       return res.status(201).json({
@@ -58,6 +59,47 @@ function createInterviewSessionController(interviewSessionService) {
     }
   }
 
+  async function getSessionAudio(req, res) {
+    try {
+      const audio = await interviewSessionService.getSessionAudio(
+        req.params.id,
+        req.params.questionId
+      );
+
+      if (audio.redirectUrl) {
+        return res.redirect(audio.redirectUrl);
+      }
+
+      const contentType =
+        audio.response?.audio?.mimetype ||
+        audio.storedFile.contentType ||
+        "audio/webm";
+
+      res.setHeader("Content-Type", contentType);
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${audio.filename}"`
+      );
+
+      if (audio.storedFile.contentLength) {
+        res.setHeader("Content-Length", String(audio.storedFile.contentLength));
+      }
+
+      audio.storedFile.stream.on("error", (streamError) => {
+        console.error("INTERVIEW AUDIO STREAM ERROR:", streamError);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "No se pudo cargar el audio" });
+        } else {
+          res.destroy(streamError);
+        }
+      });
+
+      return audio.storedFile.stream.pipe(res);
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
   async function updateFeedback(req, res) {
     try {
       const session = await interviewSessionService.updateFeedback(
@@ -79,6 +121,7 @@ function createInterviewSessionController(interviewSessionService) {
     listSessions,
     listUserSessions,
     getSession,
+    getSessionAudio,
     updateFeedback,
   };
 }

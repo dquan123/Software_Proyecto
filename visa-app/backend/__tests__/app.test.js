@@ -470,6 +470,34 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
+  if (
+    normalized.includes("SELECT id, responses") &&
+    normalized.includes("FROM interview_sessions") &&
+    normalized.includes("WHERE id = $1")
+  ) {
+    return Promise.resolve({
+      rows: [
+        {
+          id: values[0],
+          responses: [
+            {
+              id: "purpose",
+              text: "Cual es el motivo principal de su viaje?",
+              recorded: true,
+              duration: 35,
+              audio: {
+                url: "/interview-sessions/30/audio/purpose",
+                key: "local/mock-audio.webm",
+                mimetype: "audio/webm",
+                size: 14,
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   if (normalized.includes("UPDATE interview_sessions")) {
     return Promise.resolve({
       rows: [
@@ -1251,6 +1279,61 @@ describe("app endpoints", () => {
       "Sesión de entrevista guardada correctamente"
     );
     expect(response.body.session.status).toBe("pending");
+  });
+
+  test("POST /interview-sessions guarda audios con storage y expone URL del backend", async () => {
+    const response = await request(app)
+      .post("/interview-sessions")
+      .field(
+        "session",
+        JSON.stringify({
+          user: {
+            id: 4,
+            nombre: "Usuario Entrevista",
+            correo: "entrevista@example.com",
+          },
+          questions: [
+            {
+              id: "purpose",
+              text: "Cual es el motivo principal de su viaje?",
+              recorded: true,
+              duration: 35,
+            },
+          ],
+        })
+      )
+      .attach("audio_purpose", Buffer.from("audio de prueba"), {
+        filename: "purpose.webm",
+        contentType: "audio/webm",
+      });
+
+    expect(response.status).toBe(201);
+    expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+    expect(response.body.session.responses[0].audio).toMatchObject({
+      key: "local/mock-document.pdf",
+      url: "/interview-sessions/30/audio/purpose",
+      mimetype: "audio/webm",
+      size: 15,
+    });
+  });
+
+  test("GET /interview-sessions/:id/audio/:questionId sirve audio almacenado para reproductores HTML", async () => {
+    mockGetStoredFile.mockResolvedValueOnce({
+      stream: Readable.from(["audio de prueba"]),
+      contentType: "application/octet-stream",
+      contentLength: 15,
+    });
+
+    const response = await request(app)
+      .get("/interview-sessions/30/audio/purpose");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toMatch(/^audio\/webm/);
+    expect(response.headers["content-disposition"]).toBe(
+      'inline; filename="entrevista-30-purpose.webm"'
+    );
+    expect(mockGetStoredFile).toHaveBeenCalledWith("local/mock-audio.webm");
+    expect(Buffer.from(response.body).toString()).toBe("audio de prueba");
   });
 
   test("PUT /interview-sessions/:id/feedback guarda retroalimentacion valida", async () => {

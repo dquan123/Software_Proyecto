@@ -10,6 +10,13 @@ Header y contenido principal. La vista `/admin/interviews` usa el componente
 resumen de entrevistas, seleccion de sesiones, reproduccion de audios y guardado
 de retroalimentacion.
 
+Los audios de entrevistas se guardan mediante la abstraccion `storage.js`: en
+desarrollo/Docker usan fallback local y en produccion pueden usar R2. El panel
+admin reproduce los audios desde `GET /interview-sessions/:id/audio/:questionId`,
+por lo que no depende de URLs publicas del bucket. Ese endpoint esta pensado
+para reproductores HTML (`<audio>`), por eso puede cargarse directamente como
+`src` tanto desde cliente como desde administrador.
+
 ## Usuarios de prueba
 
 Estas cuentas son unicamente para desarrollo y pruebas.

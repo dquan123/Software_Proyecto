@@ -1,4 +1,37 @@
-const { uploadBufferToR2, deleteObjectFromR2 } = require("../r2");
+const { uploadStoredFile, deleteStoredFile, getStoredFile } = require("../storage");
+
+function getSessionResponses(session) {
+  if (Array.isArray(session?.responses)) return session.responses;
+  if (typeof session?.responses === "string") {
+    try {
+      const parsed = JSON.parse(session.responses);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function buildAudioRoute(sessionId, questionId) {
+  return `/interview-sessions/${sessionId}/audio/${encodeURIComponent(questionId)}`;
+}
+
+function presentSession(session) {
+  if (!session) return session;
+  const responses = getSessionResponses(session).map((response) => {
+    if (!response.audio?.key) return response;
+    return {
+      ...response,
+      audio: {
+        ...response.audio,
+        url: buildAudioRoute(session.id, response.id),
+      },
+    };
+  });
+
+  return { ...session, responses };
+}
 
 function createInterviewSessionService(pool) {
   async function ensureSchema() {
@@ -70,7 +103,7 @@ function createInterviewSessionService(pool) {
     }));
   }
 
-  async function createSession(rawPayload, files = []) {
+  async function createSession(rawPayload, files = [], { baseUrl = "" } = {}) {
     await ensureSchema();
 
     const payload = parseSessionPayload(rawPayload);
@@ -88,14 +121,15 @@ function createInterviewSessionService(pool) {
         let audio = null;
 
         if (audioFile) {
-          const uploadedAudio = await uploadBufferToR2({
+          const uploadedAudio = await uploadStoredFile({
             ...audioFile,
             originalname: `interview-${user.id || "guest"}-${question.id}.webm`,
-          });
+          }, { baseUrl });
           uploadedKeys.push(uploadedAudio.key);
           audio = {
             url: uploadedAudio.url,
             key: uploadedAudio.key,
+            provider: uploadedAudio.provider,
             mimetype: audioFile.mimetype,
             size: audioFile.size,
           };
@@ -117,11 +151,11 @@ function createInterviewSessionService(pool) {
         [user.id, user.name, user.email, JSON.stringify(responses)]
       );
 
-      return result.rows[0];
+      return presentSession(result.rows[0]);
     } catch (error) {
       await Promise.all(
         uploadedKeys.map((key) =>
-          deleteObjectFromR2(key).catch((cleanupError) => {
+          deleteStoredFile(key).catch((cleanupError) => {
             console.error("INTERVIEW AUDIO CLEANUP ERROR:", cleanupError);
           })
         )
@@ -151,7 +185,7 @@ function createInterviewSessionService(pool) {
       values
     );
 
-    return result.rows;
+    return result.rows.map(presentSession);
   }
 
   async function listUserSessions(userId) {
@@ -173,7 +207,7 @@ function createInterviewSessionService(pool) {
       [parsedUserId]
     );
 
-    return result.rows;
+    return result.rows.map(presentSession);
   }
 
   async function getSession(id) {
@@ -200,7 +234,55 @@ function createInterviewSessionService(pool) {
       throw error;
     }
 
-    return result.rows[0];
+    return presentSession(result.rows[0]);
+  }
+
+  async function getSessionAudio(id, questionId) {
+    await ensureSchema();
+
+    const parsedId = Number(id);
+    if (Number.isNaN(parsedId)) {
+      const error = new Error("ID invÃ¡lido");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = await pool.query(
+      `SELECT id, responses
+       FROM interview_sessions
+       WHERE id = $1`,
+      [parsedId]
+    );
+
+    const session = result.rows[0];
+    if (!session) {
+      const error = new Error("SesiÃ³n no encontrada");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const response = getSessionResponses(session).find(
+      (item) => String(item.id) === String(questionId)
+    );
+
+    if (!response?.audio) {
+      const error = new Error("Audio no encontrado");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!response.audio.key) {
+      return {
+        redirectUrl: response.audio.url,
+      };
+    }
+
+    const storedFile = await getStoredFile(response.audio.key);
+    return {
+      storedFile,
+      response,
+      filename: `entrevista-${parsedId}-${questionId}.webm`,
+    };
   }
 
   async function updateFeedback(id, payload = {}) {
@@ -249,7 +331,7 @@ function createInterviewSessionService(pool) {
       throw error;
     }
 
-    return result.rows[0];
+    return presentSession(result.rows[0]);
   }
 
   return {
@@ -258,6 +340,7 @@ function createInterviewSessionService(pool) {
     listSessions,
     listUserSessions,
     getSession,
+    getSessionAudio,
     updateFeedback,
   };
 }
