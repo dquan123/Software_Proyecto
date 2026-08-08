@@ -157,11 +157,11 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
   };
 
   return (
-    <>
+    <section className="admin-interviews-panel">
       {showHeader && (
-        <section className="question-bank-header">
+        <header className="admin-interviews-hero">
           <div>
-            <span className="question-bank-eyebrow">
+            <span className="admin-section-kicker">
               Administracion consular
             </span>
             <h2>Entrevistas</h2>
@@ -170,7 +170,17 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
               retroalimentacion para los usuarios.
             </p>
           </div>
-        </section>
+          <div className="admin-interviews-hero__stats" aria-label="Resumen de entrevistas">
+            <article>
+              <span>Total</span>
+              <strong>{interviewSessions.length}</strong>
+            </article>
+            <article>
+              <span>Pendientes</span>
+              <strong>{pendingInterviewSessions.length}</strong>
+            </article>
+          </div>
+        </header>
       )}
 
       <section className="question-feedback-reference">
@@ -301,6 +311,6 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
           </div>
         )}
       </section>
-    </>
+    </section>
   );
 }
