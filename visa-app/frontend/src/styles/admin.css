@@ -313,6 +313,10 @@
   white-space: nowrap;
 }
 
+.admin-comment-indicator--empty {
+  color: var(--vg-text-muted);
+}
+
 .admin-action-button {
   display: inline-flex;
   min-height: 36px;
@@ -354,6 +358,101 @@
 .admin-action-button--save {
   border-color: rgba(37, 99, 235, 0.22);
   color: var(--vg-info-text);
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 24px;
+}
+
+.admin-modal {
+  width: min(620px, 100%);
+  border: 1px solid var(--vg-border);
+  border-radius: var(--vg-card-radius);
+  background: var(--vg-card);
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.26);
+  overflow: hidden;
+}
+
+.admin-modal__header,
+.admin-modal__footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-modal__header {
+  border-bottom: 1px solid var(--vg-border);
+  padding: 24px 26px 18px;
+}
+
+.admin-modal__header h2 {
+  margin: 0 0 6px;
+  color: var(--vg-text);
+  font-size: 26px;
+}
+
+.admin-modal__header p:last-child {
+  margin: 0;
+  color: var(--vg-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-modal__close {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border: 1px solid var(--vg-border);
+  border-radius: var(--vg-radius-sm);
+  background: var(--vg-card);
+  color: var(--vg-text-muted);
+  cursor: pointer;
+}
+
+.admin-modal__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-modal__body {
+  display: grid;
+  gap: 8px;
+  padding: 24px 26px;
+}
+
+.admin-observation-field {
+  display: grid;
+  gap: 10px;
+  color: var(--vg-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-observation-input--modal {
+  min-height: 170px;
+}
+
+.admin-observation-counter {
+  color: var(--vg-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.admin-modal__footer {
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid var(--vg-border);
+  padding: 18px 26px 24px;
 }
 
 @media (max-width:760px) {
