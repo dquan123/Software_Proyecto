@@ -1317,7 +1317,7 @@ describe("app endpoints", () => {
     });
   });
 
-  test("GET /interview-sessions/:id/audio/:questionId sirve audio almacenado para administradores", async () => {
+  test("GET /interview-sessions/:id/audio/:questionId sirve audio almacenado para reproductores HTML", async () => {
     mockGetStoredFile.mockResolvedValueOnce({
       stream: Readable.from(["audio de prueba"]),
       contentType: "application/octet-stream",
@@ -1325,8 +1325,7 @@ describe("app endpoints", () => {
     });
 
     const response = await request(app)
-      .get("/interview-sessions/30/audio/purpose")
-      .set("Authorization", `Bearer ${adminToken}`);
+      .get("/interview-sessions/30/audio/purpose");
 
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toMatch(/^audio\/webm/);
