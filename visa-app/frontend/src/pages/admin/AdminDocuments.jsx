@@ -144,43 +144,49 @@ export default function AdminDocuments() {
     }));
   };
 
-  const updateDocumentStatus = async (documentId, status) => {
-    const token = getAdminToken();
-    setUpdatingId(documentId);
-    setNotice(null);
+const updateDocumentStatus = async (documentId, status) => {
+  const token = getAdminToken();
+  setUpdatingId(documentId);
+  setNotice(null);
 
-    try {
-      const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ estado: status }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data.error || "No fue posible actualizar el documento.");
-      }
-
-      replaceDocument(getUpdatedDocument(data, "No fue posible actualizar el documento."));
-      setNotice({
-        type: "success",
-        text: status === "approved"
-          ? "Documento aprobado correctamente."
-          : "Documento rechazado correctamente.",
-      });
-    } catch (requestError) {
-      setNotice({
-        type: "error",
-        text: requestError.message || "No fue posible actualizar el documento.",
-      });
-    } finally {
-      setUpdatingId(null);
+  try {
+    // Construir payload con estado y feedback (si es rechazo)
+    const payload = { estado: status };
+    if (status === "correction" && feedbackDrafts[documentId]) {
+      payload.feedback = feedbackDrafts[documentId];
     }
-  };
+
+    const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "No fue posible actualizar el documento.");
+    }
+
+    replaceDocument(getUpdatedDocument(data, "No fue posible actualizar el documento."));
+    setNotice({
+      type: "success",
+      text: status === "approved"
+        ? "Documento aprobado correctamente."
+        : "Documento rechazado correctamente.",
+    });
+  } catch (requestError) {
+    setNotice({
+      type: "error",
+      text: requestError.message || "No fue posible actualizar el documento.",
+    });
+  } finally {
+    setUpdatingId(null);
+  }
+};
 
   const updateFeedbackDraft = (documentId, value) => {
     setFeedbackDrafts((currentDrafts) => ({
