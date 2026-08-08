@@ -65,13 +65,14 @@ Estado actual antes de SCRUM-127:
 - Los documentos se almacenan en la tabla `documentos` con `archivo_url`, `storage_key`, `estado`, `feedback`, `creado_en` y `actualizado_en`.
 - En desarrollo/test, `storage.js` usa fallback local y sirve archivos mediante `/local-files`; en produccion usa R2 cuando esta configurado.
 
-Al implementar SCRUM-127:
+Al implementar SCRUM-127 en `DocumentsCommentsAdmin`:
 
 - No crear pantalla nueva; extender solo `frontend/src/pages/admin/AdminDocuments.jsx`.
 - Reutilizar `GET /documentos/:id/archivo` para visualizar documentos; no crear rutas duplicadas para archivos.
 - Reutilizar la columna `feedback` existente para observaciones del administrador.
-- Solo crear endpoints nuevos si no existe una forma segura de persistir observaciones administrativas.
-- Mantener los cambios en la rama `DocumentsReviewAdmin`; no hacer merge, rebase ni push.
+- Reutilizar `PUT /admin/documents/:id/status` para persistir observaciones administrativas; acepta `feedback` sin cambiar estado.
+- Presentar observaciones desde una accion dedicada en la tabla, idealmente con modal o panel, evitando textareas permanentes por fila.
+- Mantener los cambios en la rama `DocumentsCommentsAdmin`; no hacer merge, rebase ni push.
 
 Estado posterior a SCRUM-127:
 
