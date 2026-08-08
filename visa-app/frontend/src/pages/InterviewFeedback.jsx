@@ -52,6 +52,11 @@ function getResponses(session) {
   return Array.isArray(session?.responses) ? session.responses : [];
 }
 
+function getAudioSource(audio) {
+  if (!audio?.url) return "";
+  return audio.url.startsWith("/") ? buildApiUrl(audio.url) : audio.url;
+}
+
 export default function InterviewFeedback() {
   const { isValidating, session } = useRequireAuth();
   const modoSenior = useModoSenior();
@@ -239,8 +244,8 @@ export default function InterviewFeedback() {
                           )}`
                         : "Sin grabación"}
                     </p>
-                    {response.audio?.url && (
-                      <audio controls src={response.audio.url} />
+                    {getAudioSource(response.audio) && (
+                      <audio controls src={getAudioSource(response.audio)} />
                     )}
                   </div>
                   <strong
