@@ -169,13 +169,12 @@ describe("panel de administracion", () => {
       expect(screen.getByRole("columnheader", { name: "Observaciones" })).toBeInTheDocument();
       expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
       expect(screen.getByText("Pasaporte")).toBeInTheDocument();
-      expect(screen.getByText("Comentario agregado")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Documento ilegible.")).toBeInTheDocument();
+      expect(screen.getByText("Tiene observaciones")).toBeInTheDocument();
       expect(screen.getByText("En revisión")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Observaciones" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Aprobar" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Rechazar" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Ver documento" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Guardar" })).toBeInTheDocument();
     } else if (path === "/admin/interviews") {
       expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
@@ -243,16 +242,20 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
+    await screen.findByText("Usuario Demo");
+    await user.click(screen.getByRole("button", { name: "Observaciones" }));
+
     const feedbackInput = await screen.findByRole("textbox", {
-      name: "Observaciones de pasaporte.pdf",
+      name: "Comentario para el usuario",
     });
+    expect(feedbackInput).toHaveValue("Documento ilegible.");
     await user.clear(feedbackInput);
     await user.type(feedbackInput, "Falta la segunda pagina.");
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     expect(await screen.findByText("Observaciones guardadas correctamente.")).toBeInTheDocument();
-    expect(screen.getByText("Comentario agregado")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Falta la segunda pagina.")).toBeInTheDocument();
+    expect(screen.getByText("Tiene observaciones")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Observaciones" })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe("/admin/documents");
 
     const feedbackCall = globalThis.fetch.mock.calls.find(([url, options]) =>
@@ -262,6 +265,9 @@ describe("panel de administracion", () => {
     expect(JSON.parse(feedbackCall[1].body)).toEqual({
       feedback: "Falta la segunda pagina.",
     });
+
+    await user.click(screen.getByRole("button", { name: "Observaciones" }));
+    expect(await screen.findByDisplayValue("Falta la segunda pagina.")).toBeInTheDocument();
   });
 
   it("rechaza un documento usando el estado de correccion que entiende el cliente", async () => {

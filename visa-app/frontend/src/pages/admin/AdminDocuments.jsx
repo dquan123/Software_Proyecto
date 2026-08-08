@@ -101,6 +101,8 @@ export default function AdminDocuments() {
   const [updatingId, setUpdatingId] = useState(null);
   const [savingFeedbackId, setSavingFeedbackId] = useState(null);
   const [feedbackDrafts, setFeedbackDrafts] = useState({});
+  const [feedbackModalDocument, setFeedbackModalDocument] = useState(null);
+  const [feedbackModalDraft, setFeedbackModalDraft] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,6 +144,9 @@ export default function AdminDocuments() {
       ...currentDrafts,
       [updatedDocument.id]: updatedDocument.feedback || "",
     }));
+    setFeedbackModalDocument((currentDocument) =>
+      currentDocument?.id === updatedDocument.id ? updatedDocument : currentDocument
+    );
   };
 
 const updateDocumentStatus = async (documentId, status) => {
@@ -150,11 +155,7 @@ const updateDocumentStatus = async (documentId, status) => {
   setNotice(null);
 
   try {
-    // Construir payload con estado y feedback (si es rechazo)
     const payload = { estado: status };
-    if (status === "correction" && feedbackDrafts[documentId]) {
-      payload.feedback = feedbackDrafts[documentId];
-    }
 
     const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
       method: "PUT",
@@ -188,14 +189,21 @@ const updateDocumentStatus = async (documentId, status) => {
   }
 };
 
-  const updateFeedbackDraft = (documentId, value) => {
-    setFeedbackDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [documentId]: value,
-    }));
+  const openFeedbackModal = (document) => {
+    setFeedbackModalDocument(document);
+    setFeedbackModalDraft(feedbackDrafts[document.id] ?? document.feedback ?? "");
   };
 
-  const saveDocumentFeedback = async (documentId) => {
+  const closeFeedbackModal = () => {
+    if (savingFeedbackId) return;
+    setFeedbackModalDocument(null);
+    setFeedbackModalDraft("");
+  };
+
+  const saveDocumentFeedback = async () => {
+    if (!feedbackModalDocument) return;
+
+    const documentId = feedbackModalDocument.id;
     const token = getAdminToken();
     setSavingFeedbackId(documentId);
     setNotice(null);
@@ -204,10 +212,10 @@ const updateDocumentStatus = async (documentId, status) => {
       const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ feedback: feedbackDrafts[documentId] || "" }),
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+        body: JSON.stringify({ feedback: feedbackModalDraft }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -221,6 +229,8 @@ const updateDocumentStatus = async (documentId, status) => {
         type: "success",
         text: "Observaciones guardadas correctamente.",
       });
+      setFeedbackModalDocument(null);
+      setFeedbackModalDraft("");
     } catch (requestError) {
       setNotice({
         type: "error",
@@ -285,13 +295,11 @@ const updateDocumentStatus = async (documentId, status) => {
               )}
 
               {!isLoading && !error && documents.map((document) => {
-                const feedbackDraft = feedbackDrafts[document.id] ?? document.feedback ?? "";
                 const savedFeedback = document.feedback || "";
                 const hasFeedback = Boolean(savedFeedback.trim());
                 const isUpdating = updatingId === document.id;
                 const isSavingFeedback = savingFeedbackId === document.id;
                 const isRowBusy = isUpdating || isSavingFeedback;
-                const hasFeedbackChanges = feedbackDraft.trim() !== savedFeedback.trim();
 
                 return (
                   <tr key={document.id}>
@@ -315,43 +323,22 @@ const updateDocumentStatus = async (documentId, status) => {
                       <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
                     </td>
                     <td>
-                      <div className="admin-observation-cell">
-                        <label
-                          className="visually-hidden"
-                          htmlFor={`document-feedback-${document.id}`}
-                        >
-                          Observaciones de {document.nombre || "documento"}
-                        </label>
-                        <textarea
-                          id={`document-feedback-${document.id}`}
-                          className="admin-observation-input"
-                          rows={3}
-                          value={feedbackDraft}
-                          placeholder="Ej. Documento ilegible."
-                          disabled={isRowBusy}
-                          onChange={(event) => updateFeedbackDraft(document.id, event.target.value)}
-                        />
-                        <div className="admin-observation-footer">
-                          {hasFeedback && (
-                            <span className="admin-comment-indicator">
-                              <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
-                              Comentario agregado
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            className="admin-action-button admin-action-button--save"
-                            disabled={isRowBusy || !hasFeedbackChanges}
-                            onClick={() => saveDocumentFeedback(document.id)}
-                          >
-                            <Save size={15} strokeWidth={2.4} aria-hidden="true" />
-                            <span>{isSavingFeedback ? "Guardando..." : "Guardar"}</span>
-                          </button>
-                        </div>
-                      </div>
+                      <span className={`admin-comment-indicator${hasFeedback ? "" : " admin-comment-indicator--empty"}`}>
+                        <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
+                        {hasFeedback ? "Tiene observaciones" : "Sin observaciones"}
+                      </span>
                     </td>
                     <td>
                       <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--save"
+                          disabled={isRowBusy}
+                          onClick={() => openFeedbackModal(document)}
+                        >
+                          <MessageSquareText size={16} strokeWidth={2.4} aria-hidden="true" />
+                          <span>Observaciones</span>
+                        </button>
                         <button
                           type="button"
                           className="admin-action-button admin-action-button--approve"
@@ -392,6 +379,76 @@ const updateDocumentStatus = async (documentId, status) => {
           </table>
         </div>
       </section>
+
+      {feedbackModalDocument && (
+        <div className="admin-modal-backdrop">
+          <section
+            className="admin-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-observations-title"
+          >
+            <header className="admin-modal__header">
+              <div>
+                <p className="admin-section-kicker">Revision de documento</p>
+                <h2 id="admin-observations-title">Observaciones</h2>
+                <p>
+                  {feedbackModalDocument.nombre || "Documento"} -{" "}
+                  {feedbackModalDocument.usuario?.nombre || "Usuario sin nombre"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="admin-modal__close"
+                aria-label="Cerrar observaciones"
+                disabled={Boolean(savingFeedbackId)}
+                onClick={closeFeedbackModal}
+              >
+                <X size={20} strokeWidth={2.4} aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="admin-modal__body">
+              <label className="admin-observation-field" htmlFor="admin-observations-textarea">
+                Comentario para el usuario
+                <textarea
+                  id="admin-observations-textarea"
+                  className="admin-observation-input admin-observation-input--modal"
+                  rows={6}
+                  value={feedbackModalDraft}
+                  maxLength={1000}
+                  placeholder="Ej. Documento ilegible. Sube nuevamente una imagen clara del pasaporte."
+                  disabled={Boolean(savingFeedbackId)}
+                  onChange={(event) => setFeedbackModalDraft(event.target.value)}
+                />
+              </label>
+              <span className="admin-observation-counter">
+                {feedbackModalDraft.length}/1000 caracteres
+              </span>
+            </div>
+
+            <footer className="admin-modal__footer">
+              <button
+                type="button"
+                className="admin-action-button"
+                disabled={Boolean(savingFeedbackId)}
+                onClick={closeFeedbackModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-action-button admin-action-button--save"
+                disabled={Boolean(savingFeedbackId)}
+                onClick={saveDocumentFeedback}
+              >
+                <Save size={15} strokeWidth={2.4} aria-hidden="true" />
+                {savingFeedbackId ? "Guardando..." : "Guardar"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </AdminLayout>
   );
 }
