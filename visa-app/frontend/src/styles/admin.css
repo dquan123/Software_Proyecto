@@ -1,7 +1,9 @@
 .admin-shell {
   display: flex;
   min-height: 100vh;
-  background: #f6f8fb;
+  background:
+    radial-gradient(circle at top left, rgba(231, 25, 76, 0.08), transparent 28%),
+    linear-gradient(135deg, #f7fbff 0%, #fff7f9 46%, #f6f8fb 100%);
   color: #0f172a;
   font-family: var(--vg-font);
 }
@@ -13,29 +15,35 @@
   width: 280px;
   min-height: 100vh;
   flex-direction: column;
-  border-right: 1px solid #dce3ec;
-  background: #fff;
-  padding: 28px 20px 22px;
+  border-right: 1px solid rgba(220, 227, 236, 0.9);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff7f9 48%, #f8fbff 100%);
+  padding: 30px 20px 22px;
+  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.04);
 }
 
 .admin-sidebar__brand {
-  min-height: 86px;
-  padding: 0 12px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  min-height: 104px;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 14px 26px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .admin-sidebar__brand .visaguide-logo__mark {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  background: #0f172a;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e7194c, #2864ed);
   color: #fff;
+  box-shadow: 0 14px 26px rgba(231, 25, 76, 0.22);
 }
 
-.admin-sidebar__brand .visaguide-logo__name { color: #172033; font-size: 20px; }
-.admin-sidebar__brand small { color: #172033; font-size: 11px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }
+.admin-sidebar__brand .visaguide-logo__text { gap: 4px; }
+.admin-sidebar__brand .visaguide-logo__name { color: #172033; font-size: 22px; line-height: 1.05; }
+.admin-sidebar__brand small { color: #e7194c; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 
-.admin-sidebar__nav { display: grid; gap: 8px; margin-top: 30px; }
+.admin-sidebar__nav { display: grid; gap: 9px; margin-top: 28px; }
 
 .admin-sidebar__link,
 .admin-sidebar__logout {
@@ -54,8 +62,8 @@
   transition: background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
-.admin-sidebar__link:hover { background: #f1f5f9; color: #0f172a; }
-.admin-sidebar__link--active { background: #111a30; color: #fff; box-shadow: 0 8px 18px rgba(15,23,42,.18); }
+.admin-sidebar__link:hover { background: #fff1f4; color: #c5123c; }
+.admin-sidebar__link--active { background: linear-gradient(135deg, #e7194c, #2864ed); color: #fff; box-shadow: 0 12px 24px rgba(231,25,76,.2); }
 .admin-sidebar__logout { width: 100%; margin-top: auto; color: #e7194c; }
 .admin-sidebar__logout:hover { background: #fff1f4; color: #c5123c; }
 
@@ -70,18 +78,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  border-bottom: 1px solid #dce3ec;
-  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid rgba(220, 227, 236, 0.92);
+  background: rgba(255,255,255,.9);
   padding: 16px 38px;
   backdrop-filter: blur(12px);
 }
 
-.admin-header h1 { margin: 0; font-size: 30px; line-height: 1.2; }
+.admin-header h1 { margin: 0; font-size: 30px; line-height: 1.2; color: #172033; }
 .admin-header__actions { display: flex; align-items: center; gap: 22px; }
-.admin-header__notification { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border: 0; background: transparent; color: #64748b; }
+.admin-header__notification { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #ffe0e7; border-radius: 12px; background: #fff7f9; color: #e7194c; }
 .admin-header__notification > span { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #e7194c; }
 .admin-header__user { display: flex; align-items: center; gap: 12px; text-align: right; }
-.admin-header__user > span { display: grid; width: 46px; height: 46px; flex: 0 0 46px; place-items: center; border-radius: 12px; background: #111a30; color: #fff; font-weight: 800; }
+.admin-header__user > span { display: grid; width: 46px; height: 46px; flex: 0 0 46px; place-items: center; border-radius: 12px; background: linear-gradient(135deg, #2864ed, #e7194c); color: #fff; font-weight: 800; }
 .admin-header__user strong, .admin-header__user small { display: block; }
 .admin-header__user strong { font-size: 15px; }
 .admin-header__user small { color: #64748b; font-size: 13px; font-weight: 600; }
@@ -126,6 +134,286 @@
 .admin-placeholder__box strong { font-size:18px; }
 .admin-placeholder__box span { color:#64748b; line-height:1.5; }
 
+.admin-interviews-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-interviews-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 24px;
+  align-items: stretch;
+  border: 1px solid rgba(231, 25, 76, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 249, 0.96)),
+    radial-gradient(circle at top right, rgba(40, 100, 237, 0.18), transparent 42%);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  padding: 30px;
+}
+
+.admin-interviews-hero h2 {
+  margin: 8px 0 10px;
+  color: #172033;
+  font-size: clamp(30px, 3vw, 42px);
+  line-height: 1.08;
+}
+
+.admin-interviews-hero p {
+  max-width: 700px;
+  margin: 0;
+  color: #64748b;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.admin-interviews-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-interviews-hero__stats article {
+  display: grid;
+  align-content: center;
+  min-height: 132px;
+  border: 1px solid rgba(220, 227, 236, 0.9);
+  border-radius: 18px;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+}
+
+.admin-interviews-hero__stats span {
+  color: #e7194c;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-interviews-hero__stats strong {
+  margin-top: 8px;
+  color: #172033;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.admin-main .question-feedback-reference {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 18px;
+  margin: 0;
+  border: 1px solid rgba(220, 227, 236, 0.95);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  padding: 24px;
+}
+
+.admin-main .question-feedback-reference span,
+.admin-main .question-feedback-reference strong,
+.admin-main .question-feedback-reference p,
+.admin-main .question-feedback-reference small {
+  display: block;
+}
+
+.admin-main .question-feedback-reference__summary {
+  border-radius: 18px;
+  background: linear-gradient(160deg, #fff1f4, #eef5ff);
+  padding: 22px;
+}
+
+.admin-main .question-feedback-reference__summary span,
+.admin-main .question-feedback-reference__detail-heading span,
+.admin-main .question-feedback-reference__responses article span {
+  color: #e7194c;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-main .question-feedback-reference__summary strong {
+  margin: 10px 0;
+  color: #172033;
+  font-size: 44px;
+  line-height: 1;
+}
+
+.admin-main .question-feedback-reference p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.admin-main .question-feedback-reference__list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-main .question-feedback-reference__list button {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dce3ec;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.admin-main .question-feedback-reference__list button:hover,
+.admin-main .question-feedback-reference__list button.is-active {
+  border-color: rgba(231, 25, 76, 0.32);
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(231, 25, 76, 0.12);
+  transform: translateY(-1px);
+}
+
+.admin-main .question-feedback-reference__list button strong {
+  color: #172033;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.admin-main .question-feedback-reference__list button span,
+.admin-main .question-feedback-reference__list button small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.admin-main .question-feedback-reference__detail {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 16px;
+  border: 1px solid #dce3ec;
+  border-radius: 18px;
+  background: #f8fafc;
+  padding: 20px;
+}
+
+.admin-main .question-feedback-reference__detail-heading,
+.admin-main .question-feedback-reference__actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-main .question-feedback-reference__detail-heading strong {
+  color: #172033;
+  font-size: 22px;
+}
+
+.admin-main .question-feedback-reference__detail-heading em {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  border: 1px solid #fbbf24;
+  border-radius: 999px;
+  background: #fff8e8;
+  color: #92400e;
+  padding: 0 12px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-main .question-feedback-reference__detail-heading em.is-reviewed {
+  border-color: #86efac;
+  background: #eafbf3;
+  color: #047857;
+}
+
+.admin-main .question-feedback-reference__responses {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-main .question-feedback-reference__responses > strong {
+  color: #172033;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-main .question-feedback-reference__responses article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 360px);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #dce3ec;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.admin-main .question-feedback-reference__responses audio {
+  width: 100%;
+}
+
+.admin-main .question-feedback-reference__detail label {
+  display: grid;
+  gap: 8px;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.admin-main .question-feedback-reference__detail textarea,
+.admin-main .question-feedback-reference__detail select {
+  width: 100%;
+  border: 1px solid #dce3ec;
+  border-radius: 14px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  outline: none;
+}
+
+.admin-main .question-feedback-reference__detail textarea {
+  min-height: 130px;
+  resize: vertical;
+  padding: 14px 16px;
+  line-height: 1.45;
+}
+
+.admin-main .question-feedback-reference__detail select {
+  min-height: 46px;
+  padding: 0 14px;
+}
+
+.admin-main .question-feedback-reference__actions button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e7194c, #2864ed);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 14px 24px rgba(231, 25, 76, 0.18);
+}
+
+.admin-main .question-feedback-reference__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
 [data-theme="dark"] .admin-shell { background:#101827; color:#f8fafc; }
 [data-theme="dark"] .admin-sidebar, [data-theme="dark"] .admin-header, [data-theme="dark"] .admin-panel-card, [data-theme="dark"] .admin-stat-card, [data-theme="dark"] .admin-placeholder { background:#172033; border-color:#334155; }
 [data-theme="dark"] .admin-sidebar__brand .visaguide-logo__name, [data-theme="dark"] .admin-sidebar__brand small, [data-theme="dark"] .admin-header h1, [data-theme="dark"] .admin-hero h2, [data-theme="dark"] .admin-panel-card__header h2, [data-theme="dark"] .admin-stat-card strong { color:#f8fafc; }
@@ -135,6 +423,12 @@
 @media (max-width:1200px) {
   .admin-stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .admin-dashboard-grid { grid-template-columns:1fr; }
+  .admin-interviews-hero,
+  .admin-main .question-feedback-reference,
+  .admin-main .question-feedback-reference__list button,
+  .admin-main .question-feedback-reference__responses article {
+    grid-template-columns: 1fr;
+  }
 }
 
 
@@ -468,4 +762,18 @@
   .admin-main { padding:28px 18px 44px; }
   .admin-stats-grid, .admin-sidebar__nav { grid-template-columns:1fr; }
   .admin-stat-card { min-height:190px; }
+  .admin-interviews-hero {
+    padding: 24px 20px;
+  }
+  .admin-interviews-hero__stats {
+    grid-template-columns: 1fr;
+  }
+  .admin-main .question-feedback-reference {
+    padding: 18px;
+  }
+  .admin-main .question-feedback-reference__detail-heading,
+  .admin-main .question-feedback-reference__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
