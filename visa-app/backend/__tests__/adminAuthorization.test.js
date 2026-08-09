@@ -64,4 +64,31 @@ describe("admin authorization and metrics", () => {
       .expect(200);
     expect(response.body).toEqual({ usuarios_total: 8, clientes: 5, asesores: 2, documentos_pendientes: 3, tramites_activos: 4, ds160_pendientes: 6, entrevistas_pendientes: 1 });
   });
+
+  test("returns database-backed basic reports to an admin", async () => {
+    const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin" };
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("GROUP BY estado")) return { rows: [{ label: "En proceso", total: "3" }] };
+      if (sql.includes("GROUP BY etapa_actual")) return { rows: [{ label: "Documentos", total: "2" }] };
+      if (sql.includes("progreso_promedio")) return { rows: [{ total: "5", progreso_promedio: "46.4", completados: "1", sin_asignar: "2" }] };
+      if (sql.includes("advisor.rol = 'asesor'")) return { rows: [{ id: 7, nombre: "Laura", asignados: "3", pendientes: "2" }] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/metrics/processes")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      porEstado: [{ label: "En proceso", total: 3 }],
+      porEtapa: [{ label: "Documentos", total: 2 }],
+      totalTramites: 5,
+      progresoPromedio: 46.4,
+      completados: 1,
+      sinAsignar: 2,
+      cargaAsesores: [{ id: 7, nombre: "Laura", asignados: 3, pendientes: 2 }],
+    });
+  });
 });
