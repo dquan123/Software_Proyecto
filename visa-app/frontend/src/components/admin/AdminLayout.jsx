@@ -7,10 +7,13 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquareText,
+  Moon,
   Settings,
+  Sun,
   Users,
 } from "lucide-react";
 import VisaGuideLogo from "../VisaGuideLogo";
+import useTheme from "../../hooks/useTheme";
 import { useAdminSession } from "./AdminSessionContext";
 import "../../styles/admin.css";
 
@@ -38,6 +41,7 @@ export default function AdminLayout({ children }) {
   const session = useAdminSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
   const title = pageTitles[location.pathname] || "Panel administrador";
   const userName = session?.nombre || "Administrador";
 
@@ -73,10 +77,23 @@ export default function AdminLayout({ children }) {
           ))}
         </nav>
 
-        <button type="button" className="admin-sidebar__logout" onClick={handleLogout}>
-          <LogOut size={20} strokeWidth={2} aria-hidden="true" />
-          <span>Cerrar sesion</span>
-        </button>
+        <div className="admin-sidebar__footer">
+          <button
+            type="button"
+            className="admin-sidebar__theme"
+            onClick={toggleTheme}
+            aria-pressed={isDark}
+            aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+          >
+            {isDark ? <Sun size={20} strokeWidth={2} aria-hidden="true" /> : <Moon size={20} strokeWidth={2} aria-hidden="true" />}
+            <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>
+          </button>
+
+          <button type="button" className="admin-sidebar__logout" onClick={handleLogout}>
+            <LogOut size={20} strokeWidth={2} aria-hidden="true" />
+            <span>Cerrar sesion</span>
+          </button>
+        </div>
       </aside>
 
       <div className="admin-workspace">

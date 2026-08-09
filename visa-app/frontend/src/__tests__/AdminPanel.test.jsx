@@ -132,6 +132,20 @@ function mockAdminSession() {
       };
       return Promise.resolve({ ok: true, json: async () => ({ tramite: managedProcess }) });
     }
+    if (String(url).endsWith("/admin/metrics/processes")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          totalTramites: 5,
+          progresoPromedio: 46.4,
+          completados: 1,
+          sinAsignar: 2,
+          porEstado: [{ label: "En proceso", total: 3 }, { label: "Aprobado", total: 1 }],
+          porEtapa: [{ label: "Documentos", total: 2 }, { label: "Formulario DS-160", total: 2 }],
+          cargaAsesores: [{ id: 5, nombre: "Laura Vásquez", asignados: 3, pendientes: 2 }],
+        }),
+      });
+    }
     return Promise.resolve({
       ok: true,
       json: async () => ({ tramites_activos: 4, asesores: 2, ds160_pendientes: 6 }),
@@ -162,6 +176,20 @@ describe("panel de administracion", () => {
     expect(validationCalls).toHaveLength(1);
   });
 
+  it("permite activar y conservar el modo oscuro desde el panel", async () => {
+    window.history.pushState({}, "", "/admin/reports");
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    const themeButton = await screen.findByRole("button", { name: "Activar modo oscuro" });
+    await user.click(themeButton);
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    expect(localStorage.getItem("vg-theme")).toBe("dark");
+    expect(screen.getByRole("button", { name: "Activar modo claro" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("rechaza una sesión local fabricada con correo de administrador", async () => {
     localStorage.setItem("visaguide_session", JSON.stringify({
       id: 1,
@@ -183,7 +211,7 @@ describe("panel de administracion", () => {
     ["/admin/documents", "Documentos", "Gestión de Documentos"],
     ["/admin/interviews", "Entrevistas", "Entrevistas"],
     ["/admin/processes", "Todas las solicitudes", "Todas las Solicitudes"],
-    ["/admin/reports", "Reportes", "Resumen de trámites"],
+    ["/admin/reports", "Reportes", "Reportes básicos"],
     ["/admin/settings", "Configuracion", "Configuracion"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
     window.history.pushState({}, "", path);
@@ -216,7 +244,14 @@ describe("panel de administracion", () => {
       expect(screen.getByText("Renovación B1/B2")).toBeInTheDocument();
       expect(screen.getByText("Sin asignar")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Gestionar" })).toBeInTheDocument();
-    } else if (path !== "/admin/reports") {
+    } else if (path === "/admin/reports") {
+      expect(await screen.findByText("Trámites totales")).toBeInTheDocument();
+      expect(screen.getByText("Progreso promedio")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Trámites por estado" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Distribución por etapa" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Carga de trabajo por asesor" })).toBeInTheDocument();
+      expect(screen.getByText("Laura Vásquez")).toBeInTheDocument();
+    } else {
       expect(screen.getByText(/Este modulo sera implementado/)).toBeInTheDocument();
     }
   });
