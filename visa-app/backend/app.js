@@ -171,7 +171,34 @@ async function seedTestUsers() {
   );
 }
 
-const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestUsers() : Promise.resolve()).catch((error) => {
+async function seedTestProcesses() {
+  await Promise.all([seedTestUsers(), tramiteSchemaReady]);
+
+  const developmentProcesses = [
+    ["norman@prueba.cliente", "Turismo B1/B2", "En proceso", "Formulario DS-160", 17, "asesor.dev@visaguide.test"],
+    ["juanfri@prueba.cliente", "Estudiante F1", "Pendiente", "Documentos", 34, "asesor.dev@visaguide.test"],
+    ["yaya@prueba.cliente", "Turismo Grupo", "Aprobado", "Pago de visa", 51, "asesor.dev@visaguide.test"],
+    ["quan@prueba.cliente", "Renovación B1/B2", "En proceso", "Cita consular", 67, null],
+    ["usuario@prueba.com", "Trabajo H1B", "Inactivo", "Configuración de perfil", 0, null],
+  ];
+
+  for (const [clientEmail, profile, status, stage, progress, advisorEmail] of developmentProcesses) {
+    await pool.query("UPDATE usuario SET perfil = COALESCE(perfil, $1) WHERE correo = $2", [profile, clientEmail]);
+    await pool.query(
+      `INSERT INTO tramite
+         (id_usuario, estado, etapa_actual, progreso, siguiente_paso, mensaje, id_asesor)
+       SELECT client.id_usuario, $1, $2, $3, $4, $5, advisor.id_usuario
+       FROM usuario client
+       LEFT JOIN usuario advisor ON advisor.correo = $6 AND advisor.rol = 'asesor'
+       WHERE client.correo = $7
+         AND NOT EXISTS (SELECT 1 FROM tramite existing WHERE existing.id_usuario = client.id_usuario)`,
+      [status, stage, progress, `Continuar con ${stage}`,
+        "Expediente de prueba para validar el panel administrativo local.", advisorEmail, clientEmail]
+    );
+  }
+}
+
+const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestProcesses() : Promise.resolve()).catch((error) => {
   console.error("ERROR TEST USERS SEED:", error);
 });
 

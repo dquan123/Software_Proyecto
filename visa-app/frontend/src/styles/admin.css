@@ -1,9 +1,7 @@
 .admin-shell {
   display: flex;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(231, 25, 76, 0.08), transparent 28%),
-    linear-gradient(135deg, #f7fbff 0%, #fff7f9 46%, #f6f8fb 100%);
+  background: #f6f8fb;
   color: #0f172a;
   font-family: var(--vg-font);
 }
@@ -15,11 +13,10 @@
   width: 280px;
   min-height: 100vh;
   flex-direction: column;
-  border-right: 1px solid rgba(220, 227, 236, 0.9);
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fff7f9 48%, #f8fbff 100%);
+  border-right: 1px solid #dce3ec;
+  background: #ffffff;
   padding: 30px 20px 22px;
-  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 .admin-sidebar__brand {
@@ -34,14 +31,14 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #e7194c, #2864ed);
+  background: #0f172a;
   color: #fff;
-  box-shadow: 0 14px 26px rgba(231, 25, 76, 0.22);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
 }
 
 .admin-sidebar__brand .visaguide-logo__text { gap: 4px; }
 .admin-sidebar__brand .visaguide-logo__name { color: #172033; font-size: 22px; line-height: 1.05; }
-.admin-sidebar__brand small { color: #e7194c; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.admin-sidebar__brand small { color: #0f172a; font-size: 11px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
 
 .admin-sidebar__nav { display: grid; gap: 9px; margin-top: 28px; }
 
@@ -62,8 +59,8 @@
   transition: background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
-.admin-sidebar__link:hover { background: #fff1f4; color: #c5123c; }
-.admin-sidebar__link--active { background: linear-gradient(135deg, #e7194c, #2864ed); color: #fff; box-shadow: 0 12px 24px rgba(231,25,76,.2); }
+.admin-sidebar__link:hover { background: #f1f5f9; color: #0f172a; }
+.admin-sidebar__link--active { background: #0f172a; color: #fff; box-shadow: 0 8px 18px rgba(15,23,42,.16); }
 .admin-sidebar__logout { width: 100%; margin-top: auto; color: #e7194c; }
 .admin-sidebar__logout:hover { background: #fff1f4; color: #c5123c; }
 
@@ -79,17 +76,16 @@
   justify-content: space-between;
   gap: 24px;
   border-bottom: 1px solid rgba(220, 227, 236, 0.92);
-  background: rgba(255,255,255,.9);
+  background: #ffffff;
   padding: 16px 38px;
-  backdrop-filter: blur(12px);
 }
 
 .admin-header h1 { margin: 0; font-size: 30px; line-height: 1.2; color: #172033; }
 .admin-header__actions { display: flex; align-items: center; gap: 22px; }
-.admin-header__notification { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #ffe0e7; border-radius: 12px; background: #fff7f9; color: #e7194c; }
+.admin-header__notification { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border: 0; border-radius: 12px; background: transparent; color: #64748b; }
 .admin-header__notification > span { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #e7194c; }
 .admin-header__user { display: flex; align-items: center; gap: 12px; text-align: right; }
-.admin-header__user > span { display: grid; width: 46px; height: 46px; flex: 0 0 46px; place-items: center; border-radius: 12px; background: linear-gradient(135deg, #2864ed, #e7194c); color: #fff; font-weight: 800; }
+.admin-header__user > span { display: grid; width: 46px; height: 46px; flex: 0 0 46px; place-items: center; border-radius: 12px; background: #0f172a; color: #fff; font-weight: 800; }
 .admin-header__user strong, .admin-header__user small { display: block; }
 .admin-header__user strong { font-size: 15px; }
 .admin-header__user small { color: #64748b; font-size: 13px; font-weight: 600; }
@@ -436,6 +432,22 @@
   padding: 20px;
 }
 
+.admin-process-toolbar__actions { display: flex; gap: 14px; }
+.admin-process-toolbar__actions button {
+  display: inline-flex; min-height: 54px; align-items: center; gap: 10px;
+  border: 1px solid #d7e0eb; border-radius: 12px; background: #fff;
+  color: #0f172a; cursor: pointer; font: inherit; font-weight: 800; padding: 0 20px;
+}
+.admin-process-filter-panel {
+  grid-column: 1 / -1; display: flex; justify-content: flex-end;
+  border-top: 1px solid #e2e8f0; padding-top: 16px;
+}
+.admin-process-filter-panel label { display: flex; align-items: center; gap: 10px; color: #334155; font-weight: 800; }
+.admin-process-filter-panel select {
+  min-height: 42px; border: 1px solid #d7e0eb; border-radius: 10px;
+  background: #fff; color: #0f172a; font: inherit; padding: 0 12px;
+}
+
 .admin-process-search,
 .admin-process-filter {
   display: flex;
@@ -543,6 +555,9 @@
 }
 
 .admin-process-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
   color: #64748b;
@@ -550,6 +565,13 @@
   font-weight: 700;
   padding: 18px 22px;
 }
+
+.admin-process-results div { display: flex; gap: 8px; }
+.admin-process-results button {
+  display: grid; width: 42px; height: 42px; place-items: center;
+  border: 1px solid #d7e0eb; border-radius: 10px; background: #fff; color: #0f172a;
+}
+.admin-process-results button:disabled { color: #cbd5e1; }
 
 .admin-process-dialog-backdrop {
   position: fixed;
@@ -668,6 +690,9 @@
 [data-theme="dark"] .admin-process-toolbar,
 [data-theme="dark"] .admin-process-search,
 [data-theme="dark"] .admin-process-filter,
+[data-theme="dark"] .admin-process-toolbar__actions button,
+[data-theme="dark"] .admin-process-filter-panel select,
+[data-theme="dark"] .admin-process-results button,
 [data-theme="dark"] .admin-process-table-card,
 [data-theme="dark"] .admin-process-manage,
 [data-theme="dark"] .admin-process-dialog,
@@ -703,6 +728,12 @@
   .admin-main .question-feedback-reference__responses article {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 760px) {
+  .admin-process-toolbar { grid-template-columns: 1fr; }
+  .admin-process-toolbar__actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .admin-process-toolbar__actions button { justify-content: center; }
 }
 
 
