@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { buildApiUrl } from "../../config/api";
 
@@ -30,6 +30,8 @@ export default function AdminProcesses() {
   const [advisors, setAdvisors] = useState([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState(null);
   const [draft, setDraft] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,12 +64,13 @@ export default function AdminProcesses() {
 
   const filteredProcesses = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("es");
-    return processes.filter((process) => {
+    const matches = processes.filter((process) => {
       const matchesStatus = statusFilter === "Todos" || process.estado === statusFilter;
       const searchable = `${process.solicitante.nombre} ${process.solicitante.correo} ${process.solicitante.perfil}`.toLocaleLowerCase("es");
       return matchesStatus && (!normalizedQuery || searchable.includes(normalizedQuery));
     });
-  }, [processes, query, statusFilter]);
+    return matches.sort((left, right) => sortOrder === "oldest" ? left.id - right.id : right.id - left.id);
+  }, [processes, query, sortOrder, statusFilter]);
 
   const openManager = (process) => {
     setSelected(process);
@@ -127,14 +130,24 @@ export default function AdminProcesses() {
             placeholder="Buscar por nombre o correo..."
           />
         </label>
-        <label className="admin-process-filter">
-          <SlidersHorizontal size={20} aria-hidden="true" />
-          <span>Estado</span>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option>Todos</option>
-            {STATES.map((status) => <option key={status}>{status}</option>)}
-          </select>
-        </label>
+        <div className="admin-process-toolbar__actions">
+          <button type="button" aria-expanded={showFilters} onClick={() => setShowFilters((visible) => !visible)}>
+            <Filter size={20} aria-hidden="true" /> Filtros
+          </button>
+          <button type="button" onClick={() => setSortOrder((order) => order === "newest" ? "oldest" : "newest")}>
+            <SlidersHorizontal size={20} aria-hidden="true" /> Ordenar
+          </button>
+        </div>
+        {showFilters && (
+          <div className="admin-process-filter-panel">
+            <label>Estado
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option>Todos</option>
+                {STATES.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
       </section>
 
       {error && !selected && <p className="admin-feedback admin-feedback--error" role="alert">{error}</p>}
@@ -160,7 +173,13 @@ export default function AdminProcesses() {
             </tbody>
           </table>
         </div>
-        <footer className="admin-process-results">Mostrando {filteredProcesses.length} de {processes.length} solicitudes</footer>
+        <footer className="admin-process-results">
+          <span>Mostrando {filteredProcesses.length} de {processes.length} solicitudes</span>
+          <div aria-label="Paginación">
+            <button type="button" aria-label="Página anterior" disabled><ChevronLeft aria-hidden="true" /></button>
+            <button type="button" aria-label="Página siguiente" disabled><ChevronRight aria-hidden="true" /></button>
+          </div>
+        </footer>
       </section>
 
       {selected && draft && (
