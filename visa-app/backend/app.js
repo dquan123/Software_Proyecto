@@ -12,6 +12,7 @@ const createNotificacionRoutes = require("./routes/notificacionRoutes");
 const createAdminMetricsRoutes = require("./routes/adminMetricsRoutes");
 const createAdminDocumentRoutes = require("./routes/adminDocumentRoutes");
 const createAdminProcessRoutes = require("./routes/adminProcessRoutes");
+const createAdminManagementRoutes = require("./routes/adminManagementRoutes");
 const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = require("./auth");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
@@ -124,7 +125,38 @@ async function ensureTramiteSchema() {
   `);
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS tramite_usuario_idx ON tramite(id_usuario)");
   await pool.query("ALTER TABLE tramite ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario)");
+  await pool.query(`ALTER TABLE tramite
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
   await pool.query("CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor)");
+}
+
+async function ensureAdminSchema() {
+  await userSchemaReady;
+  await tramiteSchemaReady;
+  await pool.query(`ALTER TABLE usuario
+    ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS capacidad_asesor INT DEFAULT 50,
+    ADD COLUMN IF NOT EXISTS disponible_asesor BOOLEAN DEFAULT TRUE`);
+  await pool.query(`ALTER TABLE formulario_ds160
+    ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(30) DEFAULT 'en_progreso',
+    ADD COLUMN IF NOT EXISTS feedback_revision TEXT,
+    ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario)`);
+  await pool.query(`ALTER TABLE question_bank
+    ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS uso_count INT DEFAULT 0`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_settings (
+    id INT PRIMARY KEY,
+    nombre_comercial VARCHAR(160), razon_social VARCHAR(200), sitio_web TEXT,
+    idioma VARCHAR(20) DEFAULT 'es', zona_horaria VARCHAR(80) DEFAULT 'America/Guatemala',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_activity (
+    id SERIAL PRIMARY KEY, actor_id INT REFERENCES usuario(id_usuario),
+    accion VARCHAR(180) NOT NULL, detalle TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
 }
  
 const userSchemaReady = ensureUserSchema().catch((error) => {
@@ -132,6 +164,9 @@ const userSchemaReady = ensureUserSchema().catch((error) => {
 });
 const tramiteSchemaReady = userSchemaReady.then(ensureTramiteSchema).catch((error) => {
   console.error("ERROR TRAMITE SCHEMA:", error);
+});
+const adminSchemaReady = tramiteSchemaReady.then(ensureAdminSchema).catch((error) => {
+  console.error("ERROR ADMIN SCHEMA:", error);
 });
 
 const testUsers = [
@@ -203,7 +238,7 @@ const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestProcess
 });
 
 const questionBankService = createQuestionBankService(pool);
-questionBankService.seedInitialQuestions().catch((error) => {
+questionBankService.ensureSchema().catch((error) => {
   console.error("ERROR QUESTION BANK SCHEMA:", error);
 });
 
@@ -383,6 +418,7 @@ app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
 app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady }));
 app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady }));
+app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {

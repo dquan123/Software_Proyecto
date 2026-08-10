@@ -40,6 +40,8 @@ function DistributionBars({ items, emptyMessage }) {
 export default function AdminReports() {
   const [report, setReport] = useState(null);
   const [error, setError] = useState("");
+  const [range, setRange] = useState("30");
+  const [revision, setRevision] = useState(0);
 
   const advisorMaximum = useMemo(
     () => Math.max(0, ...(report?.cargaAsesores || []).map((advisor) => advisor.asignados)),
@@ -49,28 +51,38 @@ export default function AdminReports() {
   useEffect(() => {
     const controller = new AbortController();
     const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
-    fetch(buildApiUrl("/admin/metrics/processes"), {
+    fetch(buildApiUrl(`/admin/metrics/processes?days=${range}`), {
       signal: controller.signal,
       headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
     }).then((response) => {
       if (!response.ok) throw new Error("No fue posible cargar los reportes");
       return response.json();
-    }).then(setReport).catch((requestError) => {
+    }).then((data) => { setReport(data); setError(""); }).catch((requestError) => {
       if (requestError.name !== "AbortError") setError(requestError.message);
     });
     return () => controller.abort();
-  }, []);
+  }, [range, revision]);
+
+  const exportReport = () => {
+    if (!report) return;
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.json`; link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <AdminLayout>
       <section className="admin-hero admin-reports-hero">
         <div>
-          <h2>Reportes básicos</h2>
-          <p>Consulta el avance de los trámites y la distribución de la carga operativa.</p>
+          <h2>Reportes y Analíticas</h2>
+          <p>Estadísticas y métricas globales de la plataforma.</p>
         </div>
+        <div className="admin-report-actions"><label><span className="visually-hidden">Rango</span><select value={range} onChange={(event) => setRange(event.target.value)}><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option></select></label><button className="admin-primary-button" type="button" onClick={exportReport} disabled={!report}>Exportar</button></div>
       </section>
 
-      {error && <p className="admin-report-message" role="alert">{error}</p>}
+      {error && <div className="admin-report-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRevision((value) => value + 1)}>Reintentar</button></div>}
       {!report && !error && <p className="admin-report-message" role="status">Cargando reportes…</p>}
 
       {report && (

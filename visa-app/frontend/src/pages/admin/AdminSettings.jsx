@@ -1,11 +1,14 @@
-import AdminPlaceholderPage from "./AdminPlaceholderPage";
+import { Bell, FileText, Settings, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import AdminLayout from "../../components/admin/AdminLayout";
+import { AdminPageHeader, AdminResourceState } from "../../components/admin/AdminShared";
+import useAdminResource, { adminRequest } from "../../hooks/useAdminResource";
 
-export default function AdminSettings() {
-  return (
-    <AdminPlaceholderPage
-      title="Configuracion"
-      description="Placeholder para preferencias y parametros administrativos del panel."
-      owner="Configuracion"
-    />
-  );
+const empty = { nombre_comercial: "", razon_social: "", sitio_web: "", idioma: "es", zona_horaria: "America/Guatemala" };
+export default function AdminSettingsPage() {
+  const resource = useAdminResource("/admin/settings"); const [draft, setDraft] = useState(null); const [notice, setNotice] = useState(""); const [section, setSection] = useState("general");
+  const form = draft || resource.data?.configuracion || empty;
+  const save = async (event) => { event.preventDefault(); try { const data = await adminRequest("/admin/settings", { method: "PUT", body: JSON.stringify(form) }); setDraft(data.configuracion); setNotice("Configuración guardada."); } catch (error) { setNotice(error.message); } };
+  const sections = [["general", <Settings aria-hidden="true" />, "General"], ["notifications", <Bell aria-hidden="true" />, "Notificaciones automáticas"], ["documents", <FileText aria-hidden="true" />, "Requisitos documentales"], ["security", <ShieldCheck aria-hidden="true" />, "Roles y permisos"]];
+  return <AdminLayout><AdminPageHeader title="Configuración" description="Ajustes globales de la plataforma VisaGuide." /><AdminResourceState isLoading={resource.isLoading} error={resource.error} retry={resource.retry} />{!resource.isLoading && !resource.error && <div className="admin-settings-layout"><nav aria-label="Secciones de configuración">{sections.map(([value, icon, label]) => <button type="button" key={value} className={section === value ? "is-active" : ""} onClick={() => setSection(value)}>{icon}{label}</button>)}</nav><section className="admin-settings-card">{section === "general" ? <form className="admin-form" onSubmit={save}><header><h3>Información de la Agencia</h3><p>Datos institucionales almacenados para la plataforma.</p></header><div className="admin-form-grid"><label>Nombre comercial<input value={form.nombre_comercial || ""} onChange={(e) => setDraft({ ...form, nombre_comercial: e.target.value })} /></label><label>Razón social<input value={form.razon_social || ""} onChange={(e) => setDraft({ ...form, razon_social: e.target.value })} /></label><label className="wide">Sitio web<input type="url" value={form.sitio_web || ""} onChange={(e) => setDraft({ ...form, sitio_web: e.target.value })} /></label><label>Idioma<select value={form.idioma || "es"} onChange={(e) => setDraft({ ...form, idioma: e.target.value })}><option value="es">Español</option><option value="en">English</option></select></label><label>Zona horaria<input value={form.zona_horaria || ""} onChange={(e) => setDraft({ ...form, zona_horaria: e.target.value })} /></label></div>{notice && <p role="status">{notice}</p>}<button className="admin-primary-button" type="submit">Guardar cambios</button></form> : <div className="admin-resource-state"><strong>Configuración aún no disponible</strong><span>Esta sección requiere reglas de negocio adicionales antes de habilitar cambios seguros.</span></div>}</section></div>}</AdminLayout>;
 }

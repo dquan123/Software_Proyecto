@@ -27,6 +27,11 @@ const AdminInterviews = lazy(() => import("./pages/admin/AdminInterviews"));
 const AdminProcesses = lazy(() => import("./pages/admin/AdminProcesses"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminAdvisors = lazy(() => import("./pages/admin/AdminAdvisors"));
+const AdminAssignments = lazy(() => import("./pages/admin/AdminAssignments"));
+const AdminDS160 = lazy(() => import("./pages/admin/AdminDS160"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
+const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
 
 // ── Apply saved theme on app start ──
 const savedTheme = localStorage.getItem("vg-theme");
@@ -101,12 +106,16 @@ function App() {
         <Route path="/entrevista/retroalimentacion"   element={<InterviewFeedback />} />
         <Route path="/admin"                          element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
         <Route path="/admin/users"                    element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
+        <Route path="/admin/advisors"                 element={<RequireAdmin><AdminAdvisors /></RequireAdmin>} />
+        <Route path="/admin/assignments"              element={<RequireAdmin><AdminAssignments /></RequireAdmin>} />
         <Route path="/admin/documents"                element={<RequireAdmin><AdminDocuments /></RequireAdmin>} />
         <Route path="/admin/interviews"               element={<RequireAdmin><AdminInterviews /></RequireAdmin>} />
         <Route path="/admin/processes"                element={<RequireAdmin><AdminProcesses /></RequireAdmin>} />
         <Route path="/admin/reports"                  element={<RequireAdmin><AdminReports /></RequireAdmin>} />
         <Route path="/admin/settings"                 element={<RequireAdmin><AdminSettings /></RequireAdmin>} />
-        <Route path="/admin/questions"                element={<RequireAdmin><QuestionBank /></RequireAdmin>} />
+        <Route path="/admin/ds160"                    element={<RequireAdmin><AdminDS160 /></RequireAdmin>} />
+        <Route path="/admin/profile"                  element={<RequireAdmin><AdminProfile /></RequireAdmin>} />
+        <Route path="/admin/questions"                element={<RequireAdmin><AdminQuestions /></RequireAdmin>} />
         <Route path="/questions"                      element={<QuestionBank />} />
         <Route path="/documents"                      element={<Documents />} />
         <Route path="/ds160"                          element={<DS160Form />} />

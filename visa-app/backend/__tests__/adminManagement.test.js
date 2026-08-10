@@ -1,0 +1,106 @@
+const express = require("express");
+const request = require("supertest");
+const { createRoleMiddleware, issueSessionToken } = require("../auth");
+const createAdminManagementRoutes = require("../routes/adminManagementRoutes");
+
+describe("admin management integration", () => {
+  const admin = { id_usuario: 1, correo: "admin@test.dev", nombre: "Admin", rol: "admin" };
+  const client = { id_usuario: 4, correo: "client@test.dev", nombre: "Cliente", rol: "cliente" };
+
+  function createApp(query) {
+    const pool = { query: jest.fn(query) };
+    const app = express();
+    app.use(express.json());
+    app.use("/admin", createAdminManagementRoutes(pool, {
+      requireAdmin: createRoleMiddleware(pool, ["admin"]),
+      schemaReady: Promise.resolve(),
+    }));
+    return { app, pool };
+  }
+
+  test("protects every management endpoint with the verified database role", async () => {
+    const { app } = createApp(async () => ({ rows: [client] }));
+    await request(app).get("/admin/users").expect(401);
+    await request(app)
+      .get("/admin/users")
+      .set("Authorization", `Bearer ${issueSessionToken(client)}`)
+      .expect(403);
+  });
+
+  test("returns dashboard metrics, workload, activity and attention from database queries", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("solicitudes_activas")) return { rows: [{ solicitudes_activas: "4", sin_asignar: "2", asesores_activos: "3", ds160_pendientes: "1" }] };
+      if (sql.includes("GROUP BY u.id_usuario")) return { rows: [{ id: 7, nombre: "Laura", asignados: "5", pendientes: "2" }] };
+      if (sql.includes("FROM admin_activity")) return { rows: [{ id: 9, accion: "Solicitud asignada", detalle: "Trámite 4", created_at: new Date().toISOString() }] };
+      if (sql.includes("FROM tramite t JOIN usuario applicant")) return { rows: [{ id: 4, nombre: "Solicitante", correo: "s@test.dev", perfil: "turismo", asesor: null }] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/dashboard")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body.resumen).toEqual({ solicitudesActivas: 4, sinAsignar: 2, asesoresActivos: 3, ds160Pendientes: 1 });
+    expect(response.body.cargaAsesores[0]).toMatchObject({ nombre: "Laura", asignados: 5, pendientes: 2 });
+    expect(response.body.actividad).toHaveLength(1);
+    expect(response.body.atencion).toHaveLength(1);
+  });
+
+  test("assigns an unassigned real process to an active advisor", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
+      if (sql.includes("rol = 'asesor' AND activo")) return { rows: [{ id_usuario: 7, nombre: "Laura" }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .post("/admin/assignments")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ tramiteId: 22, asesorId: 7 })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE tramite SET id_asesor"),
+      [7, 22]
+    );
+  });
+
+  test("persists DS-160 review state and feedback", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("UPDATE formulario_ds160")) return { rows: [{ id_formulario: 31 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/ds160/31")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "correccion", feedback: "Completa el historial." })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE formulario_ds160"),
+      ["correccion", "Completa el historial.", 31]
+    );
+  });
+
+  test("stores and returns global settings without seeded business records", async () => {
+    const settings = { id: 1, nombre_comercial: "VisaGuide", razon_social: "Agencia", sitio_web: "https://visaguide.test", idioma: "es", zona_horaria: "America/Guatemala" };
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("INSERT INTO admin_settings")) return { rows: [settings] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .put("/admin/settings")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send(settings)
+      .expect(200);
+
+    expect(response.body.configuracion).toMatchObject(settings);
+  });
+});

@@ -37,6 +37,8 @@ export default function AdminProcesses() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -60,7 +62,7 @@ export default function AdminProcesses() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [revision]);
 
   const filteredProcesses = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("es");
@@ -71,6 +73,8 @@ export default function AdminProcesses() {
     });
     return matches.sort((left, right) => sortOrder === "oldest" ? left.id - right.id : right.id - left.id);
   }, [processes, query, sortOrder, statusFilter]);
+  const pageCount = Math.max(1, Math.ceil(filteredProcesses.length / 8));
+  const visibleProcesses = filteredProcesses.slice((page - 1) * 8, page * 8);
 
   const openManager = (process) => {
     setSelected(process);
@@ -150,7 +154,7 @@ export default function AdminProcesses() {
         )}
       </section>
 
-      {error && !selected && <p className="admin-feedback admin-feedback--error" role="alert">{error}</p>}
+      {error && !selected && <div className="admin-feedback admin-feedback--error" role="alert"><span>{error}</span><button type="button" onClick={() => setRevision((value) => value + 1)}>Reintentar</button></div>}
 
       <section className="admin-process-table-card" aria-busy={isLoading}>
         <div className="admin-table-wrap">
@@ -161,7 +165,7 @@ export default function AdminProcesses() {
               {!isLoading && !filteredProcesses.length && (
                 <tr><td colSpan="5" className="admin-table-state">No hay solicitudes que coincidan con los filtros.</td></tr>
               )}
-              {filteredProcesses.map((process) => (
+              {visibleProcesses.map((process) => (
                 <tr key={process.id}>
                   <td><strong className="admin-table-primary">{process.solicitante.nombre}</strong><span className="admin-table-secondary">{process.solicitante.correo}</span></td>
                   <td><strong className="admin-table-primary">{process.solicitante.perfil}</strong><span className="admin-table-secondary">{process.etapaActual}</span></td>
@@ -174,10 +178,11 @@ export default function AdminProcesses() {
           </table>
         </div>
         <footer className="admin-process-results">
-          <span>Mostrando {filteredProcesses.length} de {processes.length} solicitudes</span>
+          <span>Mostrando {visibleProcesses.length} de {filteredProcesses.length} solicitudes</span>
           <div aria-label="Paginación">
-            <button type="button" aria-label="Página anterior" disabled><ChevronLeft aria-hidden="true" /></button>
-            <button type="button" aria-label="Página siguiente" disabled><ChevronRight aria-hidden="true" /></button>
+            <button type="button" aria-label="Página anterior" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft aria-hidden="true" /></button>
+            <span>{page} / {pageCount}</span>
+            <button type="button" aria-label="Página siguiente" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)}><ChevronRight aria-hidden="true" /></button>
           </div>
         </footer>
       </section>

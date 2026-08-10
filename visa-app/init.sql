@@ -37,23 +37,12 @@ ALTER TABLE usuario
   ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS idioma              VARCHAR(10)  DEFAULT 'es';
 
-INSERT INTO usuario(nombre, correo, contrasena, rol)
-SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
-FROM (VALUES
-  ('Norman', 'norman@prueba.cliente', '123456', 'cliente'),
-  ('Juanfri', 'juanfri@prueba.cliente', '123456', 'cliente'),
-  ('Yaya', 'yaya@prueba.cliente', '123456', 'cliente'),
-  ('Quan', 'quan@prueba.cliente', '123456', 'cliente'),
-  ('Usuario Prueba', 'usuario@prueba.com', '123456', 'cliente'),
-  ('Admin Norman', 'admin.norman@prueba.com', '123456', 'admin'),
-  ('Admin Juanfri', 'admin.juanfri@prueba.com', '123456', 'admin'),
-  ('Admin Yaya', 'admin.yaya@prueba.com', '123456', 'admin'),
-  ('Admin Quan', 'admin.quan@prueba.com', '123456', 'admin'),
-  ('Admin General', 'admin@prueba.com', '123456', 'admin')
-) AS seed(nombre, correo, contrasena, rol)
-WHERE NOT EXISTS (
-  SELECT 1 FROM usuario u WHERE u.correo = seed.correo
-);
+ALTER TABLE usuario
+  ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS capacidad_asesor INT DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS disponible_asesor BOOLEAN DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS tramite (
   id_tramite SERIAL PRIMARY KEY,
@@ -63,10 +52,15 @@ CREATE TABLE IF NOT EXISTS tramite (
   progreso INT DEFAULT 0,
   siguiente_paso VARCHAR(200) DEFAULT 'Seleccionar perfil de visa',
   mensaje TEXT DEFAULT 'Configura tu perfil para comenzar',
-  id_asesor INT REFERENCES usuario(id_usuario)
+  id_asesor INT REFERENCES usuario(id_usuario),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE tramite ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario);
+ALTER TABLE tramite
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor);
 
 -- Tabla para guardar el formulario DS-160
@@ -104,30 +98,33 @@ CREATE TABLE IF NOT EXISTS question_bank (
   category VARCHAR(100),
   difficulty VARCHAR(20),
   is_required BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  activo BOOLEAN DEFAULT TRUE,
+  uso_count INT DEFAULT 0
 );
 
-INSERT INTO question_bank (question, category, difficulty, is_required)
-SELECT seed.question, seed.category, seed.difficulty, seed.is_required
-FROM (
-  VALUES
-    ('¿Cuál es el propósito principal de su viaje?', 'Viaje', 'Fácil', true),
-    ('¿Cuánto tiempo planea permanecer en el país?', 'Viaje', 'Fácil', true),
-    ('¿Quién financiará su viaje y estadía?', 'Finanzas', 'Media', true),
-    ('¿Tiene familiares o conocidos viviendo en el país destino?', 'Relaciones', 'Media', false),
-    ('¿Cuál es su ocupación actual?', 'Laboral', 'Fácil', true),
-    ('¿Desde cuándo trabaja en su empleo actual?', 'Laboral', 'Media', false),
-    ('¿Ha viajado anteriormente a este país?', 'Historial', 'Media', false),
-    ('¿Ha visitado otros países en los últimos cinco años?', 'Historial', 'Media', false),
-    ('¿Cuenta con reservación de hospedaje o dirección de estadía?', 'Viaje', 'Media', true),
-    ('¿Cuál es su salario o ingreso mensual aproximado?', 'Finanzas', 'Alta', false),
-    ('¿Tiene propiedades, negocios o activos en su país de origen?', 'Finanzas', 'Alta', false),
-    ('¿Cuál es su estado civil?', 'Personal', 'Fácil', false),
-    ('¿Viajará solo o acompañado?', 'Relaciones', 'Fácil', false),
-    ('¿Qué actividades realizará durante su estadía?', 'Viaje', 'Media', true),
-    ('¿Tiene intención de trabajar o estudiar durante su visita?', 'Migración', 'Alta', true)
-) AS seed(question, category, difficulty, is_required)
-WHERE NOT EXISTS (SELECT 1 FROM question_bank);
+ALTER TABLE formulario_ds160
+  ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(30) DEFAULT 'en_progreso',
+  ADD COLUMN IF NOT EXISTS feedback_revision TEXT,
+  ADD COLUMN IF NOT EXISTS id_asesor INT REFERENCES usuario(id_usuario);
+
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id INT PRIMARY KEY,
+  nombre_comercial VARCHAR(160),
+  razon_social VARCHAR(200),
+  sitio_web TEXT,
+  idioma VARCHAR(20) DEFAULT 'es',
+  zona_horaria VARCHAR(80) DEFAULT 'America/Guatemala',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin_activity (
+  id SERIAL PRIMARY KEY,
+  actor_id INT REFERENCES usuario(id_usuario),
+  accion VARCHAR(180) NOT NULL,
+  detalle TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS interview_sessions (
   id SERIAL PRIMARY KEY,
