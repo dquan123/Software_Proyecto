@@ -91,4 +91,23 @@ describe("admin authorization and metrics", () => {
       cargaAsesores: [{ id: 7, nombre: "Laura", asignados: 3, pendientes: 2 }],
     });
   });
+
+  test("applies the selected report period to process metrics", async () => {
+    const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin" };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("progreso_promedio")) return { rows: [{ total: 0, progreso_promedio: 0, completados: 0, sin_asignar: 0 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .get("/admin/metrics/processes?days=30")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("created_at >= CURRENT_TIMESTAMP"),
+      [30]
+    );
+  });
 });

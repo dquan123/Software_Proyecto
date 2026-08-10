@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildApiUrl } from "../config/api";
 import { getAdminHeaders } from "../utils/adminHeaders";
+import { AdminSearch, AdminTabs } from "./admin/AdminShared";
 
 function getErrorMessage(data, fallback) {
   return data?.error || data?.message || fallback;
@@ -40,6 +41,8 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
   const [feedbackDraft, setFeedbackDraft] = useState("");
   const [ratingDraft, setRatingDraft] = useState("");
   const [savingFeedback, setSavingFeedback] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const notify = useCallback(
     (toast) => {
@@ -104,6 +107,11 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
     () => interviewSessions.filter((item) => item.status !== "reviewed"),
     [interviewSessions]
   );
+  const visibleInterviewSessions = useMemo(() => interviewSessions.filter((item) => {
+    const matchesStatus = statusFilter === "all" || (statusFilter === "pending" ? item.status !== "reviewed" : item.status === "reviewed");
+    const searchable = `${item.user_name || ""} ${item.user_email || ""}`.toLowerCase();
+    return matchesStatus && searchable.includes(query.toLowerCase());
+  }), [interviewSessions, query, statusFilter]);
   const selectedResponses = useMemo(
     () => getSessionResponses(selectedInterviewSession),
     [selectedInterviewSession]
@@ -169,7 +177,7 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
             <span className="admin-section-kicker">
               Administracion consular
             </span>
-            <h2>Entrevistas</h2>
+            <h2>Entrevistas Globales</h2>
             <p>
               Revisa sesiones enviadas desde el simulador y registra
               retroalimentacion para los usuarios.
@@ -188,6 +196,8 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
         </header>
       )}
 
+      {showHeader && <div><AdminTabs value={statusFilter} onChange={setStatusFilter} label="Filtrar entrevistas" items={[{ value: "all", label: "Todas" }, { value: "pending", label: "Preparación pendiente" }, { value: "reviewed", label: "Completadas" }]} /><div className="admin-list-card"><div className="admin-list-toolbar"><AdminSearch value={query} onChange={setQuery} placeholder="Buscar solicitante..." /></div></div></div>}
+
       <section className="question-feedback-reference">
         <div className="question-feedback-reference__summary">
           <span>Historial de entrevistas</span>
@@ -202,11 +212,11 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
           {sessionsLoading ? (
             <p>Cargando historial de entrevistas...</p>
           ) : sessionsError ? (
-            <p>{sessionsError}</p>
-          ) : interviewSessions.length === 0 ? (
-            <p>No hay sesiones de entrevista registradas.</p>
+            <div role="alert"><p>{sessionsError}</p><button type="button" onClick={() => fetchInterviewSessions()}>Reintentar</button></div>
+          ) : visibleInterviewSessions.length === 0 ? (
+            <p>{interviewSessions.length ? "No hay entrevistas que coincidan con los filtros." : "No hay sesiones de entrevista registradas."}</p>
           ) : (
-            interviewSessions.slice(0, 8).map((item) => (
+            visibleInterviewSessions.slice(0, 8).map((item) => (
               <button
                 className={
                   selectedInterviewSession?.id === item.id

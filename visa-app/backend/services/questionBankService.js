@@ -116,6 +116,9 @@ function createQuestionBankService(pool) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await pool.query(`ALTER TABLE question_bank
+      ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS uso_count INT DEFAULT 0`);
   }
 
   async function seedInitialQuestions() {
@@ -185,7 +188,7 @@ function createQuestionBankService(pool) {
     await ensureSchema();
 
     const result = await pool.query(
-      `SELECT id, question, category, difficulty, is_required, created_at
+      `SELECT id, question, category, difficulty, is_required, created_at, activo, uso_count
        FROM question_bank
        ORDER BY created_at DESC, id DESC`
     );
@@ -200,7 +203,7 @@ function createQuestionBankService(pool) {
     const result = await pool.query(
       `INSERT INTO question_bank (question, category, difficulty, is_required)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, question, category, difficulty, is_required, created_at`,
+       RETURNING id, question, category, difficulty, is_required, created_at, activo, uso_count`,
       [data.question, data.category, data.difficulty, data.is_required]
     );
 
@@ -225,7 +228,7 @@ function createQuestionBankService(pool) {
            difficulty = $3,
            is_required = $4
        WHERE id = $5
-       RETURNING id, question, category, difficulty, is_required, created_at`,
+       RETURNING id, question, category, difficulty, is_required, created_at, activo, uso_count`,
       [data.question, data.category, data.difficulty, data.is_required, questionId]
     );
 

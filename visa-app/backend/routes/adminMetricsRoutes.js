@@ -23,11 +23,14 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
     }
   });
 
-  router.get("/processes", requireAdmin, async (_req, res) => {
+  router.get("/processes", requireAdmin, async (req, res) => {
     try {
+      const days = [30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : null;
+      const where = days ? "WHERE created_at >= CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day')" : "";
+      const values = days ? [days] : [];
       const [statusResult, stageResult, summaryResult, advisorResult] = await Promise.all([
-        pool.query("SELECT estado AS label, COUNT(*) AS total FROM tramite GROUP BY estado ORDER BY estado"),
-        pool.query("SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite GROUP BY etapa_actual ORDER BY etapa_actual"),
+        pool.query(`SELECT estado AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY estado ORDER BY estado`, values),
+        pool.query(`SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY etapa_actual ORDER BY etapa_actual`, values),
         pool.query(`
           SELECT
             COUNT(*) AS total,
@@ -35,7 +38,8 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
             COUNT(*) FILTER (WHERE estado = 'Aprobado' OR progreso >= 100) AS completados,
             COUNT(*) FILTER (WHERE id_asesor IS NULL) AS sin_asignar
           FROM tramite
-        `),
+          ${where}
+        `, values),
         pool.query(`
           SELECT
             advisor.id_usuario AS id,
@@ -46,11 +50,12 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
             ) AS pendientes
           FROM usuario advisor
           LEFT JOIN tramite t ON t.id_asesor = advisor.id_usuario
+            ${days ? "AND t.created_at >= CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day')" : ""}
           WHERE advisor.rol = 'asesor'
           GROUP BY advisor.id_usuario, advisor.nombre
           ORDER BY asignados DESC, advisor.nombre ASC
           LIMIT 6
-        `),
+        `, values),
       ]);
       const normalize = ({ label, total }) => ({ label, total: Number(total) || 0 });
       const summary = summaryResult.rows[0] || {};

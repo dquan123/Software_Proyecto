@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Eye, MessageSquareText, Save, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { AdminPageHeader, AdminSearch, AdminTabs } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
 
 const tableHeaders = [
@@ -103,13 +104,16 @@ export default function AdminDocuments() {
   const [feedbackDrafts, setFeedbackDrafts] = useState({});
   const [feedbackModalDocument, setFeedbackModalDocument] = useState(null);
   const [feedbackModalDraft, setFeedbackModalDraft] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [revision, setRevision] = useState(0);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const loadDocuments = useCallback((signal) => {
     const token = getAdminToken();
-
-    fetch(buildApiUrl("/admin/documents"), {
-      signal: controller.signal,
+    setIsLoading(true);
+    setError("");
+    return fetch(buildApiUrl("/admin/documents"), {
+      signal,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((response) => {
@@ -120,19 +124,33 @@ export default function AdminDocuments() {
         const nextDocuments = Array.isArray(data) ? data : data.documentos || [];
         setDocuments(nextDocuments);
         setFeedbackDrafts(buildFeedbackDrafts(nextDocuments));
-        setError("");
       })
       .catch((requestError) => {
-        if (requestError.name !== "AbortError") {
-          setError(requestError.message || "No fue posible cargar los documentos.");
-        }
+        if (requestError.name !== "AbortError") setError(requestError.message || "No fue posible cargar los documentos.");
       })
       .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
+        if (!signal?.aborted) setIsLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadDocuments(controller.signal);
 
     return () => controller.abort();
-  }, []);
+  }, [loadDocuments, revision]);
+
+  const visibleDocuments = useMemo(() => documents.filter((document) => {
+    const matchesStatus = statusFilter === "all" || document.estado === statusFilter;
+    const text = `${document.nombre || ""} ${document.documento_key || ""} ${document.usuario?.nombre || ""} ${document.usuario?.correo || ""}`.toLowerCase();
+    return matchesStatus && text.includes(query.toLowerCase());
+  }), [documents, query, statusFilter]);
+  const totals = useMemo(() => ({
+    pending: documents.filter((item) => item.estado === "pending").length,
+    review: documents.filter((item) => item.estado === "review").length,
+    approved: documents.filter((item) => item.estado === "approved").length,
+    correction: documents.filter((item) => item.estado === "correction" || item.estado === "rejected").length,
+  }), [documents]);
 
   const replaceDocument = (updatedDocument) => {
     setDocuments((currentDocuments) =>
@@ -155,7 +173,7 @@ const updateDocumentStatus = async (documentId, status) => {
   setNotice(null);
 
   try {
-    const payload = { estado: status };
+    const payload = { status };
 
     const response = await fetch(buildApiUrl(`/admin/documents/${documentId}/status`), {
       method: "PUT",
@@ -243,16 +261,17 @@ const updateDocumentStatus = async (documentId, status) => {
 
   return (
     <AdminLayout>
+      <AdminPageHeader title="Documentos Globales" description="Supervisa todos los documentos en revisión en la plataforma." />
+      <section className="admin-summary-grid" aria-label="Resumen de documentos">
+        <article><strong>{totals.pending}</strong><small>Pendientes</small></article>
+        <article><strong>{totals.review}</strong><small>En revisión</small></article>
+        <article><strong>{totals.approved}</strong><small>Aprobados</small></article>
+        <article><strong>{totals.correction}</strong><small>Corrección</small></article>
+      </section>
+      <AdminTabs value={statusFilter} onChange={setStatusFilter} label="Filtrar documentos por estado" items={[{ value: "all", label: "Todos" }, { value: "pending", label: "Pendiente" }, { value: "review", label: "En revisión" }, { value: "approved", label: "Aprobado" }, { value: "correction", label: "Corrección" }]} />
       <section className="admin-panel-card admin-documents">
         <div className="admin-panel-card__header">
-          <div>
-            <p className="admin-section-kicker">Administracion</p>
-            <h2>Gestión de Documentos</h2>
-            <p>
-              Visualiza y revisa los documentos enviados por los solicitantes desde un
-              solo lugar.
-            </p>
-          </div>
+          <AdminSearch value={query} onChange={setQuery} placeholder="Buscar por documento o solicitante..." />
         </div>
 
         {notice && (
@@ -284,17 +303,18 @@ const updateDocumentStatus = async (documentId, status) => {
                 </tr>
               )}
 
-              {!isLoading && documents.length === 0 && (
+              {!isLoading && (error || visibleDocuments.length === 0) && (
                 <tr>
                   <td colSpan={tableHeaders.length}>
-                    <p className={`admin-table-state${error ? " admin-table-state--error" : ""}`}>
-                      {error || "Todavía no hay documentos enviados por los usuarios."}
-                    </p>
+                    <div className={`admin-table-state${error ? " admin-table-state--error" : ""}`}>
+                      <p>{error || (documents.length ? "No hay documentos que coincidan con los filtros." : "Todavía no hay documentos enviados por los usuarios.")}</p>
+                      {error && <button type="button" className="admin-secondary-button" onClick={() => setRevision((value) => value + 1)}>Reintentar</button>}
+                    </div>
                   </td>
                 </tr>
               )}
 
-              {!isLoading && !error && documents.map((document) => {
+              {!isLoading && !error && visibleDocuments.map((document) => {
                 const savedFeedback = document.feedback || "";
                 const hasFeedback = Boolean(savedFeedback.trim());
                 const isUpdating = updatingId === document.id;
