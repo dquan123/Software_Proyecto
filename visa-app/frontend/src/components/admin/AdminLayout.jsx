@@ -28,18 +28,37 @@ import { useAdminSession } from "./AdminSessionContext";
 import useAdminResource from "../../hooks/useAdminResource";
 import "../../styles/admin.css";
 
-const adminNavItems = [
-  { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
-  { label: "Todas las solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Asesores", path: "/admin/advisors", icon: <BriefcaseBusiness size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Asignaciones", path: "/admin/assignments", icon: <UserRoundCheck size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Formularios DS-160", path: "/admin/ds160", icon: <CheckSquare size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Banco de preguntas", path: "/admin/questions", icon: <BookOpenText size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
-  { label: "Configuración", path: "/admin/settings", icon: <Settings size={20} strokeWidth={2} aria-hidden="true" /> },
+const adminNavGroups = [
+  {
+    label: "Dashboard",
+    items: [
+      { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
+    ],
+  },
+  {
+    label: "Gestión",
+    items: [
+      { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "Asesores", path: "/admin/advisors", icon: <BriefcaseBusiness size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "Asignaciones", path: "/admin/assignments", icon: <UserRoundCheck size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "Solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
+    ],
+  },
+  {
+    label: "Revisión",
+    items: [
+      { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "DS-160", path: "/admin/ds160", icon: <CheckSquare size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
+      { label: "Banco de preguntas", path: "/admin/questions", icon: <BookOpenText size={20} strokeWidth={2} aria-hidden="true" /> },
+    ],
+  },
+  {
+    label: "Análisis",
+    items: [
+      { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
+    ],
+  },
 ];
 
 const pageTitles = {
@@ -156,25 +175,46 @@ export default function AdminLayout({ children }) {
         </div>
 
         <nav className="admin-sidebar__nav" aria-label="Modulos de administracion">
-          {adminNavItems.map(({ label, path, icon, end }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={end}
-              className={({ isActive }) =>
-                `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
-              }
-              data-tooltip={label}
-              title={sidebarCollapsed ? label : undefined}
-              onClick={() => setSidebarOpen(false)}
-            >
-              {icon}
-              <span>{label}</span>
-            </NavLink>
+          {adminNavGroups.map((group) => (
+            <section className="admin-sidebar__group" key={group.label} aria-label={group.label}>
+              <p className="admin-sidebar__group-label">{group.label}</p>
+              <div className="admin-sidebar__group-links">
+                {group.items.map(({ label, path, icon, end }) => (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    end={end}
+                    className={({ isActive }) =>
+                      `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
+                    }
+                    data-tooltip={label}
+                    title={sidebarCollapsed ? label : undefined}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    {icon}
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </section>
           ))}
         </nav>
 
         <div className="admin-sidebar__footer">
+          <p className="admin-sidebar__group-label">Sistema</p>
+          <NavLink
+            className={({ isActive }) =>
+              `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
+            }
+            to="/admin/settings"
+            data-tooltip="Configuración"
+            title={sidebarCollapsed ? "Configuración" : undefined}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <Settings size={20} strokeWidth={2} aria-hidden="true" />
+            <span>Configuración</span>
+          </NavLink>
+
           <button
             type="button"
             className="admin-sidebar__theme"
@@ -188,7 +228,15 @@ export default function AdminLayout({ children }) {
             <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>
           </button>
 
-          <NavLink className="admin-sidebar__profile" to="/admin/profile" data-tooltip="Mi perfil" title={sidebarCollapsed ? "Mi perfil" : undefined}>
+          <NavLink
+            className={({ isActive }) =>
+              `admin-sidebar__profile${isActive ? " admin-sidebar__link--active" : ""}`
+            }
+            to="/admin/profile"
+            data-tooltip="Mi perfil"
+            title={sidebarCollapsed ? "Mi perfil" : undefined}
+            onClick={() => setSidebarOpen(false)}
+          >
             <UserCircle size={20} strokeWidth={2} aria-hidden="true" /><span>Mi perfil</span>
           </NavLink>
 
