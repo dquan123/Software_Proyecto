@@ -249,6 +249,29 @@ describe("panel de administracion", () => {
     expect(screen.getByRole("button", { name: "Expandir menu administrativo" })).toBeInTheDocument();
   });
 
+  it("organiza el sidebar administrativo por grupos visibles", async () => {
+    window.history.pushState({}, "", "/admin");
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Inicio" });
+
+    expect(screen.getByText("Dashboard", { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
+    expect(screen.getByText(/Gesti.n/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
+    expect(screen.getByText(/Revisi.n/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
+    expect(screen.getByText(/An.lisis/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
+    expect(screen.getByText("Sistema", { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
+
+    const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
+    expect(within(navigation).getByRole("link", { name: /Inicio/ })).toBeInTheDocument();
+    expect(within(navigation).getByRole("link", { name: /Usuarios/ })).toBeInTheDocument();
+    expect(within(navigation).getByRole("link", { name: /Documentos/ })).toBeInTheDocument();
+    expect(within(navigation).getByRole("link", { name: /Reportes/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Configuraci/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Mi perfil/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cerrar sesi/ })).toBeInTheDocument();
+  });
+
   it("rechaza una sesión local fabricada con correo de administrador", async () => {
     localStorage.setItem("visaguide_session", JSON.stringify({
       id: 1,
