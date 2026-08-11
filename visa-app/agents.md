@@ -163,6 +163,22 @@ Tareas planificadas:
 - Commits esperados: `style(admin): align branding with design system` y `refactor(admin): improve sidebar organization`.
 - No hacer merge, rebase ni push.
 
+Estado posterior a las tareas de Norman:
+
+- Rama de trabajo: `AdminSidebarIntegrated`.
+- Commits realizados: `style(admin): align branding with design system` y `refactor(admin): improve sidebar organization`.
+- Branding admin alineado con el sistema visual oficial usando `VisaGuideLogo` y tokens `--vg-*` en `frontend/src/styles/admin.css`: `--vg-bg`, `--vg-text`, `--vg-card`, `--vg-border`, `--vg-navy`, `--vg-navy-mid`, `--vg-red`, `--vg-on-strong`, `--vg-strong-muted`, `--vg-text-muted`, `--vg-danger-text` y `--vg-slate`.
+- Sidebar administrativo reorganizado en grupos visuales: `Dashboard`, `Gestion`, `Revision`, `Analisis` y `Sistema`, sin submenus ni rutas nuevas.
+- `frontend/src/components/admin/AdminLayout.jsx` mantiene `AdminLayout`, `RequireAdmin`, `VisaGuideLogo`, `useTheme`, `useAdminSession`, `useAdminResource`, `NavLink` y los iconos de `lucide-react`.
+- Se conserva el Sidebar colapsable de escritorio con persistencia en `localStorage` mediante la llave `vg-admin-sidebar-collapsed`.
+- En estado colapsado se muestran solo iconos, la opcion activa permanece visible y los tooltips se muestran con `data-tooltip` al pasar mouse o enfocar con teclado.
+- El scroll vertical de escritorio queda limitado a `.admin-sidebar__nav`; el header de marca permanece fijo arriba y el footer de sistema permanece visible abajo.
+- Se conserva el comportamiento movil: drawer lateral, backdrop, cierre por click y sin boton de colapso de escritorio.
+- Accesibilidad pulida con `aria-label`, `aria-controls`, `aria-expanded`, `aria-pressed`, foco visible en links/botones y navegacion por teclado.
+- Prueba agregada en `frontend/src/__tests__/AdminPanel.test.jsx` para validar los grupos visibles y enlaces principales del Sidebar.
+- Validacion enfocada ejecutada: `npm run test:run -- src/__tests__/AdminPanel.test.jsx` en `frontend/`, con 23 pruebas exitosas. El aviso conocido de jsdom sobre navegacion externa no bloquea la suite.
+- Sin cambios de arquitectura, sin merge, sin rebase y sin push.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
