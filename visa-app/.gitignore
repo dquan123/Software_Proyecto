@@ -17,6 +17,9 @@ npm-debug.log*
 # Build files
 frontend/dist/
 
+# Documentation
+docs/
+
 # Generated inspection artifacts
 .codex_pptx_inspect/
 
