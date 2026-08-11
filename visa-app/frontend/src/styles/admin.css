@@ -11,10 +11,12 @@
   z-index: 1200;
   display: flex;
   width: 280px;
+  height: 100vh;
   min-height: 100vh;
   flex-direction: column;
   border-right: 1px solid #dce3ec;
   background: #ffffff;
+  overflow: hidden;
   padding: 30px 20px 22px;
   box-shadow: none;
   transition: width .22s ease, padding .22s ease;
@@ -26,6 +28,7 @@
 }
 
 .admin-sidebar__brand {
+  flex: 0 0 auto;
   min-height: 104px;
   gap: 14px;
   align-items: center;
@@ -66,7 +69,22 @@
   color: #0f172a;
 }
 
-.admin-sidebar__nav { display: grid; gap: 9px; margin-top: 28px; }
+.admin-sidebar__nav {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 9px;
+  min-height: 0;
+  margin-top: 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.admin-sidebar__nav::-webkit-scrollbar { width: 8px; }
+.admin-sidebar__nav::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar__nav::-webkit-scrollbar-thumb { border-radius: 999px; background: #cbd5e1; }
 
 .admin-sidebar__link,
 .admin-sidebar__logout {
@@ -90,7 +108,7 @@
 .admin-sidebar__link--active { background: #0f172a; color: #fff; box-shadow: 0 8px 18px rgba(15,23,42,.16); }
 .admin-sidebar__logout { width: 100%; margin-top: auto; color: #e7194c; }
 .admin-sidebar__logout:hover { background: #fff1f4; color: #c5123c; }
-.admin-sidebar__footer { display:grid; gap:8px; margin-top:auto; }
+.admin-sidebar__footer { display:grid; flex:0 0 auto; gap:8px; margin-top:16px; }
 .admin-sidebar__theme {
   width:100%; min-height:48px; padding:12px 14px; border:0; border-radius:12px;
   display:flex; align-items:center; gap:12px; background:transparent; color:#64748b;
@@ -1222,7 +1240,7 @@
   .admin-sidebar-backdrop { position:fixed; inset:0; z-index:1100; display:block; border:0; background:rgba(15,23,42,.48); }
   .admin-sidebar__brand { min-height:auto; }
   .admin-sidebar__collapse { display:none; }
-  .admin-sidebar__nav { margin-top:18px; }
+  .admin-sidebar__nav { flex:0 0 auto; margin-top:18px; overflow:visible; padding-right:0; }
   .admin-sidebar__logout { margin-top:18px; }
   .admin-workspace { width:100%; margin-left:0; }
   .admin-header { padding:14px 18px; }
