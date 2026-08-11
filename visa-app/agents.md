@@ -114,6 +114,27 @@ Estado posterior a `audios-entrevistas-admin`:
 - El endpoint de audio debe seguir siendo cargable directamente por `<audio src="...">`; no depender de headers `Authorization`, porque el elemento HTML no los envia.
 - No guardar audio en base64 dentro de Postgres; mantener archivos en storage y metadatos en JSONB.
 
+## Sprint 6 - Mejoras del Panel Administrador
+
+Estado inicial antes de las ramas `DocumentsStatusFix`, `AdminSidebarCollapse` y `AdminSidebarScroll`:
+
+- Rama principal del Sprint para estas mejoras: `Dashboard-admin`.
+- El Panel Administrador usa `frontend/src/components/admin/AdminLayout.jsx` como layout compartido con Sidebar, Header, notificaciones, cambio de tema y logout.
+- Las rutas administrativas estan registradas en `frontend/src/App.jsx` y protegidas con `RequireAdmin`.
+- `/admin/documents` usa `frontend/src/pages/admin/AdminDocuments.jsx` y el endpoint `PUT /admin/documents/:id/status`.
+- Se verifico una inconsistencia real en documentos: el frontend envia `{ status: "approved" }`, mientras `backend/controllers/adminDocumentController.js` solo normaliza `req.body.estado`.
+- Las observaciones administrativas ya se guardan mediante `{ feedback }` y deben seguir funcionando sin cambiar estado.
+- El Sidebar admin tiene comportamiento movil con `sidebarOpen`, boton hamburger, backdrop y cierre con Escape.
+- El Sidebar admin no tiene colapso de escritorio persistente; el boton del header se oculta en desktop desde `frontend/src/styles/admin.css`.
+- El Sidebar admin solo aplica `overflow-y: auto` en mobile; en escritorio la lista de navegacion puede quedar fuera de pantallas bajas.
+
+Tareas planificadas:
+
+- `DocumentsStatusFix`: hacer que el backend acepte tanto `status` como `estado` en `PUT /admin/documents/:id/status`, manteniendo compatibilidad con comentarios y estados `approved`, `correction` y `rejected`.
+- `AdminSidebarCollapse`: agregar colapso/expansion de escritorio en `AdminLayout`, persistirlo con `localStorage`, conservar mobile y mostrar tooltips cuando el Sidebar este colapsado.
+- `AdminSidebarScroll`: mejorar el scroll vertical de escritorio para que el header y footer del Sidebar queden fijos y solo se desplace la lista de navegacion.
+- No hacer merge, rebase ni push desde estas ramas.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
