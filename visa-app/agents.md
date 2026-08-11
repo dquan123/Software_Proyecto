@@ -145,6 +145,24 @@ Estado final posterior a las mejoras:
 - Validaciones ejecutadas por rama: backend `npm test`, frontend `npm run test:run -- src/__tests__/AdminPanel.test.jsx`, frontend `npm run test:run` y frontend `npm run build`. Las pruebas y builds pasaron; Vitest mantiene el aviso conocido de jsdom `Not implemented: navigation to another Document` por `window.open`.
 - Las ramas quedaron separadas, sin merge, sin rebase y sin push.
 
+## Sprint 6 - Branding y organizacion del Sidebar Administrador
+
+Estado inicial antes de las tareas de Norman en `AdminSidebarIntegrated`:
+
+- Rama de trabajo: `AdminSidebarIntegrated`.
+- La rama ya contiene el Sidebar colapsable de escritorio y el scroll vertical de la lista administrativa.
+- El Sidebar cliente usa `VisaGuideLogo`, tokens globales `--vg-*`, fondo oscuro `--vg-navy`, acento `--vg-red`, logo con mark rojo y texto blanco.
+- El Sidebar administrador todavia mantiene overrides propios en `frontend/src/styles/admin.css`, incluyendo colores hex hardcodeados para logo, fondo, links activos, hover, header y superficies.
+- `frontend/src/components/admin/AdminLayout.jsx` mantiene una lista plana de enlaces administrativos, mas acciones de tema, perfil y logout en el footer.
+- Se debe alinear el branding del Panel Administrador al sistema visual oficial sin copiar codigo del Sidebar cliente ni cambiar logica de negocio.
+
+Tareas planificadas:
+
+- Branding admin: revisar `VisaGuideLogo`, `VisaGuideLogo.css`, `index.css`, `admin.css` y `AdminLayout.jsx`; reemplazar overrides innecesarios por tokens `--vg-*`; conservar componentes y rutas existentes.
+- Organizacion del Sidebar: agrupar enlaces en secciones visuales `Dashboard`, `Gestion`, `Revision`, `Analisis` y `Sistema`; mantener colapso, persistencia, scroll, responsive, iconos, tooltips, opcion activa, teclado y focus visible.
+- Commits esperados: `style(admin): align branding with design system` y `refactor(admin): improve sidebar organization`.
+- No hacer merge, rebase ni push.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
