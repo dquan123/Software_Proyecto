@@ -135,6 +135,16 @@ Tareas planificadas:
 - `AdminSidebarScroll`: mejorar el scroll vertical de escritorio para que el header y footer del Sidebar queden fijos y solo se desplace la lista de navegacion.
 - No hacer merge, rebase ni push desde estas ramas.
 
+Estado final posterior a las mejoras:
+
+- Rama `DocumentsStatusFix`: corrige el contrato de documentos en `backend/controllers/adminDocumentController.js`. El endpoint `PUT /admin/documents/:id/status` acepta `estado` y `status`; `estado` conserva precedencia si ambos llegan. Los comentarios via `feedback` siguen funcionando sin cambiar estado. Se agrego prueba backend en `backend/__tests__/app.test.js`.
+- Rama `AdminSidebarCollapse`: agrega Sidebar colapsable de escritorio en `frontend/src/components/admin/AdminLayout.jsx` y `frontend/src/styles/admin.css`. El estado se persiste en `localStorage` con la llave `vg-admin-sidebar-collapsed`, se mantiene al recargar, conserva el comportamiento movil y muestra tooltips con `data-tooltip` cuando esta colapsado. Se agrego prueba en `frontend/src/__tests__/AdminPanel.test.jsx`.
+- Rama `AdminSidebarScroll`: mejora el scroll vertical del Sidebar en `frontend/src/styles/admin.css`. En escritorio, el Sidebar usa alto fijo de viewport, header/logo y footer no se desplazan, y solo `.admin-sidebar__nav` tiene `overflow-y: auto`. En mobile se mantiene el scroll del panel completo.
+- Componentes reutilizados: `AdminLayout`, `VisaGuideLogo`, `RequireAdmin`, `AdminShared`, rutas existentes y estilos de `admin.css`.
+- Cambios de arquitectura: no se agregaron pantallas, rutas ni servicios nuevos; los cambios se limitaron a compatibilidad de payload backend y comportamiento visual del Sidebar.
+- Validaciones ejecutadas por rama: backend `npm test`, frontend `npm run test:run -- src/__tests__/AdminPanel.test.jsx` y frontend `npm run build`. Las pruebas y builds pasaron; Vitest mantiene el aviso conocido de jsdom `Not implemented: navigation to another Document` por `window.open`.
+- Las ramas quedaron separadas, sin merge, sin rebase y sin push.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
