@@ -145,6 +145,40 @@ Estado final posterior a las mejoras:
 - Validaciones ejecutadas por rama: backend `npm test`, frontend `npm run test:run -- src/__tests__/AdminPanel.test.jsx`, frontend `npm run test:run` y frontend `npm run build`. Las pruebas y builds pasaron; Vitest mantiene el aviso conocido de jsdom `Not implemented: navigation to another Document` por `window.open`.
 - Las ramas quedaron separadas, sin merge, sin rebase y sin push.
 
+## Sprint 6 - Branding y organizacion del Sidebar Administrador
+
+Estado inicial antes de las tareas de Norman en `AdminSidebarIntegrated`:
+
+- Rama de trabajo: `AdminSidebarIntegrated`.
+- La rama ya contiene el Sidebar colapsable de escritorio y el scroll vertical de la lista administrativa.
+- El Sidebar cliente usa `VisaGuideLogo`, tokens globales `--vg-*`, fondo oscuro `--vg-navy`, acento `--vg-red`, logo con mark rojo y texto blanco.
+- El Sidebar administrador todavia mantiene overrides propios en `frontend/src/styles/admin.css`, incluyendo colores hex hardcodeados para logo, fondo, links activos, hover, header y superficies.
+- `frontend/src/components/admin/AdminLayout.jsx` mantiene una lista plana de enlaces administrativos, mas acciones de tema, perfil y logout en el footer.
+- Se debe alinear el branding del Panel Administrador al sistema visual oficial sin copiar codigo del Sidebar cliente ni cambiar logica de negocio.
+
+Tareas planificadas:
+
+- Branding admin: revisar `VisaGuideLogo`, `VisaGuideLogo.css`, `index.css`, `admin.css` y `AdminLayout.jsx`; reemplazar overrides innecesarios por tokens `--vg-*`; conservar componentes y rutas existentes.
+- Organizacion del Sidebar: agrupar enlaces en secciones visuales `Dashboard`, `Gestion`, `Revision`, `Analisis` y `Sistema`; mantener colapso, persistencia, scroll, responsive, iconos, tooltips, opcion activa, teclado y focus visible.
+- Commits esperados: `style(admin): align branding with design system` y `refactor(admin): improve sidebar organization`.
+- No hacer merge, rebase ni push.
+
+Estado posterior a las tareas de Norman:
+
+- Rama de trabajo: `AdminSidebarIntegrated`.
+- Commits realizados: `style(admin): align branding with design system` y `refactor(admin): improve sidebar organization`.
+- Branding admin alineado con el sistema visual oficial usando `VisaGuideLogo` y tokens `--vg-*` en `frontend/src/styles/admin.css`: `--vg-bg`, `--vg-text`, `--vg-card`, `--vg-border`, `--vg-navy`, `--vg-navy-mid`, `--vg-red`, `--vg-on-strong`, `--vg-strong-muted`, `--vg-text-muted`, `--vg-danger-text` y `--vg-slate`.
+- Sidebar administrativo reorganizado en grupos visuales: `Dashboard`, `Gestion`, `Revision`, `Analisis` y `Sistema`, sin submenus ni rutas nuevas.
+- `frontend/src/components/admin/AdminLayout.jsx` mantiene `AdminLayout`, `RequireAdmin`, `VisaGuideLogo`, `useTheme`, `useAdminSession`, `useAdminResource`, `NavLink` y los iconos de `lucide-react`.
+- Se conserva el Sidebar colapsable de escritorio con persistencia en `localStorage` mediante la llave `vg-admin-sidebar-collapsed`.
+- En estado colapsado se muestran solo iconos, la opcion activa permanece visible y los tooltips se muestran con `data-tooltip` al pasar mouse o enfocar con teclado.
+- El scroll vertical de escritorio queda limitado a `.admin-sidebar__nav`; el header de marca permanece fijo arriba y el footer de sistema permanece visible abajo.
+- Se conserva el comportamiento movil: drawer lateral, backdrop, cierre por click y sin boton de colapso de escritorio.
+- Accesibilidad pulida con `aria-label`, `aria-controls`, `aria-expanded`, `aria-pressed`, foco visible en links/botones y navegacion por teclado.
+- Prueba agregada en `frontend/src/__tests__/AdminPanel.test.jsx` para validar los grupos visibles y enlaces principales del Sidebar.
+- Validacion enfocada ejecutada: `npm run test:run -- src/__tests__/AdminPanel.test.jsx` en `frontend/`, con 23 pruebas exitosas. El aviso conocido de jsdom sobre navegacion externa no bloquea la suite.
+- Sin cambios de arquitectura, sin merge, sin rebase y sin push.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
