@@ -142,7 +142,7 @@ Estado final posterior a las mejoras:
 - Rama `AdminSidebarScroll`: mejora el scroll vertical del Sidebar en `frontend/src/styles/admin.css`. En escritorio, el Sidebar usa alto fijo de viewport, header/logo y footer no se desplazan, y solo `.admin-sidebar__nav` tiene `overflow-y: auto`. En mobile se mantiene el scroll del panel completo.
 - Componentes reutilizados: `AdminLayout`, `VisaGuideLogo`, `RequireAdmin`, `AdminShared`, rutas existentes y estilos de `admin.css`.
 - Cambios de arquitectura: no se agregaron pantallas, rutas ni servicios nuevos; los cambios se limitaron a compatibilidad de payload backend y comportamiento visual del Sidebar.
-- Validaciones ejecutadas por rama: backend `npm test`, frontend `npm run test:run -- src/__tests__/AdminPanel.test.jsx` y frontend `npm run build`. Las pruebas y builds pasaron; Vitest mantiene el aviso conocido de jsdom `Not implemented: navigation to another Document` por `window.open`.
+- Validaciones ejecutadas por rama: backend `npm test`, frontend `npm run test:run -- src/__tests__/AdminPanel.test.jsx`, frontend `npm run test:run` y frontend `npm run build`. Las pruebas y builds pasaron; Vitest mantiene el aviso conocido de jsdom `Not implemented: navigation to another Document` por `window.open`.
 - Las ramas quedaron separadas, sin merge, sin rebase y sin push.
 
 ## Instalacion y ejecucion
