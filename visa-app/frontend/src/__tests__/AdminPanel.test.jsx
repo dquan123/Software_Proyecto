@@ -228,6 +228,27 @@ describe("panel de administracion", () => {
     expect(screen.getByRole("button", { name: "Activar modo claro" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("permite colapsar el sidebar de escritorio y conserva el estado", async () => {
+    window.history.pushState({}, "", "/admin");
+    const user = userEvent.setup();
+
+    const { unmount } = render(<App />);
+
+    await screen.findByRole("heading", { name: "Inicio" });
+    await user.click(screen.getByRole("button", { name: "Colapsar menu administrativo" }));
+
+    expect(localStorage.getItem("vg-admin-sidebar-collapsed")).toBe("true");
+    expect(document.querySelector(".admin-sidebar")).toHaveClass("admin-sidebar--collapsed");
+    expect(screen.getByRole("button", { name: "Expandir menu administrativo" })).toHaveAttribute("aria-expanded", "false");
+
+    unmount();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Inicio" });
+    expect(document.querySelector(".admin-sidebar")).toHaveClass("admin-sidebar--collapsed");
+    expect(screen.getByRole("button", { name: "Expandir menu administrativo" })).toBeInTheDocument();
+  });
+
   it("rechaza una sesión local fabricada con correo de administrador", async () => {
     localStorage.setItem("visaguide_session", JSON.stringify({
       id: 1,
