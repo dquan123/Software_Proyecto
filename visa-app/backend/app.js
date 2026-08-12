@@ -477,6 +477,8 @@ app.get("/estado-tramite", async (req, res) => {
       progreso: tramite.progreso,
       siguientePaso: tramite.siguiente_paso,
       mensaje: tramite.mensaje,
+      created_at: tramite.created_at,
+      updated_at: tramite.updated_at,
     });
   } catch (error) {
     console.log("ERROR ESTADO:", error);
