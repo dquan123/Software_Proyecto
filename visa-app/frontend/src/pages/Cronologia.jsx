@@ -55,6 +55,12 @@ function Nodo({ numero, estado }) {
 }
 
 function TarjetaCompletada({ etapa, senior }) {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("es-GT", { day: "numeric", month: "short", year: "numeric" });
+  };
+
   return (
     <article className="cron-card cron-card--done">
       <div className="cron-card__head">
@@ -62,7 +68,7 @@ function TarjetaCompletada({ etapa, senior }) {
           {etapa.label}
         </h3>
         <span className={`cron-card__fecha${senior ? " cron-card__fecha--senior" : ""}`}>
-          Completado
+          {etapa.completedAt ? `Completado el ${formatDate(etapa.completedAt)}` : "Completado"}
         </span>
       </div>
       <p className={`cron-card__desc${senior ? " cron-card__desc--senior" : ""}`}>
