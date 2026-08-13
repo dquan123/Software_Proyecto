@@ -62,9 +62,6 @@ export default function AdminProcessDetail() {
   const [revision, setRevision] = useState(0);
 
   const loadDetail = useCallback((signal) => {
-    setIsLoading(true);
-    setError("");
-
     return fetch(buildApiUrl(`/admin/processes/${id}`), {
       signal,
       headers: getAdminHeaders(),
@@ -84,6 +81,13 @@ export default function AdminProcessDetail() {
         if (!signal?.aborted) setIsLoading(false);
       });
   }, [id]);
+
+  const retryLoad = () => {
+    setDetail(null);
+    setIsLoading(true);
+    setError("");
+    setRevision((value) => value + 1);
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,7 +118,7 @@ export default function AdminProcessDetail() {
       <AdminResourceState
         isLoading={isLoading}
         error={error}
-        retry={() => setRevision((value) => value + 1)}
+        retry={retryLoad}
         isEmpty={!isLoading && !error && !detail}
         empty="No se encontro la solicitud."
       />
