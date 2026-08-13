@@ -191,6 +191,18 @@ Estado inicial antes de implementar `AutomaticNotifications`:
 - No crear endpoints nuevos salvo que sea estrictamente necesario; los eventos deben colgarse de los endpoints existentes de documentos, entrevistas y tramites administrativos.
 - Mantener commits separados por fase: documentos, entrevistas y tramites.
 
+Estado final posterior a SCRUM-141 (`AutomaticNotifications`):
+
+- Rama de trabajo: `AutomaticNotifications`.
+- Servicios reutilizados: `backend/services/notificacionService.js` con `crearNotificacion`, `existeNotificacionEtapa` y el helper compartido `notificarCambioEtapa`.
+- Endpoints reutilizados: `PUT /admin/documents/:id/status`, `PUT /interview-sessions/:id/feedback`, `PUT /admin/processes/:id`, `POST /admin/assignments` y el flujo legacy `PUT /tramite`.
+- Componentes reutilizados: `frontend/src/components/NotificationCenter.jsx`, `frontend/src/pages/Notificaciones.jsx` y el contador de notificaciones del Sidebar cliente. No se agregaron pantallas ni endpoints frontend.
+- Documentos: al aprobar, rechazar/enviar a correccion o guardar observaciones administrativas se crea una notificacion de tipo `documento` para el usuario propietario del documento. El endpoint admin conserva compatibilidad con `estado` y `status`.
+- Entrevistas: al guardar retroalimentacion o calificacion desde el panel admin se crea una notificacion de tipo `entrevista` para el usuario de la sesion.
+- Tramites: al cambiar estado se crea una notificacion informativa; al cambiar etapa se reutiliza `notificarCambioEtapa` para evitar duplicados recientes por `etapa_relacionada`; al asignar asesor desde gestion de tramite o desde asignaciones se crea una notificacion informativa.
+- No se creo infraestructura nueva de notificaciones ni tablas nuevas; la historia queda integrada sobre la tabla `notificaciones` existente.
+- Commits realizados: `feat(notifications): add document review notifications`, `feat(notifications): add interview feedback notifications` y `feat(notifications): add process update notifications`.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
