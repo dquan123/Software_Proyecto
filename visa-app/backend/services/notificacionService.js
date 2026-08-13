@@ -181,6 +181,19 @@ function createNotificacionService(pool) {
     return result.rows.length > 0;
   }
 
+  async function notificarCambioEtapa(userId, etapaRelacionada, titulo, mensaje) {
+    const yaExiste = await existeNotificacionEtapa(userId, etapaRelacionada);
+    if (yaExiste) return null;
+
+    return crearNotificacion({
+      userId,
+      titulo,
+      mensaje,
+      tipo: "etapa",
+      etapaRelacionada,
+    });
+  }
+
   return {
     ensureSchema,
     listarPorUsuario,
@@ -190,6 +203,7 @@ function createNotificacionService(pool) {
     eliminar,
     crearNotificacion,
     existeNotificacionEtapa,
+    notificarCambioEtapa,
   };
 }
 

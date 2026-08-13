@@ -3,10 +3,10 @@ const upload = require("../upload");
 const createInterviewSessionController = require("../controllers/interviewSessionController");
 const createInterviewSessionService = require("../services/interviewSessionService");
 
-function createInterviewSessionRoutes(pool, { requireAdmin = (_req, _res, next) => next() } = {}) {
+function createInterviewSessionRoutes(pool, { requireAdmin = (_req, _res, next) => next(), notificacionService } = {}) {
   const router = express.Router();
   const service = createInterviewSessionService(pool);
-  const controller = createInterviewSessionController(service);
+  const controller = createInterviewSessionController(service, { notificacionService });
 
   router.get("/", requireAdmin, controller.listSessions);
   router.post("/", upload.any(), controller.createSession);
