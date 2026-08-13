@@ -1350,6 +1350,16 @@ describe("app endpoints", () => {
       feedback: "Respuesta clara y concreta.",
       rating: 5,
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        4,
+        "Entrevista revisada",
+        "Ya puedes consultar la retroalimentacion de tu entrevista.",
+        "entrevista",
+        "entrevista-30",
+      ]
+    );
   });
 
   test("POST /upload guarda un documento mediante el proveedor configurado", async () => {

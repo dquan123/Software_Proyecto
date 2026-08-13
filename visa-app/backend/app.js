@@ -412,7 +412,7 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin }));
+app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
