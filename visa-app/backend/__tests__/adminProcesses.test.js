@@ -64,6 +64,143 @@ describe("admin process management", () => {
     expect(response.body.asesores).toHaveLength(1);
   });
 
+  test("returns a consolidated request detail to an admin", async () => {
+    const processRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      id_asesor: 5,
+      created_at: "2026-08-01T10:00:00.000Z",
+      updated_at: "2026-08-02T10:00:00.000Z",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+      solicitante_telefono: "+502 5555 5555",
+      solicitante_ciudad: "Ciudad de Guatemala",
+      solicitante_pais: "Guatemala",
+      solicitante_created_at: "2026-07-20T10:00:00.000Z",
+      asesor_nombre: "Laura Vasquez",
+      asesor_correo: "laura@visaguide.com",
+    };
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("WHERE t.id_tramite = $1")) return { rows: [processRow] };
+      if (sql.includes("FROM formulario_ds160")) {
+        return {
+          rows: [{
+            id_formulario: 31,
+            datos: { nombres: "Carlos", apellidos: "Mendoza", numeroPasaporte: "A123456" },
+            seccion_actual: 4,
+            completado: false,
+            estado_revision: "en_progreso",
+            feedback_revision: null,
+            updated_at: "2026-08-03T10:00:00.000Z",
+          }],
+        };
+      }
+      if (sql.includes("FROM documentos")) {
+        return {
+          rows: [{
+            id: 41,
+            nombre: "pasaporte.pdf",
+            tipo: "application/pdf",
+            archivo_url: "https://files.example/passport.pdf",
+            documento_key: "passport",
+            estado: "approved",
+            feedback: "Correcto",
+            storage_key: "local/passport.pdf",
+            creado_en: "2026-08-02T10:00:00.000Z",
+            actualizado_en: "2026-08-02T11:00:00.000Z",
+          }],
+        };
+      }
+      if (sql.includes("FROM interview_sessions")) {
+        return {
+          rows: [{
+            id: 51,
+            user_id: 8,
+            user_name: "Carlos Mendoza",
+            user_email: "carlos@example.com",
+            status: "reviewed",
+            responses: [{ id: "q1", text: "Motivo de viaje", recorded: true, audio: { key: "audio/q1.webm" } }],
+            feedback: "Buena preparacion",
+            rating: 4,
+            created_at: "2026-08-04T10:00:00.000Z",
+            reviewed_at: "2026-08-05T10:00:00.000Z",
+          }],
+        };
+      }
+      if (sql.includes("FROM notificaciones")) {
+        return {
+          rows: [{
+            id: 61,
+            titulo: "Documento aprobado",
+            mensaje: "Tu documento fue aprobado.",
+            tipo: "documento",
+            leido: false,
+            etapa_relacionada: "documento-41",
+            created_at: "2026-08-06T10:00:00.000Z",
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body.tramite).toMatchObject({
+      id: 21,
+      etapaActual: "Formulario DS-160",
+      asesor: { id: 5, nombre: "Laura Vasquez" },
+    });
+    expect(response.body.solicitante).toMatchObject({
+      id: 8,
+      correo: "carlos@example.com",
+      ciudad: "Ciudad de Guatemala",
+    });
+    expect(response.body.ds160).toMatchObject({
+      id: 31,
+      progreso: 40,
+      resumen: expect.arrayContaining([
+        { key: "nombres", label: "Nombres", value: "Carlos" },
+        { key: "numeroPasaporte", label: "Pasaporte", value: "A123456" },
+      ]),
+    });
+    expect(response.body.documentos[0]).toMatchObject({
+      id: 41,
+      archivo_url: "/documentos/41/archivo",
+      feedback: "Correcto",
+    });
+    expect(response.body.entrevistas[0].responses[0].audio.url).toBe("/interview-sessions/51/audio/q1");
+    expect(response.body.notificaciones[0]).toMatchObject({
+      id: 61,
+      leido: false,
+      tipo: "documento",
+    });
+  });
+
+  test("returns 404 when request detail does not exist", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("WHERE t.id_tramite = $1")) return { rows: [] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/processes/999")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(404);
+
+    expect(response.body).toEqual({ error: "TrÃ¡mite no encontrado" });
+  });
+
   test("assigns an advisor and updates status and stage", async () => {
     const refreshedRow = {
       id_tramite: 21,
