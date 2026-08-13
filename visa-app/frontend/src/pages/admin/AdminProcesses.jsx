@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { buildApiUrl } from "../../config/api";
@@ -171,7 +172,12 @@ export default function AdminProcesses() {
                   <td><strong className="admin-table-primary">{process.solicitante.perfil}</strong><span className="admin-table-secondary">{process.etapaActual}</span></td>
                   <td><span className={`admin-status admin-status--${statusClass(process.estado)}`}>{process.estado}</span></td>
                   <td className={process.asesor ? "" : "admin-process-unassigned"}>{process.asesor?.nombre || "Sin asignar"}</td>
-                  <td><button type="button" className="admin-process-manage" onClick={() => openManager(process)}>Gestionar</button></td>
+                  <td>
+                    <div className="admin-process-row-actions">
+                      <Link className="admin-process-detail-link" to={`/admin/processes/${process.id}`}>Ver detalle</Link>
+                      <button type="button" className="admin-process-manage" onClick={() => openManager(process)}>Gestionar</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

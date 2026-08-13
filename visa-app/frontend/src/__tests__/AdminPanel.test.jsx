@@ -160,6 +160,74 @@ function mockAdminSession() {
         }),
       });
     }
+    if (String(url).endsWith("/admin/processes/21") && (!options.method || options.method === "GET")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          tramite: {
+            ...managedProcess,
+            createdAt: "2026-08-01T10:00:00.000Z",
+            updatedAt: "2026-08-02T10:00:00.000Z",
+          },
+          solicitante: {
+            id: 8,
+            nombre: "Carlos Mendoza",
+            correo: "carlos@example.com",
+            perfil: "RenovaciÃ³n B1/B2",
+            ciudad: "Ciudad de Guatemala",
+            pais: "Guatemala",
+            createdAt: "2026-07-20T10:00:00.000Z",
+          },
+          ds160: {
+            id: 31,
+            seccionActual: 4,
+            completado: false,
+            progreso: 40,
+            estadoRevision: "en_progreso",
+            resumen: [
+              { key: "nombres", label: "Nombres", value: "Carlos" },
+              { key: "numeroPasaporte", label: "Pasaporte", value: "A123456" },
+            ],
+          },
+          documentos: [
+            {
+              id: 41,
+              nombre: "pasaporte.pdf",
+              tipo: "application/pdf",
+              documento_key: "Pasaporte",
+              estado: adminDocumentStatus,
+              feedback: adminDocumentFeedback,
+              archivo_url: "/documentos/41/archivo",
+              creado_en: "2026-08-01T10:00:00.000Z",
+            },
+          ],
+          entrevistas: [
+            {
+              id: 12,
+              user_id: 8,
+              user_name: "Carlos Mendoza",
+              user_email: "carlos@example.com",
+              status: "reviewed",
+              responses: [{ id: "q1", text: "Motivo de viaje", recorded: true }],
+              feedback: "Buena preparacion",
+              rating: 4,
+              created_at: "2026-08-03T10:00:00.000Z",
+              reviewed_at: "2026-08-04T10:00:00.000Z",
+            },
+          ],
+          notificaciones: [
+            {
+              id: 61,
+              titulo: "Documento aprobado",
+              mensaje: "Tu documento fue aprobado.",
+              tipo: "documento",
+              leido: false,
+              createdAt: "2026-08-05T10:00:00.000Z",
+            },
+          ],
+        }),
+      });
+    }
     if (String(url).endsWith("/admin/processes/21") && options.method === "PUT") {
       const payload = JSON.parse(options.body || "{}");
       managedProcess = {
@@ -330,6 +398,7 @@ describe("panel de administracion", () => {
       expect(await screen.findByText("Carlos Mendoza")).toBeInTheDocument();
       expect(screen.getByText("Renovación B1/B2")).toBeInTheDocument();
       expect(screen.getByText("Sin asignar")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute("href", "/admin/processes/21");
       expect(screen.getByRole("button", { name: "Gestionar" })).toBeInTheDocument();
     } else if (path === "/admin/reports") {
       expect(await screen.findByText("Trámites totales")).toBeInTheDocument();
@@ -365,6 +434,26 @@ describe("panel de administracion", () => {
       expect.stringContaining("/admin/processes/21"),
       expect.objectContaining({ method: "PUT" })
     );
+  });
+
+  it("muestra el detalle consolidado de una solicitud administrativa", async () => {
+    window.history.pushState({}, "", "/admin/processes/21");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Todas las solicitudes" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Detalle de Solicitud" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Carlos Mendoza" })).toBeInTheDocument();
+    expect(screen.getAllByText("Formulario DS-160").length).toBeGreaterThan(0);
+    expect(screen.getByText("Documentos aprobados")).toBeInTheDocument();
+    expect(screen.getAllByText("1/1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pasaporte").length).toBeGreaterThan(0);
+    expect(screen.getByText("Documento ilegible.")).toBeInTheDocument();
+    expect(screen.getAllByText("Buena preparacion").length).toBeGreaterThan(0);
+    expect(screen.getByText("Documento aprobado")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Gestionar tramite" })).toHaveAttribute("href", "/admin/processes");
+    expect(screen.getAllByRole("link", { name: "Ver documentos" })[0]).toHaveAttribute("href", "/admin/documents");
+    expect(screen.getAllByRole("link", { name: "Revisar entrevistas" })[0]).toHaveAttribute("href", "/admin/interviews");
   });
 
   it("permite navegar desde el sidebar", async () => {
