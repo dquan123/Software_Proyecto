@@ -2,6 +2,7 @@ const express = require("express");
 const request = require("supertest");
 const { createRoleMiddleware, issueSessionToken } = require("../auth");
 const createAdminProcessRoutes = require("../routes/adminProcessRoutes");
+const createNotificacionService = require("../services/notificacionService");
 
 describe("admin process management", () => {
   const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin" };
@@ -14,6 +15,7 @@ describe("admin process management", () => {
     app.use("/admin/processes", createAdminProcessRoutes(pool, {
       requireAdmin: createRoleMiddleware(pool, ["admin"]),
       schemaReady: Promise.resolve(),
+      notificacionService: createNotificacionService(pool),
     }));
     return { app, pool };
   }
@@ -101,6 +103,149 @@ describe("admin process management", () => {
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE tramite"),
       ["Pendiente", "Cita consular", 51, 5, 21]
+    );
+  });
+
+  test("notifies the applicant when an admin changes process status", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      estado: "Pendiente",
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+    };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 90 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "Pendiente", etapaActual: "Formulario DS-160", asesorId: null })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        8,
+        "Estado de tramite actualizado",
+        "Tu tramite cambio a Pendiente.",
+        "info",
+        "tramite-21-estado-Pendiente",
+      ]
+    );
+  });
+
+  test("notifies the applicant when an admin changes process stage without duplicating stage alerts", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      etapa_actual: "Cita consular",
+      progreso: 51,
+      siguiente_paso: "Programar cita",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+    };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("SELECT id FROM notificaciones")) return { rows: [] };
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 91 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "En proceso", etapaActual: "Cita consular", asesorId: null })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("SELECT id FROM notificaciones"),
+      [8, "Cita consular"]
+    );
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        8,
+        "Nueva etapa: Cita consular",
+        "Tu tramite avanzo a la etapa: Cita consular.",
+        "etapa",
+        "Cita consular",
+      ]
+    );
+  });
+
+  test("notifies the applicant when an advisor is assigned from process management", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      id_asesor: 5,
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+      asesor_nombre: "Laura Vasquez",
+      asesor_correo: "laura@visaguide.com",
+    };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("rol = 'asesor'")) return { rows: [{ id_usuario: 5 }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 92 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "En proceso", etapaActual: "Formulario DS-160", asesorId: 5 })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        8,
+        "Asesor asignado",
+        "Se te asigno un asesor para acompanar tu tramite.",
+        "info",
+        "tramite-21-asesor",
+      ]
     );
   });
 });

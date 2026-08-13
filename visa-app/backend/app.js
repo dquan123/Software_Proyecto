@@ -254,15 +254,7 @@ notificacionService.ensureSchema().catch((error) => {
 
 async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
   try {
-    const yaExiste = await notificacionService.existeNotificacionEtapa(userId, etapa);
-    if (yaExiste) return;
-    await notificacionService.crearNotificacion({
-      userId,
-      titulo,
-      mensaje,
-      tipo: "etapa",
-      etapaRelacionada: etapa,
-    });
+    await notificacionService.notificarCambioEtapa(userId, etapa, titulo, mensaje);
   } catch (err) {
     console.error("ERROR NOTIFICAR ETAPA:", err);
   }
@@ -412,13 +404,13 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin }));
+app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
-app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady }));
-app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady }));
-app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady }));
+app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService }));
+app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService }));
+app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {
@@ -931,7 +923,7 @@ app.get("/documentos/:id/archivo", async (req, res) => {
     const dispositionType = canPreviewInline(contentType) ? "inline" : "attachment";
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Link", '</favicon.svg>; rel="icon"; type="image/svg+xml"');
+    res.setHeader("Link", '</visaguide-favicon.svg>; rel="icon"; type="image/svg+xml"');
     res.setHeader(
       "Content-Disposition",
       `${dispositionType}; filename="${buildDownloadFilename(document)}"`

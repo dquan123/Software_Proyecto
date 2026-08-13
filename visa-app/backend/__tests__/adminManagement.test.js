@@ -2,6 +2,7 @@ const express = require("express");
 const request = require("supertest");
 const { createRoleMiddleware, issueSessionToken } = require("../auth");
 const createAdminManagementRoutes = require("../routes/adminManagementRoutes");
+const createNotificacionService = require("../services/notificacionService");
 
 describe("admin management integration", () => {
   const admin = { id_usuario: 1, correo: "admin@test.dev", nombre: "Admin", rol: "admin" };
@@ -14,6 +15,7 @@ describe("admin management integration", () => {
     app.use("/admin", createAdminManagementRoutes(pool, {
       requireAdmin: createRoleMiddleware(pool, ["admin"]),
       schemaReady: Promise.resolve(),
+      notificacionService: createNotificacionService(pool),
     }));
     return { app, pool };
   }
@@ -65,6 +67,34 @@ describe("admin management integration", () => {
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE tramite SET id_asesor"),
       [7, 22]
+    );
+  });
+
+  test("notifies the applicant when an assignment is created", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
+      if (sql.includes("rol = 'asesor' AND activo")) return { rows: [{ id_usuario: 7, nombre: "Laura" }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4 }] };
+      if (sql.includes("INSERT INTO admin_activity")) return { rows: [{ id: 12 }] };
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 93 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .post("/admin/assignments")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ tramiteId: 22, asesorId: 7 })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        4,
+        "Asesor asignado",
+        "Se te asigno un asesor para acompanar tu tramite.",
+        "info",
+        "tramite-22-asesor",
+      ]
     );
   });
 

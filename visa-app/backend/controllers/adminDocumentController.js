@@ -1,4 +1,63 @@
-function createAdminDocumentController(adminDocumentService) {
+function createAdminDocumentController(adminDocumentService, { notificacionService } = {}) {
+  function hasOwn(body, key) {
+    return Object.prototype.hasOwnProperty.call(body || {}, key);
+  }
+
+  function getRequestedStatus(body) {
+    if (hasOwn(body, "estado")) return body.estado;
+    if (hasOwn(body, "status")) return body.status;
+    return undefined;
+  }
+
+  function getDocumentNotification(documento, { statusChanged, feedbackChanged }) {
+    const documentName = documento.nombre || "documento";
+    const normalizedStatus = documento.estado === "rejected" ? "correction" : documento.estado;
+
+    if (statusChanged && normalizedStatus === "approved") {
+      return {
+        titulo: "Documento aprobado",
+        mensaje: `Tu ${documentName} fue aprobado.`,
+      };
+    }
+
+    if (statusChanged && normalizedStatus === "correction") {
+      return {
+        titulo: "Documento requiere correcciones",
+        mensaje: feedbackChanged
+          ? `Tu ${documentName} requiere correcciones. Revisa las observaciones del administrador.`
+          : `Tu ${documentName} requiere correcciones.`,
+      };
+    }
+
+    if (feedbackChanged) {
+      return {
+        titulo: "Nuevas observaciones en documento",
+        mensaje: "El administrador agrego observaciones a uno de tus documentos.",
+      };
+    }
+
+    return null;
+  }
+
+  async function notifyDocumentUpdate(documento, context) {
+    if (!notificacionService || !documento?.usuario_id) return;
+
+    const notification = getDocumentNotification(documento, context);
+    if (!notification) return;
+
+    try {
+      await notificacionService.crearNotificacion({
+        userId: documento.usuario_id,
+        titulo: notification.titulo,
+        mensaje: notification.mensaje,
+        tipo: "documento",
+        etapaRelacionada: documento.documento_key || `documento-${documento.id}`,
+      });
+    } catch (error) {
+      console.error("ERROR ADMIN DOCUMENT NOTIFICATION:", error);
+    }
+  }
+
   async function listDocuments(_req, res) {
     try {
       const documentos = await adminDocumentService.listDocuments();
@@ -18,18 +77,23 @@ function createAdminDocumentController(adminDocumentService) {
 
     try {
       const payload = {};
+      const requestedStatus = getRequestedStatus(req.body);
+      const statusChanged = requestedStatus !== undefined;
+      const feedbackChanged = hasOwn(req.body, "feedback");
 
-      if (Object.prototype.hasOwnProperty.call(req.body || {}, "estado")) {
-        payload.status = req.body.estado;
+      if (statusChanged) {
+        payload.status = requestedStatus;
       }
 
-      if (Object.prototype.hasOwnProperty.call(req.body || {}, "feedback")) {
+      if (feedbackChanged) {
         payload.feedback = req.body.feedback;
       }
 
       const documento = await adminDocumentService.updateDocumentStatus(documentId, payload);
+      await notifyDocumentUpdate(documento, { statusChanged, feedbackChanged });
+
       return res.json({
-        message: req.body?.estado
+        message: statusChanged
           ? "Estado del documento actualizado correctamente"
           : "Observaciones del documento actualizadas correctamente",
         documento,

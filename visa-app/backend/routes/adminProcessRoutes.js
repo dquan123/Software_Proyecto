@@ -31,7 +31,46 @@ function presentProcess(row) {
   };
 }
 
-module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaReady }) {
+async function notifyProcessUpdates(notificacionService, { processId, userId, previous, next }) {
+  if (!notificacionService || !userId) return;
+
+  const tasks = [];
+
+  if (previous.estado !== next.estado) {
+    tasks.push(notificacionService.crearNotificacion({
+      userId,
+      titulo: "Estado de tramite actualizado",
+      mensaje: `Tu tramite cambio a ${next.estado}.`,
+      tipo: "info",
+      etapaRelacionada: `tramite-${processId}-estado-${next.estado}`,
+    }));
+  }
+
+  if (previous.etapa_actual !== next.etapa_actual) {
+    tasks.push(notificacionService.notificarCambioEtapa(
+      userId,
+      next.etapa_actual,
+      `Nueva etapa: ${next.etapa_actual}`,
+      `Tu tramite avanzo a la etapa: ${next.etapa_actual}.`
+    ));
+  }
+
+  if (previous.id_asesor !== next.id_asesor && next.id_asesor) {
+    tasks.push(notificacionService.crearNotificacion({
+      userId,
+      titulo: "Asesor asignado",
+      mensaje: "Se te asigno un asesor para acompanar tu tramite.",
+      tipo: "info",
+      etapaRelacionada: `tramite-${processId}-asesor`,
+    }));
+  }
+
+  await Promise.all(tasks.map((task) => task.catch((error) => {
+    console.error("ERROR ADMIN PROCESS NOTIFICATION:", error);
+  })));
+}
+
+module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
   const router = express.Router();
 
   router.use(requireAdmin);
@@ -90,6 +129,16 @@ module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaR
 
     try {
       await schemaReady;
+      const currentResult = await pool.query(
+        `SELECT id_tramite, id_usuario, estado, etapa_actual, id_asesor
+         FROM tramite
+         WHERE id_tramite = $1
+         LIMIT 1`,
+        [processId]
+      );
+      const currentProcess = currentResult.rows[0];
+      if (!currentProcess) return res.status(404).json({ error: "TrÃ¡mite no encontrado" });
+
       if (normalizedAdvisorId !== null) {
         const advisor = await pool.query(
           "SELECT id_usuario FROM usuario WHERE id_usuario = $1 AND rol = 'asesor'",
@@ -119,7 +168,19 @@ module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaR
         WHERE t.id_tramite = $1
       `, [processId]);
 
-      res.json({ message: "Trámite actualizado correctamente", tramite: presentProcess(refreshed.rows[0]) });
+      const refreshedProcess = refreshed.rows[0];
+      await notifyProcessUpdates(notificacionService, {
+        processId,
+        userId: refreshedProcess.id_usuario || currentProcess.id_usuario,
+        previous: currentProcess,
+        next: {
+          estado: refreshedProcess.estado,
+          etapa_actual: refreshedProcess.etapa_actual,
+          id_asesor: refreshedProcess.id_asesor,
+        },
+      });
+
+      res.json({ message: "Trámite actualizado correctamente", tramite: presentProcess(refreshedProcess) });
     } catch (error) {
       console.error("ERROR UPDATE ADMIN PROCESS:", error);
       res.status(500).json({ error: "No fue posible actualizar el trámite" });
