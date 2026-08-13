@@ -203,6 +203,34 @@ Estado final posterior a SCRUM-141 (`AutomaticNotifications`):
 - No se creo infraestructura nueva de notificaciones ni tablas nuevas; la historia queda integrada sobre la tabla `notificaciones` existente.
 - Commits realizados: `feat(notifications): add document review notifications`, `feat(notifications): add interview feedback notifications` y `feat(notifications): add process update notifications`.
 
+## SCRUM-140 - Detalle de Solicitud Administrativa
+
+Estado inicial antes de implementar `AdminRequestDetail`:
+
+- Rama de trabajo esperada: `AdminRequestDetail`.
+- La pantalla `/admin/processes` existe en `frontend/src/pages/admin/AdminProcesses.jsx` y ya permite listar, filtrar, paginar y gestionar tramites mediante `GET /admin/processes` y `PUT /admin/processes/:id`.
+- No existe ruta frontend `/admin/processes/:id` ni endpoint backend `GET /admin/processes/:id` para consolidar una solicitud individual.
+- Componentes reutilizables identificados: `AdminLayout`, `RequireAdmin`, `AdminPageHeader`, `AdminResourceState`, `AdminSearch`, `AdminTabs`, tabla y tarjetas de `frontend/src/styles/admin.css`, `AdminDocuments` para contrato visual/logica de documentos, `AdminDS160` para estado DS-160 e `InterviewReviewPanel` para contrato visual de entrevistas.
+- Endpoints reutilizables existentes: `GET /interview-sessions/user/:userId`, `GET /documentos/:usuarioId`, `GET /notificaciones/:userId`, `GET /documentos/:id/archivo`, `PUT /admin/processes/:id`, `PUT /interview-sessions/:id/feedback` y `PUT /admin/documents/:id/status`.
+- Para evitar multiples llamadas innecesarias desde el frontend, se evaluara crear `GET /admin/processes/:id` en `backend/routes/adminProcessRoutes.js` con JOINs y consultas agregadas de usuario, tramite, DS-160, documentos, entrevistas y notificaciones.
+- La vista debe integrarse al Panel Administrador con el mismo Sidebar/Header, estados de carga/error/empty y acciones de navegacion hacia gestion de tramite, documentos, entrevistas y DS-160 sin duplicar pantallas.
+- No hacer merge, rebase ni push desde esta rama.
+
+Estado final posterior a SCRUM-140 (`AdminRequestDetail`):
+
+- Rama de trabajo: `AdminRequestDetail`.
+- Nueva ruta frontend: `/admin/processes/:id`, registrada en `frontend/src/App.jsx` y protegida con `RequireAdmin`.
+- Nueva pantalla: `frontend/src/pages/admin/AdminProcessDetail.jsx`, renderizada dentro de `AdminLayout` y usando `AdminPageHeader`, `AdminResourceState`, tarjetas, tablas, estados visuales y estilos de `frontend/src/styles/admin.css`.
+- Navegacion: `frontend/src/pages/admin/AdminProcesses.jsx` mantiene la accion `Gestionar` y agrega el enlace `Ver detalle` para abrir `/admin/processes/:id`.
+- Endpoint creado: `GET /admin/processes/:id` en `backend/routes/adminProcessRoutes.js`, protegido por `requireAdmin`; consolida tramite, solicitante, resumen DS-160, documentos, entrevistas y notificaciones del usuario.
+- Endpoints reutilizados desde la vista: `GET /documentos/:id/archivo` para abrir archivos mediante `frontend/src/utils/documentPreview.js`; enlaces a `/admin/processes`, `/admin/documents`, `/admin/interviews` y `/admin/ds160` para gestionar modulos existentes sin duplicar pantallas.
+- Componentes/logica reutilizados: `AdminLayout`, Sidebar/Header administrativo, `AdminPageHeader`, `AdminResourceState`, patrones de tabla/card de `admin.css`, contrato de documentos de `AdminDocuments`, resumen DS-160 existente y estructura de entrevistas compatible con `InterviewReviewPanel`.
+- Utilidad compartida creada: `frontend/src/utils/documentPreview.js`, usada por `AdminProcessDetail` y `AdminDocuments` para construir URLs absolutas de documentos con `buildApiUrl` y abrirlos sin que React Router capture rutas backend.
+- Backend presenta datos normalizados: `tramite`, `solicitante`, `ds160`, `documentos`, `entrevistas` y `notificaciones`; los audios de entrevistas conservan rutas `/interview-sessions/:id/audio/:questionId`.
+- Estados UI implementados: loading, error con reintento, empty states por modulo, resumen superior, progreso del tramite, resumen DS-160, documentos, entrevistas, notificaciones y accesos rapidos.
+- Pruebas agregadas/actualizadas: `backend/__tests__/adminProcesses.test.js` cubre el detalle consolidado y 404; `frontend/src/__tests__/AdminPanel.test.jsx` cubre el boton `Ver detalle` y la ruta `/admin/processes/:id`.
+- Commits realizados: `feat(admin-processes): add request detail route`, `docs(agents): note SCRUM-140 start`, `feat(admin-processes): implement request detail page`, `feat(admin-processes): integrate request detail modules` y `fix(admin-processes): satisfy request detail lint`.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:

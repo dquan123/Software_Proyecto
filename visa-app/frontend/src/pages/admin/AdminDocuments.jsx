@@ -3,6 +3,7 @@ import { Check, Eye, MessageSquareText, Save, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { AdminPageHeader, AdminSearch, AdminTabs } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
+import { openDocumentPreview } from "../../utils/documentPreview";
 
 const tableHeaders = [
   "Usuario",
@@ -45,39 +46,6 @@ function getDocumentType(document) {
 
 function getStatusLabel(status) {
   return statusLabels[status] || status || "Pendiente";
-}
-
-function isDocumentFileRoute(url) {
-  try {
-    const parsedUrl = new URL(
-      url,
-      typeof window !== "undefined" ? window.location.origin : "http://localhost"
-    );
-    return /^\/documentos\/\d+\/archivo$/.test(parsedUrl.pathname);
-  } catch {
-    return false;
-  }
-}
-
-function getDocumentPreviewUrl(document) {
-  if (!document.archivo_url) return "";
-  if (isDocumentFileRoute(document.archivo_url)) {
-    const parsedUrl = new URL(
-      document.archivo_url,
-      typeof window !== "undefined" ? window.location.origin : "http://localhost"
-    );
-    return buildApiUrl(parsedUrl.pathname);
-  }
-
-  return document.archivo_url.startsWith("/")
-    ? buildApiUrl(document.archivo_url)
-    : document.archivo_url;
-}
-
-function openDocument(document) {
-  const previewUrl = getDocumentPreviewUrl(document);
-  if (!previewUrl) return;
-  window.open(previewUrl, "_blank", "noopener,noreferrer");
 }
 
 function buildFeedbackDrafts(documentList) {
@@ -385,7 +353,7 @@ const updateDocumentStatus = async (documentId, status) => {
                           type="button"
                           className="admin-action-button"
                           disabled={isRowBusy || !document.archivo_url}
-                          onClick={() => openDocument(document)}
+                          onClick={() => openDocumentPreview(document)}
                         >
                           <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
                           <span>Ver documento</span>

@@ -25,6 +25,7 @@ const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminDocuments = lazy(() => import("./pages/admin/AdminDocuments"));
 const AdminInterviews = lazy(() => import("./pages/admin/AdminInterviews"));
 const AdminProcesses = lazy(() => import("./pages/admin/AdminProcesses"));
+const AdminProcessDetail = lazy(() => import("./pages/admin/AdminProcessDetail"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminAdvisors = lazy(() => import("./pages/admin/AdminAdvisors"));
@@ -111,6 +112,7 @@ function App() {
         <Route path="/admin/documents"                element={<RequireAdmin><AdminDocuments /></RequireAdmin>} />
         <Route path="/admin/interviews"               element={<RequireAdmin><AdminInterviews /></RequireAdmin>} />
         <Route path="/admin/processes"                element={<RequireAdmin><AdminProcesses /></RequireAdmin>} />
+        <Route path="/admin/processes/:id"            element={<RequireAdmin><AdminProcessDetail /></RequireAdmin>} />
         <Route path="/admin/reports"                  element={<RequireAdmin><AdminReports /></RequireAdmin>} />
         <Route path="/admin/settings"                 element={<RequireAdmin><AdminSettings /></RequireAdmin>} />
         <Route path="/admin/ds160"                    element={<RequireAdmin><AdminDS160 /></RequireAdmin>} />

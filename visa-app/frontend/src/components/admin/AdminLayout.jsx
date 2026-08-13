@@ -78,6 +78,12 @@ const pageTitles = {
 
 const ADMIN_SIDEBAR_COLLAPSED_KEY = "vg-admin-sidebar-collapsed";
 
+function getPageTitle(pathname) {
+  if (pageTitles[pathname]) return pageTitles[pathname];
+  if (pathname.startsWith("/admin/processes/")) return "Todas las solicitudes";
+  return "Panel administrador";
+}
+
 function getInitialSidebarCollapsed() {
   try {
     return localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_KEY) === "true";
@@ -91,7 +97,7 @@ export default function AdminLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const title = pageTitles[location.pathname] || "Panel administrador";
+  const title = getPageTitle(location.pathname);
   const userName = session?.nombre || "Administrador";
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
