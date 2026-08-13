@@ -26,7 +26,7 @@ function presentUser(row) {
   };
 }
 
-module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady }) {
+module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
   const router = express.Router();
   router.use(requireAdmin);
 
@@ -205,9 +205,22 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
       await schemaReady;
       const advisor = await pool.query("SELECT id_usuario, nombre FROM usuario WHERE id_usuario = $1 AND rol = 'asesor' AND activo = TRUE", [asesorId]);
       if (!advisor.rows.length) return res.status(400).json({ error: "Asesor no disponible" });
-      const result = await pool.query("UPDATE tramite SET id_asesor = $1, updated_at = CURRENT_TIMESTAMP WHERE id_tramite = $2 AND id_asesor IS NULL RETURNING id_tramite", [asesorId, tramiteId]);
+      const result = await pool.query("UPDATE tramite SET id_asesor = $1, updated_at = CURRENT_TIMESTAMP WHERE id_tramite = $2 AND id_asesor IS NULL RETURNING id_tramite, id_usuario", [asesorId, tramiteId]);
       if (!result.rows.length) return res.status(409).json({ error: "El trámite ya fue asignado o no existe" });
       await logActivity(req.auth.id_usuario, "Solicitud asignada", `Trámite ${tramiteId} → ${advisor.rows[0].nombre}`);
+      if (notificacionService && result.rows[0].id_usuario) {
+        try {
+          await notificacionService.crearNotificacion({
+            userId: result.rows[0].id_usuario,
+            titulo: "Asesor asignado",
+            mensaje: "Se te asigno un asesor para acompanar tu tramite.",
+            tipo: "info",
+            etapaRelacionada: `tramite-${tramiteId}-asesor`,
+          });
+        } catch (notificationError) {
+          console.error("ERROR ADMIN ASSIGNMENT NOTIFICATION:", notificationError);
+        }
+      }
       res.json({ message: "Solicitud asignada correctamente" });
     } catch (error) {
       console.error("ERROR CREATE ASSIGNMENT:", error);
