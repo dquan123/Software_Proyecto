@@ -179,6 +179,18 @@ Estado posterior a las tareas de Norman:
 - Validacion enfocada ejecutada: `npm run test:run -- src/__tests__/AdminPanel.test.jsx` en `frontend/`, con 23 pruebas exitosas. El aviso conocido de jsdom sobre navegacion externa no bloquea la suite.
 - Sin cambios de arquitectura, sin merge, sin rebase y sin push.
 
+## SCRUM-141 - Notificaciones Automaticas
+
+Estado inicial antes de implementar `AutomaticNotifications`:
+
+- Rama de trabajo esperada: `AutomaticNotifications`.
+- La app ya tiene infraestructura de notificaciones: tabla `notificaciones`, `backend/services/notificacionService.js`, `backend/routes/notificacionRoutes.js`, `backend/controllers/notificacionController.js`, `NotificationCenter`, pagina `/notificaciones` y contador del Sidebar cliente.
+- Ya existe una notificacion automatica para cambios de etapa mediante `notificarCambioEtapa` en `backend/app.js`, usada por `PUT /tramite` y por flujos legacy de avance.
+- La historia SCRUM-141 debe reutilizar el servicio existente `crearNotificacion` y, para cambios de etapa, reutilizar `existeNotificacionEtapa` o helpers existentes para evitar duplicados.
+- Alcance: generar notificaciones automaticas por revision de documentos, feedback/calificacion de entrevistas y cambios administrativos de tramite, incluyendo cambio de estado, cambio de etapa y asignacion de asesor.
+- No crear endpoints nuevos salvo que sea estrictamente necesario; los eventos deben colgarse de los endpoints existentes de documentos, entrevistas y tramites administrativos.
+- Mantener commits separados por fase: documentos, entrevistas y tramites.
+
 ## Instalacion y ejecucion
 
 Instalar dependencias por paquete:
