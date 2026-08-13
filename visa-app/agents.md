@@ -229,7 +229,7 @@ Estado final posterior a SCRUM-140 (`AdminRequestDetail`):
 - Backend presenta datos normalizados: `tramite`, `solicitante`, `ds160`, `documentos`, `entrevistas` y `notificaciones`; los audios de entrevistas conservan rutas `/interview-sessions/:id/audio/:questionId`.
 - Estados UI implementados: loading, error con reintento, empty states por modulo, resumen superior, progreso del tramite, resumen DS-160, documentos, entrevistas, notificaciones y accesos rapidos.
 - Pruebas agregadas/actualizadas: `backend/__tests__/adminProcesses.test.js` cubre el detalle consolidado y 404; `frontend/src/__tests__/AdminPanel.test.jsx` cubre el boton `Ver detalle` y la ruta `/admin/processes/:id`.
-- Commits realizados: `feat(admin-processes): add request detail route`, `docs(agents): note SCRUM-140 start`, `feat(admin-processes): implement request detail page` y `feat(admin-processes): integrate request detail modules`.
+- Commits realizados: `feat(admin-processes): add request detail route`, `docs(agents): note SCRUM-140 start`, `feat(admin-processes): implement request detail page`, `feat(admin-processes): integrate request detail modules` y `fix(admin-processes): satisfy request detail lint`.
 
 ## Instalacion y ejecucion
 
