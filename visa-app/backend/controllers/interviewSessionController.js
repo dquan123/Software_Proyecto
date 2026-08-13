@@ -1,4 +1,4 @@
-function createInterviewSessionController(interviewSessionService) {
+function createInterviewSessionController(interviewSessionService, { notificacionService } = {}) {
   function handleError(res, error) {
     const status = error.statusCode || 500;
     const message =
@@ -106,6 +106,20 @@ function createInterviewSessionController(interviewSessionService) {
         req.params.id,
         req.body
       );
+
+      if (notificacionService && session?.user_id) {
+        try {
+          await notificacionService.crearNotificacion({
+            userId: session.user_id,
+            titulo: "Entrevista revisada",
+            mensaje: "Ya puedes consultar la retroalimentacion de tu entrevista.",
+            tipo: "entrevista",
+            etapaRelacionada: `entrevista-${session.id}`,
+          });
+        } catch (notificationError) {
+          console.error("ERROR INTERVIEW FEEDBACK NOTIFICATION:", notificationError);
+        }
+      }
 
       return res.json({
         message: "Retroalimentación guardada correctamente",
