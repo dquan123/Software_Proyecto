@@ -1720,6 +1720,27 @@ describe("app endpoints", () => {
       estado: "approved",
       archivo_url: "/documentos/41/archivo",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [3, "Documento aprobado", "Tu Pasaporte fue aprobado.", "documento", "passport"]
+    );
+  });
+
+  test("PUT /admin/documents/:id/status acepta status y notifica documento aprobado", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "approved" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "approved",
+    });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [3, "Documento aprobado", "Tu Pasaporte fue aprobado.", "documento", "passport"]
+    );
   });
 
   test("PUT /admin/documents/:id/status guarda rechazos como correccion para el cliente", async () => {
@@ -1733,6 +1754,10 @@ describe("app endpoints", () => {
       id: 41,
       estado: "correction",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [3, "Documento requiere correcciones", "Tu Pasaporte requiere correcciones.", "documento", "passport"]
+    );
   });
 
   test("PUT /admin/documents/:id/status guarda observaciones administrativas", async () => {
@@ -1748,6 +1773,16 @@ describe("app endpoints", () => {
       estado: "review",
       feedback: "Documento ilegible. Vuelva a cargarlo.",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        3,
+        "Nuevas observaciones en documento",
+        "El administrador agrego observaciones a uno de tus documentos.",
+        "documento",
+        "passport",
+      ]
+    );
   });
 
   test("PUT /admin/documents/:id/status permite rechazar con observaciones", async () => {
@@ -1765,6 +1800,33 @@ describe("app endpoints", () => {
       estado: "correction",
       feedback: "Falta la segunda pagina del pasaporte.",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [
+        3,
+        "Documento requiere correcciones",
+        "Tu Pasaporte requiere correcciones. Revisa las observaciones del administrador.",
+        "documento",
+        "passport",
+      ]
+    );
+  });
+
+  test("PUT /admin/documents/:id/status envia a correccion con status y notifica al usuario", async () => {
+    const response = await request(app)
+      .put("/admin/documents/41/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "correction" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.documento).toMatchObject({
+      id: 41,
+      estado: "correction",
+    });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [3, "Documento requiere correcciones", "Tu Pasaporte requiere correcciones.", "documento", "passport"]
+    );
   });
 
   test("PUT /admin/documents/:id/status exige estado u observaciones", async () => {
