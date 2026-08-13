@@ -1624,6 +1624,7 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("application/pdf");
     expect(response.headers["content-disposition"]).toContain("inline");
+    expect(response.headers.link).toBe('</visaguide-favicon.svg>; rel="icon"; type="image/svg+xml"');
     expect(mockGetStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
   });
 

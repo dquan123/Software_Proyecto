@@ -923,7 +923,7 @@ app.get("/documentos/:id/archivo", async (req, res) => {
     const dispositionType = canPreviewInline(contentType) ? "inline" : "attachment";
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Link", '</favicon.svg>; rel="icon"; type="image/svg+xml"');
+    res.setHeader("Link", '</visaguide-favicon.svg>; rel="icon"; type="image/svg+xml"');
     res.setHeader(
       "Content-Disposition",
       `${dispositionType}; filename="${buildDownloadFilename(document)}"`
