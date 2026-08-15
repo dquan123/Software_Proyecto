@@ -50,6 +50,40 @@ describe("admin management integration", () => {
     expect(response.body.atencion).toHaveLength(1);
   });
 
+  test("returns a client's detail with their process summary", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("FROM usuario u") && sql.includes("WHERE u.id_usuario = $1")) {
+        return { rows: [{ ...client, asignados: "0", pendientes: "0", asesor_nombre: null, last_activity: new Date().toISOString() }] };
+      }
+      if (sql.includes("FROM tramite t LEFT JOIN usuario advisor")) {
+        return { rows: [{ id: 22, estado: "Pendiente", etapa_actual: "Documentos", progreso: 40, created_at: new Date().toISOString(), asesor_id: null, asesor_nombre: null }] };
+      }
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/users/4")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body.usuario).toMatchObject({ id: 4, rol: "cliente" });
+    expect(response.body.tramite).toMatchObject({ id: 22, estado: "Pendiente", progreso: 40 });
+  });
+
+  test("returns 404 when the requested user does not exist", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("FROM usuario u") && sql.includes("WHERE u.id_usuario = $1")) return { rows: [] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .get("/admin/users/999")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(404);
+  });
+
   test("assigns an unassigned real process to an active advisor", async () => {
     const { app, pool } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
