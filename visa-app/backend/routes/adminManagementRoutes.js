@@ -105,6 +105,61 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
   });
 
+  router.get("/users/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Usuario inválido" });
+    try {
+      await schemaReady;
+      const userResult = await pool.query(`SELECT u.*,
+        (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario) AS asignados,
+        (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario
+          AND assigned.estado IN ('Pendiente','En proceso')) AS pendientes,
+        advisor.nombre AS asesor_nombre,
+        COALESCE(client_process.updated_at, u.updated_at) AS last_activity
+        FROM usuario u
+        LEFT JOIN tramite client_process ON client_process.id_usuario = u.id_usuario
+        LEFT JOIN usuario advisor ON advisor.id_usuario = client_process.id_asesor
+        WHERE u.id_usuario = $1`, [id]);
+      const userRow = userResult.rows[0];
+      if (!userRow) return res.status(404).json({ error: "Usuario no encontrado" });
+
+      let tramite = null;
+      let casos = [];
+      let actividad = [];
+
+      if (userRow.rol === "cliente") {
+        const tramiteResult = await pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual,
+          t.progreso, t.created_at, advisor.id_usuario AS asesor_id, advisor.nombre AS asesor_nombre
+          FROM tramite t LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
+          WHERE t.id_usuario = $1 LIMIT 1`, [id]);
+        const row = tramiteResult.rows[0];
+        tramite = row ? {
+          id: row.id,
+          estado: row.estado,
+          etapaActual: row.etapa_actual,
+          progreso: number(row.progreso),
+          createdAt: row.created_at,
+          asesor: row.asesor_id ? { id: row.asesor_id, nombre: row.asesor_nombre } : null,
+        } : null;
+      } else if (userRow.rol === "asesor") {
+        const casosResult = await pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual,
+          applicant.nombre, applicant.correo
+          FROM tramite t JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
+          WHERE t.id_asesor = $1 ORDER BY t.id_tramite DESC`, [id]);
+        casos = casosResult.rows;
+      } else if (userRow.rol === "admin") {
+        const activityResult = await pool.query(`SELECT id, accion, detalle, created_at
+          FROM admin_activity WHERE actor_id = $1 ORDER BY created_at DESC LIMIT 10`, [id]);
+        actividad = activityResult.rows;
+      }
+
+      res.json({ usuario: presentUser(userRow), tramite, casos, actividad });
+    } catch (error) {
+      console.error("ERROR ADMIN USER DETAIL:", error);
+      res.status(500).json({ error: "No fue posible cargar el detalle del usuario" });
+    }
+  });
+
   router.post("/users", async (req, res) => {
     const { nombre, correo, contrasena, rol = "cliente" } = req.body || {};
     if (!nombre?.trim() || !correo?.trim() || !contrasena) return res.status(400).json({ error: "Nombre, correo y contraseña son obligatorios" });

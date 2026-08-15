@@ -22,6 +22,7 @@ const Notificaciones = lazy(() => import("./pages/Notificaciones"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
 const AdminDocuments = lazy(() => import("./pages/admin/AdminDocuments"));
 const AdminInterviews = lazy(() => import("./pages/admin/AdminInterviews"));
 const AdminProcesses = lazy(() => import("./pages/admin/AdminProcesses"));
@@ -107,6 +108,7 @@ function App() {
         <Route path="/entrevista/retroalimentacion"   element={<InterviewFeedback />} />
         <Route path="/admin"                          element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
         <Route path="/admin/users"                    element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
+        <Route path="/admin/users/:id"                element={<RequireAdmin><AdminUserDetail /></RequireAdmin>} />
         <Route path="/admin/advisors"                 element={<RequireAdmin><AdminAdvisors /></RequireAdmin>} />
         <Route path="/admin/assignments"              element={<RequireAdmin><AdminAssignments /></RequireAdmin>} />
         <Route path="/admin/documents"                element={<RequireAdmin><AdminDocuments /></RequireAdmin>} />
