@@ -464,14 +464,14 @@ app.get("/estado-tramite", async (req, res) => {
     }
 
     res.json({
-      estado: tramite.estado,
-      etapaActual: tramite.etapa_actual,
-      progreso: tramite.progreso,
-      siguientePaso: tramite.siguiente_paso,
-      mensaje: tramite.mensaje,
-      created_at: tramite.created_at,
-      updated_at: tramite.updated_at,
-    });
+    estado: tramite.estado,
+    etapaActual: tramite.etapa_actual,
+    progreso: tramite.progreso,
+    siguientePaso: tramite.siguiente_paso,
+    mensaje: tramite.mensaje,
+    created_at: tramite.created_at,
+    updated_at: tramite.updated_at,
+  });
   } catch (error) {
     console.log("ERROR ESTADO:", error);
     res.status(500).json({ error: error.message });
