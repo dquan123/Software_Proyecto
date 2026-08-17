@@ -191,7 +191,11 @@ export default function Cronologia() {
           documentSummary,
         });
 
-        setTimeline(getProcessTimeline(currentStage));
+        setTimeline(getProcessTimeline(currentStage, {
+          tramite: tramiteData,
+          ds160: ds160Data,
+          documents: documentsData,
+        }));
 
         if ([tramiteResult, ds160Result, documentsResult].some((result) => result.status === "rejected")) {
           setLoadError("Algunas etapas no pudieron actualizarse con datos recientes.");

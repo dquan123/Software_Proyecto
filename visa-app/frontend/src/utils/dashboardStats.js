@@ -143,14 +143,37 @@ export function getProcessStageLabel(stageNumber) {
   return PROCESS_STEPS[clampStage(stageNumber) - 1]?.label || PROCESS_STEPS[0].label;
 }
 
-export function getProcessTimeline(stageNumber) {
+export function getProcessTimeline(stageNumber, data = {}) {
   const currentStage = clampStage(stageNumber);
+  const { tramite, ds160, documents } = data;
+
+  // Obtener fecha del último documento aprobado
+  const getLastApprovedDocDate = () => {
+    if (!Array.isArray(documents)) return null;
+    const approved = documents
+      .filter(d => d.estado === "approved" && d.actualizado_en)
+      .sort((a, b) => new Date(b.actualizado_en) - new Date(a.actualizado_en));
+    return approved[0]?.actualizado_en || null;
+  };
+
+  // Mapear fecha según la etapa
+  const getCompletedAt = (stepNumber) => {
+    if (stepNumber >= currentStage) return null;
+    
+    switch (stepNumber) {
+      case 1: return tramite?.created_at || null;
+      case 2: return ds160?.completado ? (ds160?.updated_at || null) : null;
+      case 3: return getLastApprovedDocDate();
+      default: return tramite?.updated_at || null;
+    }
+  };
 
   return PROCESS_STEPS.map((step) => ({
     ...step,
     estado: step.number < currentStage ? "completada" : step.number === currentStage ? "actual" : "pendiente",
     done: step.number < currentStage,
     active: step.number === currentStage,
+    completedAt: getCompletedAt(step.number),
   }));
 }
 
