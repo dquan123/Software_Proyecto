@@ -49,16 +49,39 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
           (SELECT COUNT(*) FROM tramite WHERE estado NOT IN ('Completado', 'Aprobado')) AS solicitudes_activas,
           (SELECT COUNT(*) FROM tramite WHERE id_asesor IS NULL) AS sin_asignar,
           (SELECT COUNT(*) FROM usuario WHERE rol = 'asesor' AND activo = TRUE) AS asesores_activos,
-          (SELECT COUNT(*) FROM formulario_ds160 WHERE estado_revision IN ('en_progreso', 'por_revisar')) AS ds160_pendientes`),
+          (SELECT COUNT(*) FROM formulario_ds160 WHERE estado_revision IN ('en_progreso', 'por_revisar')) AS ds160_pendientes,
+          (SELECT COUNT(*) FROM documentos WHERE estado IN ('pending', 'review')) AS documentos_pendientes,
+          (SELECT COUNT(*) FROM interview_sessions WHERE status = 'pending') AS entrevistas_pendientes,
+          (SELECT COUNT(*) FROM usuario WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS usuarios_nuevos_30d,
+          (SELECT COUNT(*) FROM tramite WHERE estado IN ('Completado', 'Aprobado') OR progreso >= 100) AS solicitudes_completadas,
+          (SELECT COALESCE(AVG(progreso), 0) FROM tramite) AS progreso_promedio,
+          (SELECT COUNT(*) FROM tramite) AS solicitudes_total`),
         pool.query(`SELECT u.id_usuario AS id, u.nombre,
           COUNT(t.id_tramite) AS asignados,
           COUNT(t.id_tramite) FILTER (WHERE t.estado IN ('Pendiente','En proceso')) AS pendientes
           FROM usuario u LEFT JOIN tramite t ON t.id_asesor = u.id_usuario
           WHERE u.rol = 'asesor' AND u.activo = TRUE
           GROUP BY u.id_usuario, u.nombre ORDER BY asignados DESC, u.nombre LIMIT 4`),
-        pool.query(`SELECT a.id, a.accion, a.detalle, a.created_at, u.nombre AS actor
-          FROM admin_activity a LEFT JOIN usuario u ON u.id_usuario = a.actor_id
-          ORDER BY a.created_at DESC LIMIT 8`),
+        pool.query(`SELECT actividad.id, actividad.accion, actividad.detalle,
+            actividad.created_at, actividad.actor, actividad.tipo, actividad.destino
+          FROM (
+            SELECT CONCAT('admin-', a.id) AS id, a.accion, a.detalle, a.created_at,
+              u.nombre AS actor, 'administracion' AS tipo, '/admin/users' AS destino
+            FROM admin_activity a LEFT JOIN usuario u ON u.id_usuario = a.actor_id
+            UNION ALL
+            SELECT CONCAT('usuario-', u.id_usuario), 'Nuevo usuario registrado',
+              u.correo, u.created_at, u.nombre, 'usuario', CONCAT('/admin/users/', u.id_usuario)
+            FROM usuario u
+            UNION ALL
+            SELECT CONCAT('documento-', d.id), 'Documento recibido', d.nombre,
+              d.creado_en, u.nombre, 'documento', '/admin/documents'
+            FROM documentos d JOIN usuario u ON u.id_usuario = d.usuario_id
+            UNION ALL
+            SELECT CONCAT('entrevista-', i.id), 'Entrevista registrada',
+              COALESCE(i.user_email, ''), i.created_at, i.user_name, 'entrevista', '/admin/interviews'
+            FROM interview_sessions i
+          ) actividad
+          ORDER BY actividad.created_at DESC LIMIT 10`),
         pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual,
           applicant.nombre, applicant.correo, applicant.perfil,
           advisor.nombre AS asesor
@@ -68,15 +91,29 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
           ORDER BY t.id_asesor NULLS FIRST, t.id_tramite DESC LIMIT 8`),
       ]);
       const row = summary.rows[0] || {};
+      const total = number(row.solicitudes_total);
+      const completed = number(row.solicitudes_completadas);
       res.json({
         resumen: {
           solicitudesActivas: number(row.solicitudes_activas),
           sinAsignar: number(row.sin_asignar),
           asesoresActivos: number(row.asesores_activos),
           ds160Pendientes: number(row.ds160_pendientes),
+          documentosPendientes: number(row.documentos_pendientes),
+          entrevistasPendientes: number(row.entrevistas_pendientes),
+          usuariosNuevos30d: number(row.usuarios_nuevos_30d),
+          solicitudesCompletadas: completed,
+          progresoPromedio: Math.round(number(row.progreso_promedio)),
+          tasaCompletitud: total ? Math.round((completed / total) * 100) : 0,
         },
         cargaAsesores: workload.rows.map((item) => ({ ...item, asignados: number(item.asignados), pendientes: number(item.pendientes) })),
         actividad: activity.rows,
+        pendientes: [
+          { id: "asignaciones", label: "Solicitudes sin asignar", total: number(row.sin_asignar), destino: "/admin/assignments" },
+          { id: "ds160", label: "DS-160 por revisar", total: number(row.ds160_pendientes), destino: "/admin/ds160" },
+          { id: "documentos", label: "Documentos por revisar", total: number(row.documentos_pendientes), destino: "/admin/documents" },
+          { id: "entrevistas", label: "Entrevistas pendientes", total: number(row.entrevistas_pendientes), destino: "/admin/interviews" },
+        ],
         atencion: attention.rows,
       });
     } catch (error) {

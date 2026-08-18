@@ -65,9 +65,15 @@ function mockAdminSession() {
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          resumen: { solicitudesActivas: 4, sinAsignar: 1, asesoresActivos: 2, ds160Pendientes: 6 },
+          resumen: { solicitudesActivas: 4, sinAsignar: 1, asesoresActivos: 2, ds160Pendientes: 6, documentosPendientes: 3, entrevistasPendientes: 2, usuariosNuevos30d: 5, solicitudesCompletadas: 8, progresoPromedio: 64, tasaCompletitud: 80 },
           cargaAsesores: [],
-          actividad: [],
+          actividad: [{ id: "usuario-8", accion: "Nuevo usuario registrado", detalle: "carlos@example.com", actor: "Carlos Mendoza", destino: "/admin/users/8", created_at: "2026-08-01T10:00:00.000Z" }],
+          pendientes: [
+            { id: "asignaciones", label: "Solicitudes sin asignar", total: 1, destino: "/admin/assignments" },
+            { id: "ds160", label: "DS-160 por revisar", total: 6, destino: "/admin/ds160" },
+            { id: "documentos", label: "Documentos por revisar", total: 3, destino: "/admin/documents" },
+            { id: "entrevistas", label: "Entrevistas pendientes", total: 2, destino: "/admin/interviews" },
+          ],
           atencion: [],
         }),
       });
@@ -277,7 +283,12 @@ describe("panel de administracion", () => {
     expect(screen.getByText("Sin asignar")).toBeInTheDocument();
     expect(screen.getByText("Asesores activos")).toBeInTheDocument();
     expect(screen.getByText("DS-160 pendientes")).toBeInTheDocument();
-    expect(screen.getByText("Actividad de la plataforma")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Métricas adicionales" })).toBeInTheDocument();
+    expect(screen.getByText("Documentos pendientes")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Entrevistas pendientes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pendientes por atender" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Actividad reciente" })).toBeInTheDocument();
+    expect(screen.getByText("Nuevo usuario registrado")).toBeInTheDocument();
     const validationCalls = globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"));
     expect(validationCalls).toHaveLength(1);
   });
@@ -463,7 +474,8 @@ describe("panel de administracion", () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: "Inicio" });
-    await user.click(screen.getByRole("link", { name: /Usuarios/ }));
+    const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
+    await user.click(within(navigation).getByRole("link", { name: /Usuarios/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/users"));
     expect(screen.getAllByRole("heading", { name: "Usuarios" })).toHaveLength(2);
@@ -564,7 +576,8 @@ describe("panel de administracion", () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: "Inicio" });
-    await user.click(screen.getByRole("link", { name: /Entrevistas/ }));
+    const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
+    await user.click(within(navigation).getByRole("link", { name: /Entrevistas/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/interviews"));
     expect(screen.getByRole("heading", { level: 1, name: "Entrevistas" })).toBeInTheDocument();
