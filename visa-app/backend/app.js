@@ -238,7 +238,7 @@ const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestProcess
 });
 
 const questionBankService = createQuestionBankService(pool);
-questionBankService.ensureSchema().catch((error) => {
+questionBankService.seedInitialQuestions().catch((error) => {
   console.error("ERROR QUESTION BANK SCHEMA:", error);
 });
 

@@ -251,6 +251,21 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
+  if (normalized.includes("UPDATE question_bank SET activo")) {
+    return Promise.resolve({
+      rows: [{
+        id: values[1],
+        question: "Pregunta existente",
+        category: "General",
+        difficulty: "Media",
+        is_required: false,
+        activo: values[0],
+        uso_count: 0,
+        created_at: "2026-07-02T00:00:00.000Z",
+      }],
+    });
+  }
+
   if (normalized.includes("UPDATE question_bank")) {
     return Promise.resolve({
       rows: [
@@ -1181,6 +1196,20 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.questions).toHaveLength(1);
     expect(response.body.questions[0].category).toBe("Viaje");
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("WHERE activo = TRUE"));
+  });
+
+  test("GET /questions/admin exige administrador y lista preguntas inactivas", async () => {
+    await request(app).get("/questions/admin").expect(401);
+
+    const response = await request(app)
+      .get("/questions/admin")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(response.body.questions).toHaveLength(1);
+    const listQuery = mockQuery.mock.calls.find(([sql]) => String(sql).includes("FROM question_bank") && String(sql).includes("ORDER BY created_at"));
+    expect(String(listQuery[0])).not.toContain("WHERE activo = TRUE");
   });
 
   test("POST /questions crea una pregunta valida", async () => {
@@ -1221,6 +1250,21 @@ describe("app endpoints", () => {
     expect(response.body).toEqual({
       message: "Pregunta eliminada correctamente",
     });
+  });
+
+  test("PATCH /questions/:id/status activa o desactiva una pregunta", async () => {
+    const response = await request(app)
+      .patch("/questions/11/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ activo: false });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Pregunta desactivada correctamente");
+    expect(response.body.question).toMatchObject({ id: 11, activo: false });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE question_bank SET activo"),
+      [false, 11]
+    );
   });
 
   test("GET /notificaciones/:userId lista notificaciones del usuario", async () => {

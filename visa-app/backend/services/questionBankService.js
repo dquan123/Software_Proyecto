@@ -102,6 +102,31 @@ const SEED_QUESTIONS = [
     difficulty: "Alta",
     is_required: true,
   },
+  { question: "¿A qué ciudad o ciudades planea viajar?", category: "Viaje", difficulty: "Fácil", is_required: true },
+  { question: "¿Cuándo planea viajar y por qué eligió esas fechas?", category: "Viaje", difficulty: "Media", is_required: true },
+  { question: "¿Dónde se hospedará durante su visita?", category: "Viaje", difficulty: "Fácil", is_required: true },
+  { question: "¿Cómo organizó su itinerario de viaje?", category: "Viaje", difficulty: "Media", is_required: false },
+  { question: "¿Por qué necesita realizar este viaje en este momento?", category: "Viaje", difficulty: "Alta", is_required: false },
+  { question: "¿Cuál es el costo estimado de su viaje?", category: "Finanzas", difficulty: "Media", is_required: true },
+  { question: "¿Cómo demostrará que cuenta con fondos suficientes para el viaje?", category: "Finanzas", difficulty: "Alta", is_required: false },
+  { question: "Si otra persona pagará el viaje, ¿qué relación tiene con usted?", category: "Finanzas", difficulty: "Media", is_required: false },
+  { question: "¿En qué empresa trabaja y cuál es su puesto?", category: "Laboral", difficulty: "Fácil", is_required: true },
+  { question: "¿Cuáles son sus principales responsabilidades laborales?", category: "Laboral", difficulty: "Media", is_required: false },
+  { question: "¿Su empleador autorizó sus vacaciones o ausencia?", category: "Laboral", difficulty: "Media", is_required: false },
+  { question: "¿Qué compromisos laborales tiene al regresar?", category: "Laboral", difficulty: "Alta", is_required: true },
+  { question: "¿Ha solicitado anteriormente una visa estadounidense?", category: "Historial", difficulty: "Media", is_required: true },
+  { question: "¿Alguna vez le han negado una visa?", category: "Historial", difficulty: "Alta", is_required: true },
+  { question: "Si le negaron una visa, ¿qué ha cambiado desde aquella solicitud?", category: "Historial", difficulty: "Alta", is_required: false },
+  { question: "¿Alguna vez permaneció más tiempo del autorizado en otro país?", category: "Migración", difficulty: "Alta", is_required: true },
+  { question: "¿Alguien ha presentado una petición migratoria a su favor?", category: "Migración", difficulty: "Alta", is_required: false },
+  { question: "¿Qué razones concretas tiene para regresar a su país?", category: "Migración", difficulty: "Alta", is_required: true },
+  { question: "¿Tiene familiares inmediatos en Estados Unidos?", category: "Relaciones", difficulty: "Media", is_required: true },
+  { question: "¿Con quién viajará y qué relación tiene con esa persona?", category: "Relaciones", difficulty: "Fácil", is_required: false },
+  { question: "¿A quién visitará durante su viaje?", category: "Relaciones", difficulty: "Media", is_required: false },
+  { question: "¿Tiene hijos o personas que dependan de usted?", category: "Personal", difficulty: "Media", is_required: false },
+  { question: "¿Dónde vive actualmente y desde cuándo reside allí?", category: "Personal", difficulty: "Fácil", is_required: false },
+  { question: "¿Por qué eligió esta institución educativa o programa de estudios?", category: "General", difficulty: "Alta", is_required: false },
+  { question: "¿Cómo se relaciona este viaje con sus planes personales o profesionales?", category: "General", difficulty: "Alta", is_required: false },
 ];
 
 function createQuestionBankService(pool) {
@@ -124,9 +149,6 @@ function createQuestionBankService(pool) {
   async function seedInitialQuestions() {
     await ensureSchema();
 
-    const { rows } = await pool.query("SELECT COUNT(*)::int AS total FROM question_bank");
-    if (rows[0]?.total > 0) return;
-
     const values = [];
     const placeholders = SEED_QUESTIONS.map((item, index) => {
       const offset = index * 4;
@@ -135,8 +157,16 @@ function createQuestionBankService(pool) {
     });
 
     await pool.query(
-      `INSERT INTO question_bank (question, category, difficulty, is_required)
-       VALUES ${placeholders.join(", ")}`,
+      `WITH seed_questions (question, category, difficulty, is_required) AS (
+         VALUES ${placeholders.join(", ")}
+       )
+       INSERT INTO question_bank (question, category, difficulty, is_required)
+       SELECT seed.question, seed.category, seed.difficulty, seed.is_required
+       FROM seed_questions seed
+       WHERE NOT EXISTS (
+         SELECT 1 FROM question_bank existing
+         WHERE LOWER(TRIM(existing.question)) = LOWER(TRIM(seed.question))
+       )`,
       values
     );
   }
@@ -184,12 +214,13 @@ function createQuestionBankService(pool) {
     return normalized;
   }
 
-  async function listQuestions() {
+  async function listQuestions({ includeInactive = false } = {}) {
     await ensureSchema();
 
     const result = await pool.query(
       `SELECT id, question, category, difficulty, is_required, created_at, activo, uso_count
        FROM question_bank
+       ${includeInactive ? "" : "WHERE activo = TRUE"}
        ORDER BY created_at DESC, id DESC`
     );
 
@@ -267,12 +298,44 @@ function createQuestionBankService(pool) {
     return result.rows[0];
   }
 
+  async function setQuestionActive(id, activo) {
+    await ensureSchema();
+
+    const questionId = Number(id);
+    if (!Number.isInteger(questionId) || questionId <= 0) {
+      const error = new Error("ID inválido");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (typeof activo !== "boolean") {
+      const error = new Error("El estado activo debe ser booleano");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = await pool.query(
+      `UPDATE question_bank SET activo = $1
+       WHERE id = $2
+       RETURNING id, question, category, difficulty, is_required, created_at, activo, uso_count`,
+      [activo, questionId]
+    );
+
+    if (result.rows.length === 0) {
+      const error = new Error("Pregunta no encontrada");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return result.rows[0];
+  }
+
   return {
     ensureSchema,
     seedInitialQuestions,
     listQuestions,
     createQuestion,
     updateQuestion,
+    setQuestionActive,
     deleteQuestion,
   };
 }
