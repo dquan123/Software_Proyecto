@@ -84,6 +84,39 @@ describe("admin management integration", () => {
       .expect(404);
   });
 
+  test("updates a user's editable profile fields", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("UPDATE usuario SET")) return { rows: [{ ...client, nombre: "Cliente Editado", correo: "nuevo@test.dev" }] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .patch("/admin/users/4")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ nombre: "Cliente Editado", correo: "nuevo@test.dev", telefono: "12345678", ciudad: "Ciudad", pais: "Guatemala" })
+      .expect(200);
+
+    expect(response.body.usuario).toMatchObject({ nombre: "Cliente Editado", correo: "nuevo@test.dev" });
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE usuario SET"),
+      ["Cliente Editado", "nuevo@test.dev", "12345678", "Ciudad", "Guatemala", null, null, null, null, 4]
+    );
+  });
+
+  test("rejects an invalid role on user edit", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .patch("/admin/users/4")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ rol: "superadmin" })
+      .expect(400);
+  });
+
   test("assigns an unassigned real process to an active advisor", async () => {
     const { app, pool } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };

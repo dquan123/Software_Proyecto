@@ -179,21 +179,40 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
 
   router.patch("/users/:id", async (req, res) => {
     const id = Number(req.params.id);
-    const { activo, disponible, capacidad } = req.body || {};
+    const { activo, disponible, capacidad, nombre, correo, telefono, ciudad, pais, rol } = req.body || {};
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Usuario inválido" });
+    if (rol !== undefined && !VALID_ROLES.has(rol)) return res.status(400).json({ error: "Rol inválido" });
     try {
       await schemaReady;
       const result = await pool.query(`UPDATE usuario SET
-        activo = COALESCE($1, activo),
-        disponible_asesor = COALESCE($2, disponible_asesor),
-        capacidad_asesor = COALESCE($3, capacidad_asesor),
+        nombre = COALESCE($1, nombre),
+        correo = COALESCE($2, correo),
+        telefono = COALESCE($3, telefono),
+        ciudad = COALESCE($4, ciudad),
+        pais = COALESCE($5, pais),
+        rol = COALESCE($6, rol),
+        activo = COALESCE($7, activo),
+        disponible_asesor = COALESCE($8, disponible_asesor),
+        capacidad_asesor = COALESCE($9, capacidad_asesor),
         updated_at = CURRENT_TIMESTAMP
-        WHERE id_usuario = $4 RETURNING *`,
-      [typeof activo === "boolean" ? activo : null, typeof disponible === "boolean" ? disponible : null, capacidad ? number(capacidad) : null, id]);
+        WHERE id_usuario = $10 RETURNING *`,
+      [
+        nombre?.trim() || null,
+        correo?.trim().toLowerCase() || null,
+        telefono !== undefined ? telefono : null,
+        ciudad !== undefined ? ciudad : null,
+        pais !== undefined ? pais : null,
+        rol || null,
+        typeof activo === "boolean" ? activo : null,
+        typeof disponible === "boolean" ? disponible : null,
+        capacidad ? number(capacidad) : null,
+        id,
+      ]);
       if (!result.rows.length) return res.status(404).json({ error: "Usuario no encontrado" });
       await logActivity(req.auth.id_usuario, "Usuario actualizado", result.rows[0].correo);
       res.json({ usuario: presentUser(result.rows[0]) });
     } catch (error) {
+      if (error.code === "23505") return res.status(409).json({ error: "El correo ya está registrado" });
       console.error("ERROR UPDATE ADMIN USER:", error);
       res.status(500).json({ error: "No fue posible actualizar el usuario" });
     }
