@@ -16,6 +16,10 @@ function mockAdminSession() {
   localStorage.setItem("correoUsuario", adminSession.correo);
   let adminDocumentStatus = "review";
   let adminDocumentFeedback = "Documento ilegible.";
+  let adminQuestions = [
+    { id: 10, question: "¿Cuál es el propósito de su viaje?", category: "Viaje", difficulty: "Fácil", is_required: true, activo: true, uso_count: 12 },
+    { id: 11, question: "¿Quién financiará su viaje?", category: "Finanzas", difficulty: "Media", is_required: false, activo: false, uso_count: 4 },
+  ];
   let managedProcess = {
     id: 21,
     estado: "En proceso",
@@ -92,6 +96,20 @@ function mockAdminSession() {
     }
     if (String(url).endsWith("/admin/profile")) {
       return Promise.resolve({ ok: true, json: async () => ({ usuario: adminSession }) });
+    }
+    if (String(url).endsWith("/questions/admin")) {
+      return Promise.resolve({ ok: true, json: async () => ({ questions: adminQuestions }) });
+    }
+    if (/\/questions\/\d+\/status$/.test(String(url)) && options.method === "PATCH") {
+      const id = Number(String(url).match(/\/questions\/(\d+)\/status$/)?.[1]);
+      const payload = JSON.parse(options.body || "{}");
+      adminQuestions = adminQuestions.map((question) => question.id === id ? { ...question, activo: payload.activo } : question);
+      return Promise.resolve({ ok: true, json: async () => ({ question: adminQuestions.find((question) => question.id === id) }) });
+    }
+    if (/\/questions\/\d+$/.test(String(url)) && options.method === "DELETE") {
+      const id = Number(String(url).match(/\/questions\/(\d+)$/)?.[1]);
+      adminQuestions = adminQuestions.filter((question) => question.id !== id);
+      return Promise.resolve({ ok: true, json: async () => ({ message: "Pregunta eliminada correctamente" }) });
     }
     if (String(url).endsWith("/questions")) {
       return Promise.resolve({ ok: true, json: async () => ({ questions: [] }) });
@@ -423,6 +441,45 @@ describe("panel de administracion", () => {
     } else if (path === "/admin/settings") {
       expect(await screen.findByDisplayValue("VisaGuide")).toBeInTheDocument();
     }
+  });
+
+  it("permite filtrar y desactivar preguntas desde el panel", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/questions");
+
+    render(<App />);
+
+    expect(await screen.findByText("¿Cuál es el propósito de su viaje?")).toBeInTheDocument();
+    expect(screen.getByText("¿Quién financiará su viaje?")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Estado"), "active");
+    expect(screen.queryByText("¿Quién financiará su viaje?")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Desactivar" }));
+    expect(await screen.findByText("Pregunta desactivada correctamente.")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/questions/10/status"),
+      expect.objectContaining({ method: "PATCH" })
+    );
+  });
+
+  it("confirma y elimina preguntas desde el panel", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/questions");
+
+    render(<App />);
+
+    await screen.findByText("¿Quién financiará su viaje?");
+    await user.click(screen.getByRole("button", { name: "Eliminar pregunta: ¿Quién financiará su viaje?" }));
+    const dialog = screen.getByRole("alertdialog", { name: "Eliminar pregunta" });
+    expect(within(dialog).getByText("¿Quién financiará su viaje?")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar pregunta" }));
+
+    expect(await screen.findByText("Pregunta eliminada correctamente.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("¿Quién financiará su viaje?")).not.toBeInTheDocument());
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/questions/11"),
+      expect.objectContaining({ method: "DELETE" })
+    );
   });
 
   it("permite asignar un asesor y actualizar un trámite", async () => {
