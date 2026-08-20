@@ -32,9 +32,9 @@ describe("admin management integration", () => {
   test("returns dashboard metrics, workload, activity and attention from database queries", async () => {
     const { app } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
-      if (sql.includes("solicitudes_activas")) return { rows: [{ solicitudes_activas: "4", sin_asignar: "2", asesores_activos: "3", ds160_pendientes: "1" }] };
+      if (sql.includes("solicitudes_activas")) return { rows: [{ solicitudes_activas: "4", sin_asignar: "2", asesores_activos: "3", ds160_pendientes: "1", documentos_pendientes: "5", entrevistas_pendientes: "2", usuarios_nuevos_30d: "7", solicitudes_completadas: "8", progreso_promedio: "64.4", solicitudes_total: "10" }] };
       if (sql.includes("GROUP BY u.id_usuario")) return { rows: [{ id: 7, nombre: "Laura", asignados: "5", pendientes: "2" }] };
-      if (sql.includes("FROM admin_activity")) return { rows: [{ id: 9, accion: "Solicitud asignada", detalle: "Trámite 4", created_at: new Date().toISOString() }] };
+      if (sql.includes("FROM admin_activity")) return { rows: [{ id: "admin-9", accion: "Solicitud asignada", detalle: "Trámite 4", actor: "Admin", tipo: "administracion", destino: "/admin/users", created_at: new Date().toISOString() }] };
       if (sql.includes("FROM tramite t JOIN usuario applicant")) return { rows: [{ id: 4, nombre: "Solicitante", correo: "s@test.dev", perfil: "turismo", asesor: null }] };
       return { rows: [] };
     });
@@ -44,9 +44,16 @@ describe("admin management integration", () => {
       .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
       .expect(200);
 
-    expect(response.body.resumen).toEqual({ solicitudesActivas: 4, sinAsignar: 2, asesoresActivos: 3, ds160Pendientes: 1 });
+    expect(response.body.resumen).toEqual({ solicitudesActivas: 4, sinAsignar: 2, asesoresActivos: 3, ds160Pendientes: 1, documentosPendientes: 5, entrevistasPendientes: 2, usuariosNuevos30d: 7, solicitudesCompletadas: 8, progresoPromedio: 64, tasaCompletitud: 80 });
     expect(response.body.cargaAsesores[0]).toMatchObject({ nombre: "Laura", asignados: 5, pendientes: 2 });
     expect(response.body.actividad).toHaveLength(1);
+    expect(response.body.actividad[0]).toMatchObject({ tipo: "administracion", actor: "Admin" });
+    expect(response.body.pendientes).toEqual([
+      { id: "asignaciones", label: "Solicitudes sin asignar", total: 2, destino: "/admin/assignments" },
+      { id: "ds160", label: "DS-160 por revisar", total: 1, destino: "/admin/ds160" },
+      { id: "documentos", label: "Documentos por revisar", total: 5, destino: "/admin/documents" },
+      { id: "entrevistas", label: "Entrevistas pendientes", total: 2, destino: "/admin/interviews" },
+    ]);
     expect(response.body.atencion).toHaveLength(1);
   });
 

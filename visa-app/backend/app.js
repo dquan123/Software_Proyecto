@@ -238,7 +238,7 @@ const testUsersReady = (process.env.NODE_ENV === "development" ? seedTestProcess
 });
 
 const questionBankService = createQuestionBankService(pool);
-questionBankService.ensureSchema().catch((error) => {
+questionBankService.seedInitialQuestions().catch((error) => {
   console.error("ERROR QUESTION BANK SCHEMA:", error);
 });
 
@@ -534,7 +534,7 @@ app.post("/login", async (req, res) => {
         token: issueSessionToken(usuario),
       });
     } else {
-      res.status(401).json({ error: "Credenciales incorrectas" });
+      res.status(401).json({ error: "El correo o la contraseña son incorrectos" });
     }
   } catch (error) {
     console.log("ERROR LOGIN:", error);

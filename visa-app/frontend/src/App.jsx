@@ -190,7 +190,7 @@ function Login() {
         localStorage.setItem("correoUsuario", correo);
         navigate(getLoginDestination(usuario), { replace: true });
       } else {
-        setError(res.status === 401 ? "Correo o contraseña incorrectos" : data.error || "Error al iniciar sesión");
+        setError(res.status === 401 ? "El correo o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo." : data.error || "Ocurrió un error al iniciar sesión. Intenta más tarde.");
       }
     } catch { setError("Error de conexión."); }
     finally { setIsLoading(false); }
@@ -289,7 +289,7 @@ function Registro() {
         localStorage.setItem("correoUsuario", data.data.correo);
         navigate("/seleccion-perfil", { replace: true });
       } else {
-        setError(data.error?.includes("duplicate") ? "Este correo ya está registrado" : data.error || "Error al registrar");
+        setError(data.error?.includes("duplicate") ? "Este correo ya está registrado. ¿Quizás ya tienes una cuenta?" : data.error || "Ocurrió un error al crear tu cuenta. Intenta más tarde.");
       }
     } catch { setError("Error de conexión."); }
     finally { setIsLoading(false); }
