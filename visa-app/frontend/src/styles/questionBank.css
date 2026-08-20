@@ -1055,3 +1055,33 @@
     justify-content: space-between;
   }
 }
+
+@media (max-width: 480px) {
+  .feedback-status-card {
+    padding: 20px 16px;
+  }
+
+  .feedback-status-card h2 {
+    font-size: 18px;
+  }
+
+  .feedback-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-question-row {
+    padding: 14px;
+  }
+
+  .feedback-question-row h3 {
+    font-size: 14px;
+  }
+
+  .feedback-review-card {
+    padding: 16px;
+  }
+
+  .feedback-review-card p {
+    font-size: 14px;
+  }
+}
