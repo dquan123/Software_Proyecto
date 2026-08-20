@@ -121,7 +121,6 @@ export default function AdminProcesses() {
   return (
     <AdminLayout>
       <section className="admin-hero admin-processes-hero">
-        <h2>Todas las Solicitudes</h2>
         <p>Vista global de todos los expedientes en la plataforma.</p>
       </section>
 
