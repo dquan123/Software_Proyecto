@@ -871,7 +871,7 @@ describe("app endpoints", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+    expect(response.body).toEqual({ error: "El correo o la contraseña son incorrectos" });
   });
 
   test("POST /login devuelve 401 cuando faltan campos", async () => {
@@ -880,7 +880,7 @@ describe("app endpoints", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+    expect(response.body).toEqual({ error: "El correo o la contraseña son incorrectos" });
   });
 
   test("POST /login devuelve 401 cuando el usuario no existe", async () => {
@@ -890,7 +890,7 @@ describe("app endpoints", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ error: "Credenciales incorrectas" });
+    expect(response.body).toEqual({ error: "El correo o la contraseña son incorrectos" });
   });
 
   test("POST /login devuelve 500 ante error simulado de base de datos", async () => {
