@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 export function AdminPageHeader({ title, description, action }) {
-  return <header className="admin-page-heading"><div><h2>{title}</h2><p>{description}</p></div>{action}</header>;
+  return <header className={`admin-page-heading${title ? "" : " admin-page-heading--description-only"}`}><div>{title && <h2>{title}</h2>}<p>{description}</p></div>{action}</header>;
 }
 
 export function AdminResourceState({ isLoading, error, isEmpty, empty, retry }) {

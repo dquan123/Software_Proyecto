@@ -153,7 +153,7 @@ function createQuestionBankService(pool) {
     const placeholders = SEED_QUESTIONS.map((item, index) => {
       const offset = index * 4;
       values.push(item.question, item.category, item.difficulty, item.is_required);
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+      return `($${offset + 1}::text, $${offset + 2}::text, $${offset + 3}::text, $${offset + 4}::boolean)`;
     });
 
     await pool.query(

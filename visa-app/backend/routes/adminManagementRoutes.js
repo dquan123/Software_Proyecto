@@ -293,7 +293,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     try {
       await schemaReady;
       const [cases, advisors] = await Promise.all([
-        pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual, t.progreso,
+        pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual, t.progreso, t.created_at,
           u.nombre, u.correo, u.perfil FROM tramite t JOIN usuario u ON u.id_usuario = t.id_usuario
           WHERE t.id_asesor IS NULL ORDER BY t.id_tramite DESC`),
         pool.query(`SELECT u.id_usuario AS id, u.nombre, u.correo, u.capacidad_asesor AS capacidad,
