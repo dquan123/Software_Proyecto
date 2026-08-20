@@ -10,6 +10,7 @@ const empty = {
   sitio_web: "",
   idioma: "es",
   zona_horaria: "America/Guatemala",
+  notificaciones_automaticas: true,
 };
 
 const sections = [
@@ -68,6 +69,26 @@ export default function AdminSettingsPage() {
                   <label>Idioma<select value={form.idioma || "es"} onChange={(event) => setDraft({ ...form, idioma: event.target.value })}><option value="es">Español</option><option value="en">English</option></select></label>
                   <label>Zona horaria<input value={form.zona_horaria || ""} onChange={(event) => setDraft({ ...form, zona_horaria: event.target.value })} /></label>
                 </div>
+                {notice && <p role="status">{notice}</p>}
+                <button className="admin-primary-button" type="submit">Guardar cambios</button>
+              </form>
+            ) : section === "notifications" ? (
+              <form className="admin-form" onSubmit={save}>
+                <header>
+                  <h3>Notificaciones automáticas</h3>
+                  <p>Controla si la plataforma avisa a los usuarios cuando ocurren cambios en su proceso.</p>
+                </header>
+                <label className="admin-toggle">
+                  <input
+                    type="checkbox"
+                    checked={form.notificaciones_automaticas !== false}
+                    onChange={(event) => setDraft({ ...form, notificaciones_automaticas: event.target.checked })}
+                  />
+                  <span>
+                    <strong>Activar notificaciones automáticas</strong>
+                    <span>Envía avisos a los usuarios cuando cambia el estado de su trámite, se revisa su DS-160, se les asigna un asesor, o reciben retroalimentación de entrevista.</span>
+                  </span>
+                </label>
                 {notice && <p role="status">{notice}</p>}
                 <button className="admin-primary-button" type="submit">Guardar cambios</button>
               </form>
