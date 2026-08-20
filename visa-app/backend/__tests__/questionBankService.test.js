@@ -24,6 +24,7 @@ describe("question bank seed catalog", () => {
     expect(seedCall).toBeDefined();
     expect(seedCall[0]).toContain("WHERE NOT EXISTS");
     expect(seedCall[0]).toContain("LOWER(TRIM(existing.question))");
+    expect(seedCall[0]).toContain("::boolean");
     expect(seedCall[1]).toHaveLength(SEED_QUESTIONS.length * 4);
     expect(pool.query.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM question_bank"))).toBe(false);
   });
