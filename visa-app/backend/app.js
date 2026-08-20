@@ -531,7 +531,7 @@ app.post("/login", async (req, res) => {
         token: issueSessionToken(usuario),
       });
     } else {
-      res.status(401).json({ error: "Credenciales incorrectas" });
+      res.status(401).json({ error: "El correo o la contraseña son incorrectos" });
     }
   } catch (error) {
     console.log("ERROR LOGIN:", error);
