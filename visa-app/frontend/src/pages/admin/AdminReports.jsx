@@ -103,7 +103,7 @@ export default function AdminReports() {
     <AdminLayout>
       <section className="admin-hero admin-reports-hero">
         <div>
-          <h2>Reportes y Analíticas</h2>
+          <h1>Reportes y Analíticas</h1>
           <p>Estadísticas y métricas globales de la plataforma.</p>
         </div>
         <div className="admin-report-actions"><label><span>Periodo</span><select value={range} onChange={(event) => selectRange(event.target.value)}><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option><option value="all">Todo el historial</option><option value="custom">Rango personalizado</option></select></label>{range === "custom" && <div className="admin-report-date-range"><CalendarDays aria-hidden="true" /><label><span>Desde</span><input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} /></label><label><span>Hasta</span><input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} /></label></div>}<button className="admin-primary-button admin-primary-button--navy" type="button" onClick={exportReport} disabled={!report || isExporting || (range === "custom" && (!from || !to))}><Download aria-hidden="true" />{isExporting ? "Exportando…" : "Exportar CSV"}</button></div>

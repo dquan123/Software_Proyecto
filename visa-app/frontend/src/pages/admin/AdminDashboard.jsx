@@ -36,7 +36,7 @@ export default function AdminDashboard() {
     : null;
 
   return <AdminLayout>
-    <section className="admin-hero"><h2>Panel de Administración Global</h2><p>Supervisa el rendimiento, la carga de trabajo y el estado general de la plataforma.</p></section>
+    <section className="admin-hero"><h1>Panel de Administración Global</h1><p>Supervisa el rendimiento, la carga de trabajo y el estado general de la plataforma.</p></section>
     <AdminResourceState {...resource} />
     {data && <>
       <section className="admin-stats-grid" aria-label="Indicadores administrativos">

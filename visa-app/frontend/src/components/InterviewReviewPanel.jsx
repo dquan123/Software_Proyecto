@@ -140,7 +140,7 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
 
   return (
     <section className="admin-interviews-panel">
-      <header className="admin-page-heading admin-page-heading--description-only"><div><p>Monitor de citas y simuladores a nivel agencia.</p></div></header>
+      <header className="admin-page-heading"><div><h1>Entrevistas</h1><p>Monitor de citas y simuladores a nivel agencia.</p></div></header>
       <AdminTabs value={statusFilter} onChange={setStatusFilter} label="Filtrar entrevistas" items={[{ value: "all", label: "Próximas" }, { value: "pending", label: "Preparación pendiente" }, { value: "reviewed", label: "Completadas" }]} />
       <section className="admin-list-card">
         <div className="admin-list-toolbar"><AdminSearch value={query} onChange={setQuery} placeholder="Buscar solicitante..." /></div>

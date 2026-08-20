@@ -1,0 +1,38 @@
+/* ══════════════════════════════
+   PERFIL — Responsive
+   ══════════════════════════════ */
+
+@media (max-width: 768px) {
+  .perfil-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .perfil-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .perfil-header h1 {
+    font-size: 28px !important;
+  }
+
+  .perfil-header p {
+    font-size: 15px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .perfil-header h1 {
+    font-size: 24px !important;
+  }
+
+  .perfil-header p {
+    font-size: 14px !important;
+  }
+
+  .perfil-grid {
+    gap: 16px !important;
+  }
+}

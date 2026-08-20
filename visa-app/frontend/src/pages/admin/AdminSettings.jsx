@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader description="Ajustes globales de la plataforma VisaGuide." />
+      <AdminPageHeader title="Configuración" description="Ajustes globales de la plataforma VisaGuide." />
       <AdminResourceState isLoading={resource.isLoading} error={resource.error} retry={resource.retry} />
       {!resource.isLoading && !resource.error && (
         <div className="admin-settings-layout">
