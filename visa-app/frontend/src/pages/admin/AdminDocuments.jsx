@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Eye, MessageSquareText, Save, X } from "lucide-react";
+import { Check, Eye, Save, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { AdminPageHeader, AdminSearch, AdminTabs } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
 import { openDocumentPreview } from "../../utils/documentPreview";
 
 const tableHeaders = [
-  "Usuario",
-  "Tipo de documento",
+  "Documento",
+  "Solicitante",
+  "Asesor",
   "Estado",
-  "Fecha de carga",
-  "Archivo",
-  "Observaciones",
-  "Acciones",
+  "Acción",
 ];
 
 const statusLabels = {
@@ -283,8 +281,6 @@ const updateDocumentStatus = async (documentId, status) => {
               )}
 
               {!isLoading && !error && visibleDocuments.map((document) => {
-                const savedFeedback = document.feedback || "";
-                const hasFeedback = Boolean(savedFeedback.trim());
                 const isUpdating = updatingId === document.id;
                 const isSavingFeedback = savingFeedbackId === document.id;
                 const isRowBusy = isUpdating || isSavingFeedback;
@@ -292,73 +288,17 @@ const updateDocumentStatus = async (documentId, status) => {
                 return (
                   <tr key={document.id}>
                     <td>
-                      <strong className="admin-table-primary">
-                        {document.usuario?.nombre || "Usuario sin nombre"}
-                      </strong>
-                      <span className="admin-table-secondary">
-                        {document.usuario?.correo || "Correo no disponible"}
-                      </span>
-                    </td>
-                    <td>{getDocumentType(document)}</td>
-                    <td>
-                      <span className={`admin-status admin-status--${document.estado || "pending"}`}>
-                        {getStatusLabel(document.estado)}
-                      </span>
-                    </td>
-                    <td>{formatDate(document.creado_en || document.actualizado_en)}</td>
-                    <td>
-                      <strong className="admin-table-primary">{document.nombre || "Archivo"}</strong>
-                      <span className="admin-table-secondary">{document.tipo || "Tipo no especificado"}</span>
+                      <strong className="admin-table-primary">{getDocumentType(document)}</strong>
+                      <span className="admin-table-secondary">{formatDate(document.creado_en || document.actualizado_en)}</span>
                     </td>
                     <td>
-                      <span className={`admin-comment-indicator${hasFeedback ? "" : " admin-comment-indicator--empty"}`}>
-                        <MessageSquareText size={14} strokeWidth={2.4} aria-hidden="true" />
-                        {hasFeedback ? "Tiene observaciones" : "Sin observaciones"}
-                      </span>
+                      <strong className="admin-table-primary">{document.usuario?.nombre || "Usuario sin nombre"}</strong>
+                      <span className="admin-table-secondary">{document.usuario?.perfil || document.usuario?.correo || "Perfil no disponible"}</span>
                     </td>
+                    <td>{document.asesor || document.usuario?.asesor || "Sin asignar"}</td>
+                    <td><span className={`admin-status admin-status--${document.estado || "pending"}`}>{getStatusLabel(document.estado)}</span></td>
                     <td>
-                      <div className="admin-table-actions" aria-label={`Acciones para ${document.nombre || "documento"}`}>
-                        <button
-                          type="button"
-                          className="admin-action-button admin-action-button--save"
-                          disabled={isRowBusy}
-                          onClick={() => openFeedbackModal(document)}
-                        >
-                          <MessageSquareText size={16} strokeWidth={2.4} aria-hidden="true" />
-                          <span>Observaciones</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-action-button admin-action-button--approve"
-                          disabled={isRowBusy || document.estado === "approved"}
-                          onClick={() => updateDocumentStatus(document.id, "approved")}
-                        >
-                          <Check size={16} strokeWidth={2.4} aria-hidden="true" />
-                          <span>Aprobar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-action-button admin-action-button--reject"
-                          disabled={
-                            isRowBusy ||
-                            document.estado === "correction" ||
-                            document.estado === "rejected"
-                          }
-                          onClick={() => updateDocumentStatus(document.id, "correction")}
-                        >
-                          <X size={16} strokeWidth={2.4} aria-hidden="true" />
-                          <span>Rechazar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-action-button"
-                          disabled={isRowBusy || !document.archivo_url}
-                          onClick={() => openDocumentPreview(document)}
-                        >
-                          <Eye size={16} strokeWidth={2.4} aria-hidden="true" />
-                          <span>Ver documento</span>
-                        </button>
-                      </div>
+                      <button type="button" className="admin-action-button" disabled={isRowBusy} onClick={() => openFeedbackModal(document)}>Ver revisión</button>
                     </td>
                   </tr>
                 );
@@ -378,8 +318,8 @@ const updateDocumentStatus = async (documentId, status) => {
           >
             <header className="admin-modal__header">
               <div>
-                <p className="admin-section-kicker">Revision de documento</p>
-                <h2 id="admin-observations-title">Observaciones</h2>
+                <p className="admin-section-kicker">Documento global</p>
+                <h2 id="admin-observations-title">Revisión de documento</h2>
                 <p>
                   {feedbackModalDocument.nombre || "Documento"} -{" "}
                   {feedbackModalDocument.usuario?.nombre || "Usuario sin nombre"}
@@ -397,6 +337,12 @@ const updateDocumentStatus = async (documentId, status) => {
             </header>
 
             <div className="admin-modal__body">
+              <dl className="admin-document-review-meta"><div><dt>Tipo</dt><dd>{getDocumentType(feedbackModalDocument)}</dd></div><div><dt>Estado</dt><dd>{getStatusLabel(feedbackModalDocument.estado)}</dd></div><div><dt>Fecha de carga</dt><dd>{formatDate(feedbackModalDocument.creado_en || feedbackModalDocument.actualizado_en)}</dd></div></dl>
+              <div className="admin-document-review-actions" aria-label={`Acciones para ${feedbackModalDocument.nombre || "documento"}`}>
+                <button type="button" className="admin-action-button" disabled={Boolean(savingFeedbackId) || !feedbackModalDocument.archivo_url} onClick={() => openDocumentPreview(feedbackModalDocument)}><Eye size={16} strokeWidth={2.4} aria-hidden="true" />Ver documento</button>
+                <button type="button" className="admin-action-button admin-action-button--approve" disabled={Boolean(savingFeedbackId) || updatingId === feedbackModalDocument.id || feedbackModalDocument.estado === "approved"} onClick={() => updateDocumentStatus(feedbackModalDocument.id, "approved")}><Check size={16} strokeWidth={2.4} aria-hidden="true" />Aprobar</button>
+                <button type="button" className="admin-action-button admin-action-button--reject" disabled={Boolean(savingFeedbackId) || updatingId === feedbackModalDocument.id || feedbackModalDocument.estado === "correction" || feedbackModalDocument.estado === "rejected"} onClick={() => updateDocumentStatus(feedbackModalDocument.id, "correction")}><X size={16} strokeWidth={2.4} aria-hidden="true" />Rechazar</button>
+              </div>
               <label className="admin-observation-field" htmlFor="admin-observations-textarea">
                 Comentario para el usuario
                 <textarea

@@ -1,5 +1,79 @@
 const express = require("express");
 
+const ALLOWED_PERIODS = new Set([30, 90, 365]);
+
+function parseDate(value, field) {
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const error = new Error(`${field} debe usar el formato YYYY-MM-DD`);
+    error.statusCode = 400;
+    throw error;
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    const error = new Error(`${field} no es una fecha válida`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return value;
+}
+
+function buildDateFilter(query, column = "created_at") {
+  const from = parseDate(query.from, "from");
+  const to = parseDate(query.to, "to");
+  if (from && to && from > to) {
+    const error = new Error("La fecha inicial no puede ser posterior a la fecha final");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (from || to) {
+    const conditions = [];
+    const values = [];
+    if (from) {
+      values.push(from);
+      conditions.push(`${column} >= $${values.length}::date`);
+    }
+    if (to) {
+      values.push(to);
+      conditions.push(`${column} < ($${values.length}::date + INTERVAL '1 day')`);
+    }
+    return { clause: conditions.join(" AND "), values, from, to, days: null };
+  }
+
+  const days = ALLOWED_PERIODS.has(Number(query.days)) ? Number(query.days) : null;
+  return {
+    clause: days ? `${column} >= CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day')` : "",
+    values: days ? [days] : [],
+    from: null,
+    to: null,
+    days,
+  };
+}
+
+function csvCell(value) {
+  let text = value === null || value === undefined ? "" : String(value);
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildProcessCsv(rows) {
+  const headers = ["ID", "Solicitante", "Correo", "Perfil", "Estado", "Etapa", "Progreso", "Asesor", "Fecha de creación", "Última actualización"];
+  const lines = rows.map((row) => [
+    row.id_tramite,
+    row.solicitante,
+    row.correo,
+    row.perfil,
+    row.estado,
+    row.etapa_actual,
+    row.progreso,
+    row.asesor || "Sin asignar",
+    row.created_at ? new Date(row.created_at).toISOString() : "",
+    row.updated_at ? new Date(row.updated_at).toISOString() : "",
+  ].map(csvCell).join(","));
+  return `\uFEFF${headers.map(csvCell).join(",")}\r\n${lines.join("\r\n")}`;
+}
+
 module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
   const router = express.Router();
 
@@ -25,21 +99,27 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
 
   router.get("/processes", requireAdmin, async (req, res) => {
     try {
-      const days = [30, 90, 365].includes(Number(req.query.days)) ? Number(req.query.days) : null;
-      const where = days ? "WHERE created_at >= CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day')" : "";
-      const values = days ? [days] : [];
-      const [statusResult, stageResult, summaryResult, advisorResult] = await Promise.all([
-        pool.query(`SELECT estado AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY estado ORDER BY estado`, values),
-        pool.query(`SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY etapa_actual ORDER BY etapa_actual`, values),
+      const filter = buildDateFilter(req.query);
+      const where = filter.clause ? `WHERE ${filter.clause}` : "";
+      const advisorFilter = buildDateFilter(req.query, "t.created_at");
+      const monthlyFilter = buildDateFilter(req.query, "t.created_at");
+      const documentFilter = buildDateFilter(req.query, "d.creado_en");
+      const [statusResult, stageResult, summaryResult, advisorResult, monthlyResult, documentResult] = await Promise.all([
+        pool.query(`SELECT estado AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY estado ORDER BY estado`, filter.values),
+        pool.query(`SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY etapa_actual ORDER BY etapa_actual`, filter.values),
         pool.query(`
           SELECT
             COUNT(*) AS total,
             COALESCE(AVG(progreso), 0) AS progreso_promedio,
             COUNT(*) FILTER (WHERE estado = 'Aprobado' OR progreso >= 100) AS completados,
-            COUNT(*) FILTER (WHERE id_asesor IS NULL) AS sin_asignar
+            COUNT(*) FILTER (WHERE id_asesor IS NULL) AS sin_asignar,
+            COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400)
+              FILTER (WHERE estado = 'Aprobado' OR progreso >= 100), 0) AS tiempo_promedio_dias,
+            (SELECT COUNT(*) FROM documentos WHERE estado IN ('pending', 'review')) +
+              (SELECT COUNT(*) FROM formulario_ds160 WHERE estado_revision = 'por_revisar') AS revisiones_pendientes
           FROM tramite
           ${where}
-        `, values),
+        `, filter.values),
         pool.query(`
           SELECT
             advisor.id_usuario AS id,
@@ -50,22 +130,46 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
             ) AS pendientes
           FROM usuario advisor
           LEFT JOIN tramite t ON t.id_asesor = advisor.id_usuario
-            ${days ? "AND t.created_at >= CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day')" : ""}
+            ${advisorFilter.clause ? `AND ${advisorFilter.clause}` : ""}
           WHERE advisor.rol = 'asesor'
           GROUP BY advisor.id_usuario, advisor.nombre
           ORDER BY asignados DESC, advisor.nombre ASC
           LIMIT 6
-        `, values),
+        `, advisorFilter.values),
+        pool.query(`WITH months AS (
+          SELECT generate_series(
+            date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+            date_trunc('month', CURRENT_DATE),
+            INTERVAL '1 month'
+          ) AS month
+        )
+        SELECT TO_CHAR(months.month, 'YYYY-MM') AS label, COUNT(t.id_tramite) AS total
+        FROM months
+        LEFT JOIN tramite t ON date_trunc('month', t.created_at) = months.month
+          ${monthlyFilter.clause ? `AND ${monthlyFilter.clause}` : ""}
+        GROUP BY months.month ORDER BY months.month`, monthlyFilter.values),
+        pool.query(`SELECT d.estado AS label, COUNT(*) AS total
+          FROM documentos d ${documentFilter.clause ? `WHERE ${documentFilter.clause}` : ""}
+          GROUP BY d.estado ORDER BY d.estado`, documentFilter.values),
       ]);
       const normalize = ({ label, total }) => ({ label, total: Number(total) || 0 });
       const summary = summaryResult.rows[0] || {};
+      const total = Number(summary.total) || 0;
+      const completed = Number(summary.completados) || 0;
       res.json({
         porEstado: statusResult.rows.map(normalize),
         porEtapa: stageResult.rows.map(normalize),
-        totalTramites: Number(summary.total) || 0,
+        nuevasSolicitudes: monthlyResult.rows.map(normalize),
+        documentosPorEstado: documentResult.rows.map(normalize),
+        totalTramites: total,
+        totalActivas: Math.max(0, total - completed),
         progresoPromedio: Number(summary.progreso_promedio) || 0,
-        completados: Number(summary.completados) || 0,
+        completados: completed,
         sinAsignar: Number(summary.sin_asignar) || 0,
+        tiempoPromedioDias: Number(summary.tiempo_promedio_dias) || 0,
+        revisionesPendientes: Number(summary.revisiones_pendientes) || 0,
+        tasaExito: total ? Math.round((completed / total) * 100) : 0,
+        periodo: { days: filter.days, from: filter.from, to: filter.to },
         cargaAsesores: advisorResult.rows.map((row) => ({
           id: row.id,
           nombre: row.nombre,
@@ -74,10 +178,40 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
         })),
       });
     } catch (error) {
+      if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
       console.error("ERROR ADMIN PROCESS METRICS:", error);
       res.status(500).json({ error: "No fue posible cargar los reportes" });
     }
   });
 
+  router.get("/processes.csv", requireAdmin, async (req, res) => {
+    try {
+      const filter = buildDateFilter(req.query, "t.created_at");
+      const where = filter.clause ? `WHERE ${filter.clause}` : "";
+      const result = await pool.query(`
+        SELECT t.id_tramite, applicant.nombre AS solicitante, applicant.correo,
+          applicant.perfil, t.estado, t.etapa_actual, t.progreso,
+          advisor.nombre AS asesor, t.created_at, t.updated_at
+        FROM tramite t
+        JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
+        LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
+        ${where}
+        ORDER BY t.created_at DESC, t.id_tramite DESC
+      `, filter.values);
+
+      const filename = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(buildProcessCsv(result.rows));
+    } catch (error) {
+      if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+      console.error("ERROR ADMIN PROCESS CSV:", error);
+      return res.status(500).json({ error: "No fue posible exportar el reporte" });
+    }
+  });
+
   return router;
 };
+
+module.exports.buildDateFilter = buildDateFilter;
+module.exports.buildProcessCsv = buildProcessCsv;

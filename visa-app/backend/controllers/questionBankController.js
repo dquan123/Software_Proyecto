@@ -20,6 +20,15 @@ function createQuestionBankController(questionBankService) {
     }
   }
 
+  async function listAdminQuestions(req, res) {
+    try {
+      const questions = await questionBankService.listQuestions({ includeInactive: true });
+      return res.json({ questions });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
   async function createQuestion(req, res) {
     try {
       const question = await questionBankService.createQuestion(req.body);
@@ -57,10 +66,27 @@ function createQuestionBankController(questionBankService) {
     }
   }
 
+  async function setQuestionActive(req, res) {
+    try {
+      const question = await questionBankService.setQuestionActive(
+        req.params.id,
+        req.body?.activo
+      );
+      return res.json({
+        message: question.activo ? "Pregunta activada correctamente" : "Pregunta desactivada correctamente",
+        question,
+      });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
   return {
     listQuestions,
+    listAdminQuestions,
     createQuestion,
     updateQuestion,
+    setQuestionActive,
     deleteQuestion,
   };
 }

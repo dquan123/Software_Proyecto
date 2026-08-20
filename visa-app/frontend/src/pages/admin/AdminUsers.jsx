@@ -52,7 +52,7 @@ export default function AdminUsers() {
   };
 
   return <AdminLayout>
-    <AdminPageHeader title="Usuarios" description="Gestión global de solicitantes, asesores y administradores." action={<button className="admin-primary-button" type="button" onClick={() => setModal(true)}><Plus aria-hidden="true" />Crear usuario</button>} />
+    <AdminPageHeader description="Gestión global de solicitantes, asesores y administradores." action={<button className="admin-primary-button" type="button" onClick={() => setModal(true)}><Plus aria-hidden="true" />Crear usuario</button>} />
     {notice && <p className="admin-feedback" role="status">{notice}</p>}
     <AdminTabs value={tab} onChange={(value) => { setTab(value); setPage(1); }} items={tabs} label="Filtrar usuarios por rol" />
     <section className="admin-list-card">

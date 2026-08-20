@@ -45,7 +45,9 @@ describe("pantallas de autenticación", () => {
     await user.type(password, "secreto");
     await user.click(screen.getByRole("button", { name: /Ingresar/i }));
 
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Correo o contraseña incorrectos"));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(
+      "El correo o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo."
+    ));
     expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
