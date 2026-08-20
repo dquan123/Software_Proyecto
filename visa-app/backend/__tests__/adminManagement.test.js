@@ -117,6 +117,70 @@ describe("admin management integration", () => {
       .expect(400);
   });
 
+  test("blocks an admin from deactivating their own account", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .patch("/admin/users/1")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ activo: false })
+      .expect(400);
+
+    expect(response.body.error).toBe("No puedes desactivar tu propia cuenta");
+  });
+
+  test("blocks an admin from changing their own role", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .patch("/admin/users/1")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ rol: "cliente" })
+      .expect(400);
+
+    expect(response.body.error).toBe("No puedes cambiar tu propio rol");
+  });
+
+  test("blocks changing an advisor's role away from asesor while cases are assigned", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("SELECT rol FROM usuario WHERE id_usuario")) return { rows: [{ rol: "asesor" }] };
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT COUNT(*) FROM tramite WHERE id_asesor")) return { rows: [{ count: "2" }] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .patch("/admin/users/7")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ rol: "cliente" })
+      .expect(409);
+
+    expect(response.body.error).toBe("No puedes cambiar el rol: el asesor tiene trámites asignados");
+    expect(pool.query).not.toHaveBeenCalledWith(expect.stringContaining("UPDATE usuario SET"), expect.anything());
+  });
+
+  test("allows changing an advisor's role away from asesor once they have no assigned cases", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("SELECT rol FROM usuario WHERE id_usuario")) return { rows: [{ rol: "asesor" }] };
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT COUNT(*) FROM tramite WHERE id_asesor")) return { rows: [{ count: "0" }] };
+      if (sql.includes("UPDATE usuario SET")) return { rows: [{ id_usuario: 7, correo: "asesor@test.dev", rol: "cliente" }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .patch("/admin/users/7")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ rol: "cliente" })
+      .expect(200);
+  });
+
   test("assigns an unassigned real process to an active advisor", async () => {
     const { app, pool } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };

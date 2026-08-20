@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, ClipboardList, UserRound } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, ClipboardList, Pencil, UserRound, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { AdminPageHeader, AdminResourceState } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
-import { getAdminHeaders } from "../../utils/adminHeaders";
+import { adminRequest } from "../../hooks/useAdminResource";
+import { getAdminHeaders, getAdminUserId } from "../../utils/adminHeaders";
 
 const roleLabels = { cliente: "Solicitante", asesor: "Asesor", admin: "Administrador" };
 
@@ -24,10 +25,14 @@ function statusClass(status) {
 
 export default function AdminUserDetail() {
   const { id } = useParams();
+  const currentUserId = getAdminUserId();
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ nombre: "", correo: "", telefono: "", ciudad: "", pais: "", rol: "cliente" });
+  const [notice, setNotice] = useState("");
 
   const loadDetail = useCallback((signal) => {
     return fetch(buildApiUrl(`/admin/users/${id}`), { signal, headers: getAdminHeaders() })
@@ -62,13 +67,30 @@ export default function AdminUserDetail() {
 
   const user = detail?.usuario;
 
+  const openEdit = () => {
+    setEditForm({ nombre: user.nombre, correo: user.correo, telefono: user.telefono || "", ciudad: user.ciudad || "", pais: user.pais || "", rol: user.rol });
+    setEditModal(true);
+  };
+  const saveEdit = async (event) => {
+    event.preventDefault();
+    try {
+      await adminRequest(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify(editForm) });
+      setEditModal(false);
+      setNotice("Usuario actualizado correctamente.");
+      retryLoad();
+    } catch (error) {
+      setNotice(error.message);
+    }
+  };
+
   return (
     <AdminLayout>
       <AdminPageHeader
         title="Detalle de Usuario"
         description="Perfil completo y actividad asociada al usuario."
-        action={<Link className="admin-secondary-button" to="/admin/users"><ArrowLeft aria-hidden="true" size={18} />Volver</Link>}
+        action={<><Link className="admin-secondary-button" to="/admin/users"><ArrowLeft aria-hidden="true" size={18} />Volver</Link>{user && <button className="admin-primary-button" type="button" onClick={openEdit}><Pencil aria-hidden="true" size={18} />Editar</button>}</>}
       />
+      {notice && <p className="admin-feedback" role="status">{notice}</p>}
 
       <AdminResourceState
         isLoading={isLoading}
@@ -186,6 +208,33 @@ export default function AdminUserDetail() {
             </section>
           )}
         </>
+      )}
+
+      {editModal && user && (
+        <div className="admin-modal-backdrop">
+          <section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="edit-user-detail-title">
+            <header className="admin-modal__header">
+              <h2 id="edit-user-detail-title">Editar usuario</h2>
+              <button className="admin-modal__close" type="button" onClick={() => setEditModal(false)} aria-label="Cerrar"><X aria-hidden="true" /></button>
+            </header>
+            <form className="admin-form" onSubmit={saveEdit}>
+              <label>Nombre<input required value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} /></label>
+              <label>Correo<input required type="email" value={editForm.correo} onChange={(e) => setEditForm({ ...editForm, correo: e.target.value })} /></label>
+              <label>Teléfono<input value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} /></label>
+              <label>Ciudad<input value={editForm.ciudad} onChange={(e) => setEditForm({ ...editForm, ciudad: e.target.value })} /></label>
+              <label>País<input value={editForm.pais} onChange={(e) => setEditForm({ ...editForm, pais: e.target.value })} /></label>
+              <label>Rol
+                <select disabled={user.id === currentUserId} value={editForm.rol} onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}>
+                  <option value="cliente">Solicitante</option>
+                  <option value="asesor">Asesor</option>
+                  <option value="admin">Administrador</option>
+                </select>
+                {user.id === currentUserId && <small>No puedes cambiar tu propio rol.</small>}
+              </label>
+              <footer><button className="admin-primary-button" type="submit">Guardar cambios</button></footer>
+            </form>
+          </section>
+        </div>
       )}
     </AdminLayout>
   );

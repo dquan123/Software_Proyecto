@@ -43,6 +43,15 @@ describe("admin authorization and metrics", () => {
     dateSpy.mockRestore();
   });
 
+  test("rejects a session for a deactivated user", async () => {
+    const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin", activo: false };
+    const { app } = createApp(async () => ({ rows: [admin] }));
+    await request(app)
+      .get("/admin/metrics/overview")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(401);
+  });
+
   test("rejects an authenticated client", async () => {
     const client = { id_usuario: 4, correo: "cliente@test.dev", rol: "cliente" };
     const { app } = createApp(async () => ({ rows: [client] }));
