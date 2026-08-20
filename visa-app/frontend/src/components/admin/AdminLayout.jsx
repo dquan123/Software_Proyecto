@@ -27,38 +27,19 @@ import useTheme from "../../hooks/useTheme";
 import { useAdminSession } from "./AdminSessionContext";
 import useAdminResource from "../../hooks/useAdminResource";
 import "../../styles/admin.css";
+import "../../styles/admin-prototype.css";
 
-const adminNavGroups = [
-  {
-    label: "Dashboard",
-    items: [
-      { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
-    ],
-  },
-  {
-    label: "Gestión",
-    items: [
-      { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "Asesores", path: "/admin/advisors", icon: <BriefcaseBusiness size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "Asignaciones", path: "/admin/assignments", icon: <UserRoundCheck size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "Solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
-    ],
-  },
-  {
-    label: "Revisión",
-    items: [
-      { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "DS-160", path: "/admin/ds160", icon: <CheckSquare size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
-      { label: "Banco de preguntas", path: "/admin/questions", icon: <BookOpenText size={20} strokeWidth={2} aria-hidden="true" /> },
-    ],
-  },
-  {
-    label: "Análisis",
-    items: [
-      { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
-    ],
-  },
+const adminNavItems = [
+  { label: "Inicio", path: "/admin", icon: <LayoutDashboard size={20} strokeWidth={2} aria-hidden="true" />, end: true },
+  { label: "Todas las solicitudes", path: "/admin/processes", icon: <ClipboardList size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Asesores", path: "/admin/advisors", icon: <BriefcaseBusiness size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Usuarios", path: "/admin/users", icon: <Users size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Asignaciones", path: "/admin/assignments", icon: <UserRoundCheck size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Documentos", path: "/admin/documents", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Formularios DS-160", path: "/admin/ds160", icon: <CheckSquare size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Entrevistas", path: "/admin/interviews", icon: <MessageSquareText size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Banco de preguntas", path: "/admin/questions", icon: <BookOpenText size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
 
 const pageTitles = {
@@ -181,33 +162,22 @@ export default function AdminLayout({ children }) {
         </div>
 
         <nav className="admin-sidebar__nav" aria-label="Modulos de administracion">
-          {adminNavGroups.map((group) => (
-            <section className="admin-sidebar__group" key={group.label} aria-label={group.label}>
-              <p className="admin-sidebar__group-label">{group.label}</p>
-              <div className="admin-sidebar__group-links">
-                {group.items.map(({ label, path, icon, end }) => (
-                  <NavLink
-                    key={path}
-                    to={path}
-                    end={end}
-                    className={({ isActive }) =>
-                      `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
-                    }
-                    data-tooltip={label}
-                    title={sidebarCollapsed ? label : undefined}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    {icon}
-                    <span>{label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            </section>
+          {adminNavItems.map(({ label, path, icon, end }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={end}
+              className={({ isActive }) =>
+                `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
+              }
+              data-tooltip={label}
+              title={sidebarCollapsed ? label : undefined}
+              onClick={() => setSidebarOpen(false)}
+            >
+              {icon}
+              <span>{label}</span>
+            </NavLink>
           ))}
-        </nav>
-
-        <div className="admin-sidebar__footer">
-          <p className="admin-sidebar__group-label">Sistema</p>
           <NavLink
             className={({ isActive }) =>
               `admin-sidebar__link${isActive ? " admin-sidebar__link--active" : ""}`
@@ -220,7 +190,9 @@ export default function AdminLayout({ children }) {
             <Settings size={20} strokeWidth={2} aria-hidden="true" />
             <span>Configuración</span>
           </NavLink>
+        </nav>
 
+        <div className="admin-sidebar__footer">
           <button
             type="button"
             className="admin-sidebar__theme"

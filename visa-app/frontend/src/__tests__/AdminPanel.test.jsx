@@ -92,7 +92,10 @@ function mockAdminSession() {
       return Promise.resolve({ ok: true, json: async () => ({ casos: [], asesores: [] }) });
     }
     if (String(url).endsWith("/admin/ds160")) {
-      return Promise.resolve({ ok: true, json: async () => ({ formularios: [] }) });
+      return Promise.resolve({ ok: true, json: async () => ({ formularios: [{ id: 31, nombre: "Usuario Demo", correo: "demo@example.com", perfil: "Turismo B1/B2", progreso: 85, seccion_actual: 8, completado: false, estado_revision: "en_progreso", asesor: "Laura Vásquez" }] }) });
+    }
+    if (String(url).endsWith("/admin/ds160/31") && options.method === "PUT") {
+      return Promise.resolve({ ok: true, json: async () => ({ formulario: { id: 31, estado_revision: JSON.parse(options.body).estado } }) });
     }
     if (String(url).endsWith("/admin/profile")) {
       return Promise.resolve({ ok: true, json: async () => ({ usuario: adminSession }) });
@@ -262,6 +265,12 @@ function mockAdminSession() {
       };
       return Promise.resolve({ ok: true, json: async () => ({ tramite: managedProcess }) });
     }
+    if (String(url).includes("/admin/metrics/processes.csv")) {
+      return Promise.resolve({
+        ok: true,
+        blob: async () => new Blob(["ID,Solicitante\n21,Carlos"], { type: "text/csv" }),
+      });
+    }
     if (String(url).includes("/admin/metrics/processes")) {
       return Promise.resolve({
         ok: true,
@@ -270,9 +279,15 @@ function mockAdminSession() {
           progresoPromedio: 46.4,
           completados: 1,
           sinAsignar: 2,
+          totalActivas: 4,
+          tiempoPromedioDias: 14,
+          revisionesPendientes: 3,
+          tasaExito: 20,
           porEstado: [{ label: "En proceso", total: 3 }, { label: "Aprobado", total: 1 }],
           porEtapa: [{ label: "Documentos", total: 2 }, { label: "Formulario DS-160", total: 2 }],
           cargaAsesores: [{ id: 5, nombre: "Laura Vásquez", asignados: 3, pendientes: 2 }],
+          nuevasSolicitudes: [{ label: "2026-03", total: 1 }, { label: "2026-04", total: 2 }, { label: "2026-05", total: 3 }],
+          documentosPorEstado: [{ label: "approved", total: 3 }, { label: "review", total: 1 }],
         }),
       });
     }
@@ -343,28 +358,34 @@ describe("panel de administracion", () => {
 
     await screen.findByRole("heading", { name: "Inicio" });
     expect(document.querySelector(".admin-sidebar")).toHaveClass("admin-sidebar--collapsed");
-    expect(screen.getByRole("button", { name: "Expandir menu administrativo" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Expandir menu administrativo" }));
+
+    expect(localStorage.getItem("vg-admin-sidebar-collapsed")).toBe("false");
+    expect(document.querySelector(".admin-sidebar")).not.toHaveClass("admin-sidebar--collapsed");
+    expect(screen.getByRole("button", { name: "Colapsar menu administrativo" })).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("organiza el sidebar administrativo por grupos visibles", async () => {
+  it("presenta la navegación administrativa en el orden del prototipo", async () => {
     window.history.pushState({}, "", "/admin");
 
     render(<App />);
 
     await screen.findByRole("heading", { name: "Inicio" });
 
-    expect(screen.getByText("Dashboard", { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
-    expect(screen.getByText(/Gesti.n/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
-    expect(screen.getByText(/Revisi.n/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
-    expect(screen.getByText(/An.lisis/, { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
-    expect(screen.getByText("Sistema", { selector: ".admin-sidebar__group-label" })).toBeInTheDocument();
-
     const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
-    expect(within(navigation).getByRole("link", { name: /Inicio/ })).toBeInTheDocument();
-    expect(within(navigation).getByRole("link", { name: /Usuarios/ })).toBeInTheDocument();
-    expect(within(navigation).getByRole("link", { name: /Documentos/ })).toBeInTheDocument();
-    expect(within(navigation).getByRole("link", { name: /Reportes/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Configuraci/ })).toBeInTheDocument();
+    expect(within(navigation).getAllByRole("link").map((link) => link.textContent.trim())).toEqual([
+      "Inicio",
+      "Todas las solicitudes",
+      "Asesores",
+      "Usuarios",
+      "Asignaciones",
+      "Documentos",
+      "Formularios DS-160",
+      "Entrevistas",
+      "Banco de preguntas",
+      "Reportes",
+      "Configuración",
+    ]);
     expect(screen.getByRole("link", { name: /Mi perfil/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cerrar sesi/ })).toBeInTheDocument();
   });
@@ -386,16 +407,16 @@ describe("panel de administracion", () => {
   });
 
   it.each([
-    ["/admin/users", "Usuarios", "Usuarios"],
-    ["/admin/advisors", "Asesores", "Asesores"],
-    ["/admin/assignments", "Asignaciones", "Asignaciones"],
+    ["/admin/users", "Usuarios", null],
+    ["/admin/advisors", "Asesores", null],
+    ["/admin/assignments", "Asignaciones", null],
     ["/admin/documents", "Documentos", "Documentos Globales"],
     ["/admin/ds160", "Formularios DS-160", "DS-160 Globales"],
-    ["/admin/interviews", "Entrevistas", "Entrevistas Globales"],
-    ["/admin/questions", "Banco de preguntas", "Banco de Preguntas"],
-    ["/admin/processes", "Todas las solicitudes", "Todas las Solicitudes"],
+    ["/admin/interviews", "Entrevistas", null],
+    ["/admin/questions", "Banco de preguntas", null],
+    ["/admin/processes", "Todas las solicitudes", null],
     ["/admin/reports", "Reportes", "Reportes y Analíticas"],
-    ["/admin/settings", "Configuración", "Configuración"],
+    ["/admin/settings", "Configuración", null],
     ["/admin/profile", "Panel de Administración", "Mi Perfil"],
   ])("carga la ruta base %s", async (path, header, pageTitle) => {
     window.history.pushState({}, "", path);
@@ -403,22 +424,27 @@ describe("panel de administracion", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: header })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { level: 2, name: pageTitle })).toBeInTheDocument();
+    if (pageTitle) {
+      expect(await screen.findByRole("heading", { level: 2, name: pageTitle })).toBeInTheDocument();
+    } else {
+      expect(screen.getAllByRole("heading", { name: header })).toHaveLength(1);
+    }
     if (path === "/admin/documents") {
-      expect(screen.getByRole("columnheader", { name: "Usuario" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "Tipo de documento" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "Observaciones" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Documento" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Solicitante" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Asesor" })).toBeInTheDocument();
       expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
       expect(screen.getByText("Pasaporte")).toBeInTheDocument();
-      expect(screen.getByText("Tiene observaciones")).toBeInTheDocument();
       expect(screen.getByText("En revisión", { selector: ".admin-status" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Observaciones" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Aprobar" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Rechazar" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Ver documento" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Ver revisión" })).toBeInTheDocument();
+    } else if (path === "/admin/ds160") {
+      expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Ver formulario" })).toBeInTheDocument();
     } else if (path === "/admin/interviews") {
-      expect((await screen.findAllByText("Usuario Demo")).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/administrador/).length).toBeGreaterThan(0);
+      expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Cita" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Preparación" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Ver entrevista" })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /Entrevistas/ })).toHaveClass("admin-sidebar__link--active");
       expect(screen.queryByRole("heading", { name: "Banco de Preguntas" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Nueva pregunta" })).not.toBeInTheDocument();
@@ -430,17 +456,50 @@ describe("panel de administracion", () => {
       expect(screen.getByRole("link", { name: "Ver detalle" })).toHaveAttribute("href", "/admin/processes/21");
       expect(screen.getByRole("button", { name: "Gestionar" })).toBeInTheDocument();
     } else if (path === "/admin/reports") {
-      expect(await screen.findByText("Trámites totales")).toBeInTheDocument();
-      expect(screen.getByText("Progreso promedio")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Trámites por estado" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Distribución por etapa" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Carga de trabajo por asesor" })).toBeInTheDocument();
-      expect(screen.getByText("Laura Vásquez")).toBeInTheDocument();
+      expect(await screen.findByText("Total activas")).toBeInTheDocument();
+      expect(screen.getByText("Tiempo promedio")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Nuevas solicitudes (últimos 6 meses)" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Solicitudes por etapa" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Estado de Documentos" })).toBeInTheDocument();
     } else if (path === "/admin/users") {
-      expect(screen.getByText("No hay usuarios registrados.")).toBeInTheDocument();
+      expect(await screen.findByText("No hay usuarios registrados.")).toBeInTheDocument();
     } else if (path === "/admin/settings") {
       expect(await screen.findByDisplayValue("VisaGuide")).toBeInTheDocument();
     }
+  });
+
+  it("filtra reportes por fechas personalizadas y exporta el mismo rango en CSV", async () => {
+    const user = userEvent.setup();
+    const createObjectURL = vi.fn(() => "blob:reporte-csv");
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
+    window.history.pushState({}, "", "/admin/reports");
+
+    render(<App />);
+
+    await screen.findByText("Total activas");
+    await user.selectOptions(screen.getByLabelText("Periodo"), "custom");
+    await user.clear(screen.getByLabelText("Desde"));
+    await user.type(screen.getByLabelText("Desde"), "2026-07-01");
+    await user.clear(screen.getByLabelText("Hasta"));
+    await user.type(screen.getByLabelText("Hasta"), "2026-07-31");
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/metrics/processes?from=2026-07-01&to=2026-07-31"),
+      expect.any(Object)
+    ));
+
+    await user.click(screen.getByRole("button", { name: "Exportar CSV" }));
+    expect(await screen.findByText("Reporte CSV exportado correctamente.")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/metrics/processes.csv?from=2026-07-01&to=2026-07-31"),
+      expect.any(Object)
+    );
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:reporte-csv");
+    clickSpy.mockRestore();
   });
 
   it("permite filtrar y desactivar preguntas desde el panel", async () => {
@@ -535,7 +594,39 @@ describe("panel de administracion", () => {
     await user.click(within(navigation).getByRole("link", { name: /Usuarios/ }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/admin/users"));
-    expect(screen.getAllByRole("heading", { name: "Usuarios" })).toHaveLength(2);
+    expect(screen.getAllByRole("heading", { name: "Usuarios" })).toHaveLength(1);
+  });
+
+  it("abre la revisión DS-160 y guarda el estado desde el detalle", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/ds160");
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Ver formulario" }));
+    const dialog = screen.getByRole("dialog", { name: "Usuario Demo" });
+    await user.selectOptions(within(dialog).getByLabelText("Estado de revisión"), "aprobado");
+    await user.click(within(dialog).getByRole("button", { name: "Guardar revisión" }));
+
+    expect(await screen.findByText("Formulario actualizado.")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/ds160/31"),
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ estado: "aprobado" }) })
+    );
+  });
+
+  it("abre una entrevista desde la tabla y la cierra con Escape", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/interviews");
+
+    render(<App />);
+
+    const trigger = await screen.findByRole("button", { name: "Ver entrevista" });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Usuario Demo" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Usuario Demo" })).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("permite aprobar un documento sin recargar la pagina", async () => {
@@ -545,6 +636,7 @@ describe("panel de administracion", () => {
     render(<App />);
 
     expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver revisión" }));
     await user.click(screen.getByRole("button", { name: "Aprobar" }));
 
     expect(await screen.findByText("Documento aprobado correctamente.")).toBeInTheDocument();
@@ -564,6 +656,7 @@ describe("panel de administracion", () => {
     render(<App />);
 
     expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver revisión" }));
     await user.click(screen.getByRole("button", { name: "Ver documento" }));
 
     expect(openSpy).toHaveBeenCalledWith(
@@ -581,7 +674,7 @@ describe("panel de administracion", () => {
     render(<App />);
 
     await screen.findByText("Usuario Demo");
-    await user.click(screen.getByRole("button", { name: "Observaciones" }));
+    await user.click(screen.getByRole("button", { name: "Ver revisión" }));
 
     const feedbackInput = await screen.findByRole("textbox", {
       name: "Comentario para el usuario",
@@ -592,8 +685,7 @@ describe("panel de administracion", () => {
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     expect(await screen.findByText("Observaciones guardadas correctamente.")).toBeInTheDocument();
-    expect(screen.getByText("Tiene observaciones")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Observaciones" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisión de documento" })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe("/admin/documents");
 
     const feedbackCall = globalThis.fetch.mock.calls.find(([url, options]) =>
@@ -604,7 +696,7 @@ describe("panel de administracion", () => {
       feedback: "Falta la segunda pagina.",
     });
 
-    await user.click(screen.getByRole("button", { name: "Observaciones" }));
+    await user.click(screen.getByRole("button", { name: "Ver revisión" }));
     expect(await screen.findByDisplayValue("Falta la segunda pagina.")).toBeInTheDocument();
   });
 
@@ -615,6 +707,7 @@ describe("panel de administracion", () => {
     render(<App />);
 
     expect(await screen.findByText("Usuario Demo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver revisión" }));
     await user.click(screen.getByRole("button", { name: "Rechazar" }));
 
     expect(await screen.findByText("Documento rechazado correctamente.")).toBeInTheDocument();
