@@ -829,6 +829,26 @@ describe("app endpoints", () => {
     });
   });
 
+  test("POST /login devuelve 403 cuando la cuenta esta desactivada", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+        if (values?.[0] === "inactivo@example.com" && values?.[1] === "1234") {
+          return Promise.resolve({ rows: [{ id_usuario: 9, nombre: "Inactivo", correo: "inactivo@example.com", perfil: null, rol: "cliente", activo: false }] });
+        }
+        return Promise.resolve({ rows: [] });
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/login").send({
+      correo: "inactivo@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Cuenta desactivada. Contacta a un administrador." });
+  });
+
   test("POST /login devuelve 401 con credenciales incorrectas", async () => {
     const response = await request(app).post("/login").send({
       correo: "login@example.com",

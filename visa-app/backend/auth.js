@@ -64,12 +64,12 @@ function createSessionMiddleware(pool) {
 
     try {
       const result = await pool.query(
-        `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol
+        `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo
          FROM usuario WHERE id_usuario = $1`,
         [session.sub]
       );
       const user = result.rows[0];
-      if (!user) return res.status(401).json({ error: "Sesión inválida o expirada" });
+      if (!user || user.activo === false) return res.status(401).json({ error: "Sesión inválida o expirada" });
       req.auth = user;
       return next();
     } catch (error) {

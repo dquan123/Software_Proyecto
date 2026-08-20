@@ -182,8 +182,23 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     const { activo, disponible, capacidad, nombre, correo, telefono, ciudad, pais, rol } = req.body || {};
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Usuario inválido" });
     if (rol !== undefined && !VALID_ROLES.has(rol)) return res.status(400).json({ error: "Rol inválido" });
+    if (id === req.auth.id_usuario) {
+      if (activo === false) return res.status(400).json({ error: "No puedes desactivar tu propia cuenta" });
+      if (rol !== undefined && rol !== req.auth.rol) return res.status(400).json({ error: "No puedes cambiar tu propio rol" });
+    }
     try {
       await schemaReady;
+      if (rol !== undefined) {
+        const currentResult = await pool.query("SELECT rol FROM usuario WHERE id_usuario = $1", [id]);
+        const currentUser = currentResult.rows[0];
+        if (!currentUser) return res.status(404).json({ error: "Usuario no encontrado" });
+        if (currentUser.rol === "asesor" && rol !== "asesor") {
+          const casesResult = await pool.query("SELECT COUNT(*) FROM tramite WHERE id_asesor = $1", [id]);
+          if (Number(casesResult.rows[0].count) > 0) {
+            return res.status(409).json({ error: "No puedes cambiar el rol: el asesor tiene trámites asignados" });
+          }
+        }
+      }
       const result = await pool.query(`UPDATE usuario SET
         nombre = COALESCE($1, nombre),
         correo = COALESCE($2, correo),

@@ -6,3 +6,8 @@ export function getAdminHeaders(json = false) {
     ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
   };
 }
+
+export function getAdminUserId() {
+  const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
+  return session?.id ?? null;
+}

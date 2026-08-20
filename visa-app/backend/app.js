@@ -515,13 +515,16 @@ app.post("/login", async (req, res) => {
   try {
     await testUsersReady;
     const result = await pool.query(
-      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol
+      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo
        FROM usuario
        WHERE correo=$1 AND contrasena=$2`,
       [correo, contrasena]
     );
 
     if (result.rows.length > 0) {
+      if (result.rows[0].activo === false) {
+        return res.status(403).json({ error: "Cuenta desactivada. Contacta a un administrador." });
+      }
       const usuario = presentLoginUser(result.rows[0]);
       res.json({
         success: true,
