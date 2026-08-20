@@ -30,6 +30,11 @@ function mockAdminSession() {
     solicitante: { id: 8, nombre: "Carlos Mendoza", correo: "carlos@example.com", perfil: "Renovación B1/B2" },
     asesor: null,
   };
+  let adminUsers = [
+    { id: 1, nombre: "Admin General", correo: "admin@prueba.com", rol: "admin", perfil: null, activo: true, telefono: "", ciudad: "", pais: "", asignados: 0, pendientes: 0, asesor: null, actividad: "2026-08-10T10:00:00.000Z" },
+    { id: 4, nombre: "Cliente Prueba", correo: "cliente@example.com", rol: "cliente", perfil: "Turismo B1/B2", activo: true, telefono: "", ciudad: "", pais: "", asignados: 0, pendientes: 0, asesor: null, actividad: "2026-08-05T10:00:00.000Z" },
+    { id: 7, nombre: "Laura Vásquez", correo: "laura@visaguide.com", rol: "asesor", perfil: null, activo: true, telefono: "", ciudad: "", pais: "", asignados: 3, pendientes: 1, asesor: null, actividad: "2026-08-06T10:00:00.000Z" },
+  ];
   vi.spyOn(globalThis, "fetch").mockImplementation((url, options = {}) => {
     if (String(url).includes("/validar-sesion")) {
       return Promise.resolve({
@@ -82,8 +87,19 @@ function mockAdminSession() {
         }),
       });
     }
-    if (String(url).endsWith("/admin/users")) {
-      return Promise.resolve({ ok: true, json: async () => ({ usuarios: [] }) });
+    if (String(url).endsWith("/admin/users") && (!options.method || options.method === "GET")) {
+      return Promise.resolve({ ok: true, json: async () => ({ usuarios: adminUsers }) });
+    }
+    if (/\/admin\/users\/\d+$/.test(String(url)) && options.method === "PATCH") {
+      const id = Number(String(url).match(/\/admin\/users\/(\d+)$/)[1]);
+      const payload = JSON.parse(options.body || "{}");
+      const target = adminUsers.find((item) => item.id === id);
+      if (!target) return Promise.resolve({ ok: false, status: 404, json: async () => ({ error: "Usuario no encontrado" }) });
+      if (id === adminSession.id && payload.activo === false) {
+        return Promise.resolve({ ok: false, status: 400, json: async () => ({ error: "No puedes desactivar tu propia cuenta" }) });
+      }
+      adminUsers = adminUsers.map((item) => item.id === id ? { ...item, ...payload } : item);
+      return Promise.resolve({ ok: true, json: async () => ({ usuario: adminUsers.find((item) => item.id === id) }) });
     }
     if (String(url).endsWith("/admin/advisors")) {
       return Promise.resolve({ ok: true, json: async () => ({ asesores: [] }) });
@@ -408,6 +424,45 @@ describe("panel de administracion", () => {
     expect(globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"))).toHaveLength(0);
   });
 
+  it("lista, busca, filtra y edita usuarios, e impide que el admin se auto-bloquee", async () => {
+    window.history.pushState({}, "", "/admin/users");
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Usuarios" })).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Admin General")).toBeInTheDocument();
+    expect(within(table).getByText("Cliente Prueba")).toBeInTheDocument();
+    expect(within(table).getByText("Laura Vásquez")).toBeInTheDocument();
+
+    await user.type(screen.getByRole("searchbox", { name: "Buscar" }), "laura");
+    expect(within(table).queryByText("Cliente Prueba")).not.toBeInTheDocument();
+    expect(within(table).getByText("Laura Vásquez")).toBeInTheDocument();
+    await user.clear(screen.getByRole("searchbox", { name: "Buscar" }));
+
+    await user.click(screen.getByRole("tab", { name: "Asesor" }));
+    expect(within(table).queryByText("Cliente Prueba")).not.toBeInTheDocument();
+    expect(within(table).getByText("Laura Vásquez")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Todos" }));
+
+    const adminRow = within(table).getByText("Admin General").closest("tr");
+    expect(within(adminRow).getByRole("button", { name: "Desactivar" })).toBeDisabled();
+    await user.click(within(adminRow).getByRole("button", { name: "Editar" }));
+    expect(screen.getByRole("combobox", { name: /Rol/ })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    const clientRow = within(table).getByText("Cliente Prueba").closest("tr");
+    await user.click(within(clientRow).getByRole("button", { name: "Editar" }));
+    const nameInput = screen.getByLabelText("Nombre");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Cliente Editado");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await screen.findByText("Cliente Editado")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Editar usuario" })).not.toBeInTheDocument();
+  });
+
   it.each([
     ["/admin/users", "Usuarios"],
     ["/admin/advisors", "Asesores"],
@@ -460,7 +515,8 @@ describe("panel de administracion", () => {
       expect(screen.getByRole("heading", { name: "Solicitudes por etapa" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Estado de Documentos" })).toBeInTheDocument();
     } else if (path === "/admin/users") {
-      expect(await screen.findByText("No hay usuarios registrados.")).toBeInTheDocument();
+      expect(await screen.findByText("Cliente Prueba")).toBeInTheDocument();
+      expect(screen.getByText("Laura Vásquez")).toBeInTheDocument();
     } else if (path === "/admin/settings") {
       expect(await screen.findByDisplayValue("VisaGuide")).toBeInTheDocument();
     }
