@@ -310,8 +310,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Panel de Administración Global" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Panel de Administración Global" })).toBeInTheDocument();
     expect(await screen.findByText("Solicitudes activas")).toBeInTheDocument();
     expect(screen.getByText("Sin asignar")).toBeInTheDocument();
     expect(screen.getByText("Asesores activos")).toBeInTheDocument();
@@ -322,6 +321,9 @@ describe("panel de administracion", () => {
     expect(screen.getByRole("heading", { name: "Pendientes por atender" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Actividad reciente" })).toBeInTheDocument();
     expect(screen.getByText("Nuevo usuario registrado")).toBeInTheDocument();
+    const topActions = screen.getByRole("group", { name: "Notificaciones y perfil administrativo" });
+    expect(within(topActions).getByRole("button", { name: "Notificaciones" })).toBeInTheDocument();
+    expect(within(topActions).getByRole("link", { name: /Abrir perfil de/ })).toHaveAttribute("href", "/admin/profile");
     const validationCalls = globalThis.fetch.mock.calls.filter(([url]) => String(url).includes("/validar-sesion"));
     expect(validationCalls).toHaveLength(1);
   });
@@ -346,7 +348,7 @@ describe("panel de administracion", () => {
 
     const { unmount } = render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Panel de Administración Global" });
     await user.click(screen.getByRole("button", { name: "Colapsar menu administrativo" }));
 
     expect(localStorage.getItem("vg-admin-sidebar-collapsed")).toBe("true");
@@ -356,7 +358,7 @@ describe("panel de administracion", () => {
     unmount();
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Panel de Administración Global" });
     expect(document.querySelector(".admin-sidebar")).toHaveClass("admin-sidebar--collapsed");
     await user.click(screen.getByRole("button", { name: "Expandir menu administrativo" }));
 
@@ -370,7 +372,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Panel de Administración Global" });
 
     const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
     expect(within(navigation).getAllByRole("link").map((link) => link.textContent.trim())).toEqual([
@@ -407,28 +409,24 @@ describe("panel de administracion", () => {
   });
 
   it.each([
-    ["/admin/users", "Usuarios", null],
-    ["/admin/advisors", "Asesores", null],
-    ["/admin/assignments", "Asignaciones", null],
-    ["/admin/documents", "Documentos", "Documentos Globales"],
-    ["/admin/ds160", "Formularios DS-160", "DS-160 Globales"],
-    ["/admin/interviews", "Entrevistas", null],
-    ["/admin/questions", "Banco de preguntas", null],
-    ["/admin/processes", "Todas las solicitudes", null],
-    ["/admin/reports", "Reportes", "Reportes y Analíticas"],
-    ["/admin/settings", "Configuración", null],
-    ["/admin/profile", "Panel de Administración", "Mi Perfil"],
-  ])("carga la ruta base %s", async (path, header, pageTitle) => {
+    ["/admin/users", "Usuarios"],
+    ["/admin/advisors", "Asesores"],
+    ["/admin/assignments", "Asignaciones"],
+    ["/admin/documents", "Documentos Globales"],
+    ["/admin/ds160", "DS-160 Globales"],
+    ["/admin/interviews", "Entrevistas"],
+    ["/admin/questions", "Banco de preguntas"],
+    ["/admin/processes", "Todas las solicitudes"],
+    ["/admin/reports", "Reportes y Analíticas"],
+    ["/admin/settings", "Configuración"],
+    ["/admin/profile", "Mi Perfil"],
+  ])("carga la ruta base %s", async (path, pageTitle) => {
     window.history.pushState({}, "", path);
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: header })).toBeInTheDocument();
-    if (pageTitle) {
-      expect(await screen.findByRole("heading", { level: 2, name: pageTitle })).toBeInTheDocument();
-    } else {
-      expect(screen.getAllByRole("heading", { name: header })).toHaveLength(1);
-    }
+    expect(await screen.findByRole("heading", { level: 1, name: pageTitle })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: pageTitle })).toHaveLength(1);
     if (path === "/admin/documents") {
       expect(screen.getByRole("columnheader", { name: "Documento" })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: "Solicitante" })).toBeInTheDocument();
@@ -568,9 +566,8 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Todas las solicitudes" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { level: 2, name: "Detalle de Solicitud" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Carlos Mendoza" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Detalle de Solicitud" })).toBeInTheDocument();
+    expect((await screen.findAllByText("Carlos Mendoza")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Formulario DS-160").length).toBeGreaterThan(0);
     expect(screen.getByText("Documentos aprobados")).toBeInTheDocument();
     expect(screen.getAllByText("1/1").length).toBeGreaterThan(0);
@@ -589,7 +586,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Panel de Administración Global" });
     const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
     await user.click(within(navigation).getByRole("link", { name: /Usuarios/ }));
 
@@ -725,7 +722,7 @@ describe("panel de administracion", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "Inicio" });
+    await screen.findByRole("heading", { name: "Panel de Administración Global" });
     const navigation = screen.getByRole("navigation", { name: /Modulos de administracion/ });
     await user.click(within(navigation).getByRole("link", { name: /Entrevistas/ }));
 
