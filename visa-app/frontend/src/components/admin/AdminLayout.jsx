@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   BookOpenText,
   BarChart3,
@@ -42,28 +42,7 @@ const adminNavItems = [
   { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
 
-const pageTitles = {
-  "/admin": "Inicio",
-  "/admin/advisors": "Asesores",
-  "/admin/users": "Usuarios",
-  "/admin/documents": "Documentos",
-  "/admin/interviews": "Entrevistas",
-  "/admin/processes": "Todas las solicitudes",
-  "/admin/assignments": "Asignaciones",
-  "/admin/ds160": "Formularios DS-160",
-  "/admin/questions": "Banco de preguntas",
-  "/admin/profile": "Panel de Administración",
-  "/admin/reports": "Reportes",
-  "/admin/settings": "Configuración",
-};
-
 const ADMIN_SIDEBAR_COLLAPSED_KEY = "vg-admin-sidebar-collapsed";
-
-function getPageTitle(pathname) {
-  if (pageTitles[pathname]) return pageTitles[pathname];
-  if (pathname.startsWith("/admin/processes/")) return "Todas las solicitudes";
-  return "Panel administrador";
-}
 
 function getInitialSidebarCollapsed() {
   try {
@@ -75,10 +54,8 @@ function getInitialSidebarCollapsed() {
 
 export default function AdminLayout({ children }) {
   const session = useAdminSession();
-  const location = useLocation();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const title = getPageTitle(location.pathname);
   const userName = session?.nombre || "Administrador";
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -228,8 +205,8 @@ export default function AdminLayout({ children }) {
 
       <div className="admin-workspace">
         <header className="admin-header">
-          <div className="admin-header__title"><button ref={menuTriggerRef} type="button" className="admin-header__menu" aria-label={sidebarOpen ? "Cerrar menú administrativo" : "Abrir menú administrativo"} aria-controls="admin-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>{sidebarOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</button><h1>{title}</h1></div>
-          <div className="admin-header__actions">
+          <button ref={menuTriggerRef} type="button" className="admin-header__menu" aria-label={sidebarOpen ? "Cerrar menú administrativo" : "Abrir menú administrativo"} aria-controls="admin-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>{sidebarOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</button>
+          <div className="admin-header__actions" role="group" aria-label="Notificaciones y perfil administrativo">
             <div className="admin-header__notifications" ref={notificationRef}>
             <button ref={notificationTriggerRef} type="button" className="admin-header__notification" aria-label="Notificaciones" aria-haspopup="true" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>
               <Bell size={22} strokeWidth={2} aria-hidden="true" />
@@ -237,13 +214,13 @@ export default function AdminLayout({ children }) {
             </button>
             {notificationsOpen && <section className="admin-notification-menu" aria-label="Notificaciones administrativas"><header><strong>Notificaciones</strong><button type="button" onClick={() => { setNotificationsOpen(false); notificationTriggerRef.current?.focus(); }} aria-label="Cerrar notificaciones">×</button></header>{notificationsLoading ? <p role="status">Cargando…</p> : notificationsError ? <div role="alert"><p>{notificationsError}</p><button type="button" onClick={retryNotifications}>Reintentar</button></div> : notifications.length ? <ul>{notifications.slice(0, 8).map((item) => <li key={item.id}><strong>{item.titulo}</strong><span>{item.mensaje}</span></li>)}</ul> : <p>Sin notificaciones.</p>}</section>}
             </div>
-            <div className="admin-header__user" aria-label="Administrador actual">
+            <NavLink className="admin-header__user" to="/admin/profile" aria-label={`Abrir perfil de ${userName}`}>
             <div>
               <strong>{userName}</strong>
               <small>Global</small>
             </div>
               <span>{userName.slice(0, 2).toUpperCase()}</span>
-            </div>
+            </NavLink>
           </div>
         </header>
 

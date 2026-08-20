@@ -319,3 +319,64 @@
     right: 14px;
   }
 }
+
+@media (max-width: 480px) {
+  .cron-titulo {
+    font-size: 28px;
+  }
+
+  .cron-subtitulo {
+    font-size: 14px;
+  }
+
+  .cron-item {
+    gap: 16px;
+  }
+
+  .cron-timeline-col {
+    width: 40px;
+  }
+
+  .cron-nodo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cron-nodo__num {
+    font-size: 14px;
+  }
+
+  .cron-card__title {
+    font-size: 16px;
+  }
+
+  .cron-card__fecha {
+    font-size: 11px;
+  }
+
+  .cron-card__desc {
+    font-size: 13px;
+  }
+
+  .cron-btn-accion {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 13px;
+  }
+
+  .cron-badge-actual {
+    font-size: 10px;
+    padding: 5px 10px;
+    top: -12px;
+    right: 12px;
+  }
+
+  .cron-pendiente__title {
+    font-size: 15px;
+  }
+
+  .cron-pendiente__desc {
+    font-size: 13px;
+  }
+}

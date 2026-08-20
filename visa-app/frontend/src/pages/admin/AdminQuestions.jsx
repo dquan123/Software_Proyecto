@@ -111,6 +111,7 @@ export default function AdminQuestions() {
   return (
     <AdminLayout>
       <AdminPageHeader
+        title="Banco de preguntas"
         description="Administración del catálogo de preguntas del simulador."
         action={(
           <button className="admin-primary-button" type="button" onClick={() => setModal({})}>

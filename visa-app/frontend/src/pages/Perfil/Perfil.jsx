@@ -3,6 +3,7 @@ import { buildApiUrl } from "../../config/api";
 import Sidebar from "../../components/Sidebar";
 import useModoSenior from "../../hooks/useModoSenior";
 import useRequireAuth from "../../hooks/useRequireAuth";
+import "../../styles/perfil.css";
 
 // ---------------------------------------------------------------------
 // Utilidades
@@ -297,7 +298,7 @@ export default function Perfil() {
 
       <main id="main-content" tabIndex="-1" className="vg-authenticated-page" style={s.main}>
         {/* ====================== HEADER ====================== */}
-        <header style={s.header}>
+        <header style={s.header} className="perfil-header">
           <div>
             <h1 style={{ ...s.title, fontSize: modoSenior ? "44px" : "var(--vg-page-title)" }}>
               Perfil de Usuario
@@ -347,7 +348,7 @@ export default function Perfil() {
         {mensajeOk && <div style={s.toastOk}>{mensajeOk}</div>}
 
         {/* ====================== GRID PRINCIPAL ====================== */}
-        <section style={s.grid}>
+        <section style={s.grid} className="perfil-grid">
           {/* ------------ Columna izquierda: Avatar + Contacto ------------ */}
           <article style={s.userCard}>
             {/* Top navy con avatar */}
