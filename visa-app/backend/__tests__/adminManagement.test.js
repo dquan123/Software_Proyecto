@@ -271,4 +271,23 @@ describe("admin management integration", () => {
 
     expect(response.body.configuracion).toMatchObject(settings);
   });
+
+  test("saves the automatic notifications toggle with the rest of the settings", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("INSERT INTO admin_settings")) return { rows: [{ id: 1, notificaciones_automaticas: false }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/settings")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ nombre_comercial: "VisaGuide", notificaciones_automaticas: false })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO admin_settings"),
+      ["VisaGuide", "", "", "es", "America/Guatemala", false]
+    );
+  });
 });

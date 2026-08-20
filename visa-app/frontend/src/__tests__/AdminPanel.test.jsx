@@ -30,6 +30,7 @@ function mockAdminSession() {
     solicitante: { id: 8, nombre: "Carlos Mendoza", correo: "carlos@example.com", perfil: "Renovación B1/B2" },
     asesor: null,
   };
+  let adminSettings = { nombre_comercial: "VisaGuide", razon_social: "", sitio_web: "", idioma: "es", zona_horaria: "America/Guatemala", notificaciones_automaticas: true };
   let adminUsers = [
     { id: 1, nombre: "Admin General", correo: "admin@prueba.com", rol: "admin", perfil: null, activo: true, telefono: "", ciudad: "", pais: "", asignados: 0, pendientes: 0, asesor: null, actividad: "2026-08-10T10:00:00.000Z" },
     { id: 4, nombre: "Cliente Prueba", correo: "cliente@example.com", rol: "cliente", perfil: "Turismo B1/B2", activo: true, telefono: "", ciudad: "", pais: "", asignados: 0, pendientes: 0, asesor: null, actividad: "2026-08-05T10:00:00.000Z" },
@@ -90,6 +91,23 @@ function mockAdminSession() {
     if (String(url).endsWith("/admin/users") && (!options.method || options.method === "GET")) {
       return Promise.resolve({ ok: true, json: async () => ({ usuarios: adminUsers }) });
     }
+    if (/\/admin\/users\/\d+$/.test(String(url)) && (!options.method || options.method === "GET")) {
+      const id = Number(String(url).match(/\/admin\/users\/(\d+)$/)[1]);
+      if (id === 8) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            usuario: { id: 8, nombre: "Carlos Mendoza", correo: "carlos@example.com", rol: "cliente", perfil: "Renovación B1/B2", activo: true, telefono: "", ciudad: "", pais: "", createdAt: "2026-07-20T10:00:00.000Z", actividad: "2026-08-01T10:00:00.000Z" },
+            tramite: { id: 21, estado: managedProcess.estado, etapaActual: managedProcess.etapaActual, progreso: managedProcess.progreso, asesor: managedProcess.asesor },
+            casos: [],
+            actividad: [],
+          }),
+        });
+      }
+      const target = adminUsers.find((item) => item.id === id);
+      if (!target) return Promise.resolve({ ok: false, status: 404, json: async () => ({ error: "Usuario no encontrado" }) });
+      return Promise.resolve({ ok: true, json: async () => ({ usuario: target, tramite: null, casos: [], actividad: [] }) });
+    }
     if (/\/admin\/users\/\d+$/.test(String(url)) && options.method === "PATCH") {
       const id = Number(String(url).match(/\/admin\/users\/(\d+)$/)[1]);
       const payload = JSON.parse(options.body || "{}");
@@ -133,11 +151,12 @@ function mockAdminSession() {
     if (String(url).endsWith("/questions")) {
       return Promise.resolve({ ok: true, json: async () => ({ questions: [] }) });
     }
-    if (String(url).endsWith("/admin/settings")) {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ configuracion: { nombre_comercial: "VisaGuide", razon_social: "", sitio_web: "", idioma: "es", zona_horaria: "America/Guatemala" } }),
-      });
+    if (String(url).endsWith("/admin/settings") && (!options.method || options.method === "GET")) {
+      return Promise.resolve({ ok: true, json: async () => ({ configuracion: adminSettings }) });
+    }
+    if (String(url).endsWith("/admin/settings") && options.method === "PUT") {
+      adminSettings = { ...adminSettings, ...JSON.parse(options.body || "{}") };
+      return Promise.resolve({ ok: true, json: async () => ({ configuracion: adminSettings }) });
     }
     if (String(url).endsWith("/admin/documents")) {
       return Promise.resolve({
@@ -461,6 +480,40 @@ describe("panel de administracion", () => {
 
     expect(await screen.findByText("Cliente Editado")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Editar usuario" })).not.toBeInTheDocument();
+  });
+
+  it("muestra DS-160, documentos y entrevistas en el detalle de un usuario solicitante", async () => {
+    window.history.pushState({}, "", "/admin/users/8");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Detalle de Usuario" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Carlos Mendoza" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /DS-160/ })).toBeInTheDocument();
+    expect(screen.getByText("Nombres")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Documentos" })).toBeInTheDocument();
+    expect(screen.getByText("pasaporte.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Entrevistas" })).toBeInTheDocument();
+    expect(screen.getByText("Buena preparacion")).toBeInTheDocument();
+  });
+
+  it("permite desactivar las notificaciones automáticas desde configuración", async () => {
+    window.history.pushState({}, "", "/admin/settings");
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByDisplayValue("VisaGuide");
+    await user.click(screen.getByRole("button", { name: /Notificaciones automáticas/ }));
+
+    const toggle = await screen.findByRole("checkbox", { name: /Activar notificaciones automáticas/ });
+    expect(toggle).toBeChecked();
+
+    await user.click(toggle);
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await screen.findByText("Configuración guardada.")).toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
   });
 
   it.each([

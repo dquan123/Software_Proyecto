@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   sitio_web TEXT,
   idioma VARCHAR(20) DEFAULT 'es',
   zona_horaria VARCHAR(80) DEFAULT 'America/Guatemala',
+  notificaciones_automaticas BOOLEAN DEFAULT TRUE,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

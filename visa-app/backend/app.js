@@ -151,8 +151,11 @@ async function ensureAdminSchema() {
     id INT PRIMARY KEY,
     nombre_comercial VARCHAR(160), razon_social VARCHAR(200), sitio_web TEXT,
     idioma VARCHAR(20) DEFAULT 'es', zona_horaria VARCHAR(80) DEFAULT 'America/Guatemala',
+    notificaciones_automaticas BOOLEAN DEFAULT TRUE,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
+  await pool.query(`ALTER TABLE admin_settings
+    ADD COLUMN IF NOT EXISTS notificaciones_automaticas BOOLEAN DEFAULT TRUE`);
   await pool.query(`CREATE TABLE IF NOT EXISTS admin_activity (
     id SERIAL PRIMARY KEY, actor_id INT REFERENCES usuario(id_usuario),
     accion VARCHAR(180) NOT NULL, detalle TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

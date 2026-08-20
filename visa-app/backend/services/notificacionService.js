@@ -134,9 +134,20 @@ function createNotificacionService(pool) {
     return result.rows[0].id;
   }
 
+  async function notificacionesAutomaticasActivas() {
+    try {
+      const result = await pool.query("SELECT notificaciones_automaticas FROM admin_settings WHERE id = 1");
+      return result.rows[0]?.notificaciones_automaticas !== false;
+    } catch {
+      return true;
+    }
+  }
+
   async function crearNotificacion({ userId, titulo, mensaje, tipo = "info", etapaRelacionada = null }) {
     await ensureSchema();
     const uid = parseUserId(userId);
+
+    if (!(await notificacionesAutomaticasActivas())) return null;
 
     if (!titulo || !titulo.trim()) {
       const error = new Error("El título es obligatorio");

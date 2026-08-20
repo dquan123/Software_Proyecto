@@ -427,13 +427,21 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     try {
       await schemaReady;
       const result = await pool.query(`INSERT INTO admin_settings
-        (id, nombre_comercial, razon_social, sitio_web, idioma, zona_horaria)
-        VALUES (1, $1, $2, $3, $4, $5)
+        (id, nombre_comercial, razon_social, sitio_web, idioma, zona_horaria, notificaciones_automaticas)
+        VALUES (1, $1, $2, $3, $4, $5, $6)
         ON CONFLICT (id) DO UPDATE SET nombre_comercial = EXCLUDED.nombre_comercial,
           razon_social = EXCLUDED.razon_social, sitio_web = EXCLUDED.sitio_web,
           idioma = EXCLUDED.idioma, zona_horaria = EXCLUDED.zona_horaria,
+          notificaciones_automaticas = EXCLUDED.notificaciones_automaticas,
           updated_at = CURRENT_TIMESTAMP RETURNING *`,
-      [data.nombre_comercial || "", data.razon_social || "", data.sitio_web || "", data.idioma || "es", data.zona_horaria || "America/Guatemala"]);
+      [
+        data.nombre_comercial || "",
+        data.razon_social || "",
+        data.sitio_web || "",
+        data.idioma || "es",
+        data.zona_horaria || "America/Guatemala",
+        typeof data.notificaciones_automaticas === "boolean" ? data.notificaciones_automaticas : true,
+      ]);
       await logActivity(req.auth.id_usuario, "Configuración actualizada", "Datos generales");
       res.json({ configuracion: result.rows[0] });
     } catch (error) {

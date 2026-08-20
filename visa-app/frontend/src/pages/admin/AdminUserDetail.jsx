@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, ClipboardList, Pencil, UserRound, X } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, ClipboardCheck, ClipboardList, ExternalLink, FileText, Pencil, UserRound, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { AdminPageHeader, AdminResourceState } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
 import { adminRequest } from "../../hooks/useAdminResource";
 import { getAdminHeaders, getAdminUserId } from "../../utils/adminHeaders";
+import { openDocumentPreview } from "../../utils/documentPreview";
 
 const roleLabels = { cliente: "Solicitante", asesor: "Asesor", admin: "Administrador" };
+const documentStatusLabels = { approved: "Aprobado", review: "En revision", rejected: "Rechazado", correction: "Correccion", pending: "Pendiente" };
+
+function getDocumentStatusLabel(status) {
+  return documentStatusLabels[status] || status || "Pendiente";
+}
+
+function getRecordedCount(session) {
+  return (session.responses || []).filter((response) => response.recorded).length;
+}
 
 function formatDate(value) {
   if (!value) return "Sin fecha";
@@ -17,9 +27,9 @@ function formatDate(value) {
 }
 
 function statusClass(status) {
-  if (status === "Aprobado" || status === "Completado") return "approved";
-  if (status === "Pendiente") return "review";
-  if (status === "Inactivo") return "correction";
+  if (status === "Aprobado" || status === "Completado" || status === "approved" || status === "reviewed") return "approved";
+  if (status === "Pendiente" || status === "review" || status === "pending") return "review";
+  if (status === "Inactivo" || status === "correction" || status === "rejected") return "correction";
   return "pending";
 }
 
@@ -33,6 +43,7 @@ export default function AdminUserDetail() {
   const [editModal, setEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ nombre: "", correo: "", telefono: "", ciudad: "", pais: "", rol: "cliente" });
   const [notice, setNotice] = useState("");
+  const [processState, setProcessState] = useState({ tramiteId: null, data: null, error: "" });
 
   const loadDetail = useCallback((signal) => {
     return fetch(buildApiUrl(`/admin/users/${id}`), { signal, headers: getAdminHeaders() })
@@ -64,6 +75,30 @@ export default function AdminUserDetail() {
     loadDetail(controller.signal);
     return () => controller.abort();
   }, [loadDetail, revision]);
+
+  const tramiteId = detail?.tramite?.id;
+
+  useEffect(() => {
+    if (!tramiteId) return undefined;
+    const controller = new AbortController();
+    fetch(buildApiUrl(`/admin/processes/${tramiteId}`), { signal: controller.signal, headers: getAdminHeaders() })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No fue posible cargar el trámite.");
+        return data;
+      })
+      .then((data) => setProcessState({ tramiteId, data, error: "" }))
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") {
+          setProcessState({ tramiteId, data: null, error: requestError.message || "No fue posible cargar el trámite." });
+        }
+      });
+    return () => controller.abort();
+  }, [tramiteId, revision]);
+
+  const processLoading = Boolean(tramiteId) && processState.tramiteId !== tramiteId;
+  const processError = processState.tramiteId === tramiteId ? processState.error : "";
+  const processDetail = processState.tramiteId === tramiteId ? processState.data : null;
 
   const user = detail?.usuario;
 
@@ -153,6 +188,101 @@ export default function AdminUserDetail() {
                 <div className="admin-empty-state admin-empty-state--compact"><strong>Sin trámite iniciado</strong></div>
               )}
             </section>
+          )}
+
+          {user.rol === "cliente" && detail.tramite && (
+            <>
+              <AdminResourceState isLoading={processLoading} error={processError} retry={retryLoad} isEmpty={false} />
+              {!processLoading && !processError && processDetail && (
+                <>
+                  <section className="admin-panel-card">
+                    <div className="admin-panel-card__header">
+                      <div>
+                        <h2><ClipboardCheck aria-hidden="true" size={22} /> DS-160</h2>
+                        <p>Resumen del formulario guardado.</p>
+                      </div>
+                      <Link className="admin-secondary-button" to="/admin/ds160">Abrir módulo</Link>
+                    </div>
+                    {processDetail.ds160 ? (
+                      <>
+                        <div className="admin-request-progress admin-request-progress--compact">
+                          <strong>{processDetail.ds160.progreso}%</strong>
+                          <span><i style={{ width: `${processDetail.ds160.progreso}%` }} /></span>
+                          <p>{processDetail.ds160.completado ? "Formulario completado" : `Sección ${processDetail.ds160.seccionActual} en progreso`}</p>
+                        </div>
+                        <dl className="admin-request-mini-list">
+                          {processDetail.ds160.resumen.length ? processDetail.ds160.resumen.map((item) => (
+                            <div key={item.key}><dt>{item.label}</dt><dd>{item.value}</dd></div>
+                          )) : <div><dt>Resumen</dt><dd>Sin campos relevantes capturados todavía.</dd></div>}
+                        </dl>
+                      </>
+                    ) : (
+                      <div className="admin-empty-state admin-empty-state--compact"><strong>Sin formulario DS-160</strong></div>
+                    )}
+                  </section>
+
+                  <section className="admin-panel-card">
+                    <div className="admin-panel-card__header">
+                      <div>
+                        <h2><FileText aria-hidden="true" size={22} /> Documentos</h2>
+                        <p>Documentos asociados a esta solicitud.</p>
+                      </div>
+                      <Link className="admin-secondary-button" to="/admin/documents">Ver documentos</Link>
+                    </div>
+                    {processDetail.documentos.length ? (
+                      <div className="admin-table-wrap">
+                        <table className="admin-table">
+                          <thead><tr><th>Nombre</th><th>Estado</th><th>Observaciones</th><th>Archivo</th></tr></thead>
+                          <tbody>
+                            {processDetail.documentos.map((document) => (
+                              <tr key={document.id}>
+                                <td><strong>{document.nombre}</strong><small>{document.documento_key || document.tipo || "Documento"}</small></td>
+                                <td><span className={`admin-status admin-status--${statusClass(document.estado)}`}>{getDocumentStatusLabel(document.estado)}</span></td>
+                                <td>{document.feedback || "Sin observaciones"}</td>
+                                <td><button className="admin-action-button" type="button" disabled={!document.archivo_url} onClick={() => openDocumentPreview(document)}><ExternalLink aria-hidden="true" size={15} />Ver documento</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="admin-empty-state admin-empty-state--compact"><strong>Sin documentos registrados</strong></div>
+                    )}
+                  </section>
+
+                  <section className="admin-panel-card">
+                    <div className="admin-panel-card__header">
+                      <div>
+                        <h2><BriefcaseBusiness aria-hidden="true" size={22} /> Entrevistas</h2>
+                        <p>Sesiones realizadas desde el simulador.</p>
+                      </div>
+                      <Link className="admin-secondary-button" to="/admin/interviews">Revisar entrevistas</Link>
+                    </div>
+                    {processDetail.entrevistas.length ? (
+                      <div className="admin-request-interviews">
+                        {processDetail.entrevistas.map((session) => (
+                          <article key={session.id}>
+                            <header>
+                              <div>
+                                <strong>{formatDate(session.created_at)}</strong>
+                                <span>{getRecordedCount(session)} de {(session.responses || []).length} respuestas grabadas</span>
+                              </div>
+                              <span className={`admin-status admin-status--${statusClass(session.status)}`}>{session.status === "reviewed" ? "Retroalimentada" : "Pendiente"}</span>
+                            </header>
+                            <dl>
+                              <div><dt>Calificación</dt><dd>{session.rating || "Sin calificación"}</dd></div>
+                              <div><dt>Feedback</dt><dd>{session.feedback || "Sin feedback"}</dd></div>
+                            </dl>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="admin-empty-state admin-empty-state--compact"><strong>Sin entrevistas registradas</strong></div>
+                    )}
+                  </section>
+                </>
+              )}
+            </>
           )}
 
           {user.rol === "asesor" && (
