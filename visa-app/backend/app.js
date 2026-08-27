@@ -5,6 +5,7 @@ require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
+const { createCorsOptions } = require("./config/cors");
 const upload = require("./upload");
 const createInterviewSessionRoutes = require("./routes/interviewSessionRoutes");
 const createQuestionBankRoutes = require("./routes/questionBankRoutes");
@@ -23,20 +24,7 @@ const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } =
 const app = express();
 
 app.set("trust proxy", 1);
-
-//app.use(cors());
-//app.options("/{*splat}", cors());
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
-app.use(cors());
+app.use(cors(createCorsOptions()));
 
 app.use(express.json());
 if (process.env.NODE_ENV !== "production") {

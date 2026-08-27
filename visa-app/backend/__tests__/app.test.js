@@ -703,6 +703,28 @@ beforeEach(() => {
 });
 
 describe("app endpoints", () => {
+  test("OPTIONS permite preflight PATCH desde un origen autorizado", async () => {
+    const response = await request(app)
+      .options("/questions/11/status")
+      .set("Origin", "http://localhost:5173")
+      .set("Access-Control-Request-Method", "PATCH")
+      .set("Access-Control-Request-Headers", "authorization,content-type");
+
+    expect(response.status).toBe(204);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
+    expect(response.headers["access-control-allow-headers"]).toBe("Authorization,Content-Type");
+  });
+
+  test("OPTIONS no autoriza un origen fuera de la lista", async () => {
+    const response = await request(app)
+      .options("/questions/11/status")
+      .set("Origin", "https://untrusted.example.com")
+      .set("Access-Control-Request-Method", "PATCH");
+
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
   test("GET /validar-sesion devuelve la sesión obtenida del token", async () => {
     const response = await request(app)
       .get("/validar-sesion")
