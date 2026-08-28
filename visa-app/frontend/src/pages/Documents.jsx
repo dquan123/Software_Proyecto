@@ -122,7 +122,10 @@ export default function Documents() {
         setLoadingDocuments(true);
         setDocumentsError("");
 
-        const response = await fetch(buildApiUrl(`/documentos/${session.id}`), {
+        const response = await fetch(buildApiUrl("/documentos/listar"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: session.id }),
           signal: controller.signal,
         });
         if (!response.ok) {

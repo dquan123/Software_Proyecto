@@ -409,11 +409,11 @@ app.get("/validar-sesion", requireSession, (req, res) => {
 });
 
 // ENDPOINT: estado del trámite
-app.get("/estado-tramite", async (req, res) => {
-  const { correo } = req.query;
+async function handleEstadoTramite(req, res) {
+  const { correo } = req.body || {};
 
   if (!correo) {
-    return res.status(400).json({ error: "Correo requerido" });
+    return res.status(400).json({ error: "Correo requerido en el body" });
   }
 
   try {
@@ -467,6 +467,11 @@ app.get("/estado-tramite", async (req, res) => {
     console.log("ERROR ESTADO:", error);
     res.status(500).json({ error: error.message });
   }
+}
+
+app.post("/estado-tramite", handleEstadoTramite);
+app.get("/estado-tramite", (_req, res) => {
+  res.status(405).json({ error: "Usa POST /estado-tramite con correo en el body" });
 });
 
 // endpoint registro
@@ -667,14 +672,14 @@ function calcularEtapa(progreso, perfil) {
   return etapa;
 }
  
-// GET /usuario-perfil?correo=...
+// POST /usuario-perfil
 // Devuelve TODO lo que la pantalla "Perfil de Usuario" necesita en un
 // solo request: datos personales, datos del trámite y preferencias.
-app.get("/usuario-perfil", async (req, res) => {
-  const { correo } = req.query;
+app.post("/usuario-perfil", async (req, res) => {
+  const { correo } = req.body || {};
  
   if (!correo) {
-    return res.status(400).json({ error: "Correo requerido" });
+    return res.status(400).json({ error: "Correo requerido en el body" });
   }
  
   try {
@@ -737,6 +742,10 @@ app.get("/usuario-perfil", async (req, res) => {
     console.log("ERROR GET USUARIO-PERFIL:", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+app.get("/usuario-perfil", (_req, res) => {
+  res.status(405).json({ error: "Usa POST /usuario-perfil con correo en el body" });
 });
  
 // PUT /usuario-perfil
@@ -945,11 +954,14 @@ app.get("/documentos/:id/archivo", async (req, res) => {
   }
 });
 
-app.get("/documentos/:usuarioId", async (req, res) => {
-  const usuarioId = Number(req.params.usuarioId);
+async function handleListDocumentos(req, res, usuarioIdValue) {
+  const usuarioId = Number(usuarioIdValue ?? req.body?.usuario_id ?? req.body?.usuarioId);
 
   if (Number.isNaN(usuarioId)) {
-    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+    const message = usuarioIdValue === undefined
+      ? "usuario_id requerido en el body y debe ser numérico"
+      : "usuario_id debe ser numérico";
+    return res.status(400).json({ error: message });
   }
 
   try {
@@ -968,18 +980,26 @@ app.get("/documentos/:usuarioId", async (req, res) => {
     console.error("ERROR GET DOCUMENTOS:", error);
     return res.status(500).json({ error: "No se pudieron cargar los documentos" });
   }
+}
+
+app.post("/documentos/listar", async (req, res) => {
+  return handleListDocumentos(req, res);
 });
 
-app.delete("/documentos/:id", async (req, res) => {
-  const documentId = Number(req.params.id);
-  const usuarioId = Number(req.query.usuario_id);
+app.get("/documentos/:usuarioId", async (req, res) => {
+  return handleListDocumentos(req, res, req.params.usuarioId);
+});
+
+async function handleDeleteDocumento(req, res, documentIdValue) {
+  const documentId = Number(documentIdValue ?? req.body?.documento_id ?? req.body?.documentId);
+  const usuarioId = Number(req.body?.usuario_id ?? req.body?.usuarioId);
 
   if (Number.isNaN(documentId)) {
     return res.status(400).json({ error: "documento_id debe ser numérico" });
   }
 
   if (Number.isNaN(usuarioId)) {
-    return res.status(400).json({ error: "usuario_id debe ser numérico" });
+    return res.status(400).json({ error: "usuario_id requerido en el body y debe ser numérico" });
   }
 
   try {
@@ -1009,18 +1029,26 @@ app.delete("/documentos/:id", async (req, res) => {
     console.error("ERROR DELETE DOCUMENTO:", error);
     return res.status(500).json({ error: "No se pudo eliminar el documento" });
   }
+}
+
+app.delete("/documentos", async (req, res) => {
+  return handleDeleteDocumento(req, res);
+});
+
+app.delete("/documentos/:id", async (req, res) => {
+  return handleDeleteDocumento(req, res, req.params.id);
 });
 
 // =====================
 // ENDPOINTS DS-160
 // =====================
 
-// GET: Descargar formulario DS-160 del usuario en PDF
-app.get("/ds160/pdf", async (req, res) => {
-  const { correo } = req.query;
+// POST: Descargar formulario DS-160 del usuario en PDF
+async function handleDs160Pdf(req, res) {
+  const { correo } = req.body || {};
 
   if (!correo) {
-    return res.status(400).json({ error: "Correo requerido" });
+    return res.status(400).json({ error: "Correo requerido en el body" });
   }
 
   try {
@@ -1057,14 +1085,19 @@ app.get("/ds160/pdf", async (req, res) => {
     if (res.headersSent) return res.end();
     return res.status(500).json({ error: error.message });
   }
+}
+
+app.post("/ds160/pdf", handleDs160Pdf);
+app.get("/ds160/pdf", (_req, res) => {
+  res.status(405).json({ error: "Usa POST /ds160/pdf con correo en el body" });
 });
 
-// GET: Cargar formulario DS-160 del usuario
-app.get("/ds160", async (req, res) => {
-  const { correo } = req.query;
+// POST: Cargar formulario DS-160 del usuario
+async function handleLoadDs160(req, res) {
+  const { correo } = req.body || {};
 
   if (!correo) {
-    return res.status(400).json({ error: "Correo requerido" });
+    return res.status(400).json({ error: "Correo requerido en el body" });
   }
 
   try {
@@ -1106,6 +1139,11 @@ app.get("/ds160", async (req, res) => {
     console.log("ERROR GET DS160:", error);
     res.status(500).json({ error: error.message });
   }
+}
+
+app.post("/ds160/load", handleLoadDs160);
+app.get("/ds160", (_req, res) => {
+  res.status(405).json({ error: "Usa POST /ds160/load con correo en el body" });
 });
 
 // POST: Guardar formulario DS-160

@@ -932,10 +932,10 @@ describe("app endpoints", () => {
     expect(response.body).toEqual({ error: "connection timeout" });
   });
 
-  test("GET /ds160 carga un formulario existente", async () => {
+  test("POST /ds160/load carga un formulario existente con correo en body", async () => {
     const response = await request(app)
-      .get("/ds160")
-      .query({ correo: "ds160-con-form@example.com" });
+      .post("/ds160/load")
+      .send({ correo: "ds160-con-form@example.com" });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -954,10 +954,10 @@ describe("app endpoints", () => {
     );
   });
 
-  test("GET /ds160 devuelve formulario vacio cuando el usuario no tiene progreso guardado", async () => {
+  test("POST /ds160/load devuelve formulario vacio cuando el usuario no tiene progreso guardado", async () => {
     const response = await request(app)
-      .get("/ds160")
-      .query({ correo: "ds160-sin-form@example.com" });
+      .post("/ds160/load")
+      .send({ correo: "ds160-sin-form@example.com" });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -967,23 +967,23 @@ describe("app endpoints", () => {
     });
   });
 
-  test("GET /ds160 devuelve 404 cuando el usuario no existe", async () => {
+  test("POST /ds160/load devuelve 404 cuando el usuario no existe", async () => {
     const response = await request(app)
-      .get("/ds160")
-      .query({ correo: "noexiste@example.com" });
+      .post("/ds160/load")
+      .send({ correo: "noexiste@example.com" });
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Usuario no encontrado" });
   });
 
-  test("GET /ds160 devuelve 400 cuando falta el correo", async () => {
-    const response = await request(app).get("/ds160");
+  test("POST /ds160/load devuelve 400 cuando falta el correo", async () => {
+    const response = await request(app).post("/ds160/load").send({});
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: "Correo requerido" });
+    expect(response.body).toEqual({ error: "Correo requerido en el body" });
   });
 
-  test("GET /ds160 devuelve 500 ante error simulado de base de datos", async () => {
+  test("POST /ds160/load devuelve 500 ante error simulado de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
       if (String(sql).includes("SELECT * FROM formulario_ds160 WHERE id_usuario = $1")) {
         return Promise.reject(new Error("ds160 read failed"));
@@ -992,17 +992,17 @@ describe("app endpoints", () => {
     });
 
     const response = await request(app)
-      .get("/ds160")
-      .query({ correo: "ds160-con-form@example.com" });
+      .post("/ds160/load")
+      .send({ correo: "ds160-con-form@example.com" });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "ds160 read failed" });
   });
 
-  test("GET /ds160/pdf genera el PDF del formulario existente", async () => {
+  test("POST /ds160/pdf genera el PDF del formulario existente con correo en body", async () => {
     const response = await request(app)
-      .get("/ds160/pdf")
-      .query({ correo: "ds160-pdf@example.com" })
+      .post("/ds160/pdf")
+      .send({ correo: "ds160-pdf@example.com" })
       .buffer(true)
       .parse((res, callback) => {
         const chunks = [];
@@ -1017,32 +1017,32 @@ describe("app endpoints", () => {
     expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
   });
 
-  test("GET /ds160/pdf devuelve 400 cuando falta el correo", async () => {
-    const response = await request(app).get("/ds160/pdf");
+  test("POST /ds160/pdf devuelve 400 cuando falta el correo", async () => {
+    const response = await request(app).post("/ds160/pdf").send({});
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: "Correo requerido" });
+    expect(response.body).toEqual({ error: "Correo requerido en el body" });
   });
 
-  test("GET /ds160/pdf devuelve 404 cuando el usuario no existe", async () => {
+  test("POST /ds160/pdf devuelve 404 cuando el usuario no existe", async () => {
     const response = await request(app)
-      .get("/ds160/pdf")
-      .query({ correo: "noexiste@example.com" });
+      .post("/ds160/pdf")
+      .send({ correo: "noexiste@example.com" });
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Usuario no encontrado" });
   });
 
-  test("GET /ds160/pdf devuelve 404 cuando no existe formulario guardado", async () => {
+  test("POST /ds160/pdf devuelve 404 cuando no existe formulario guardado", async () => {
     const response = await request(app)
-      .get("/ds160/pdf")
-      .query({ correo: "ds160-pdf-sin-form@example.com" });
+      .post("/ds160/pdf")
+      .send({ correo: "ds160-pdf-sin-form@example.com" });
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Formulario DS-160 no encontrado" });
   });
 
-  test("GET /ds160/pdf devuelve 500 ante error interno de base de datos", async () => {
+  test("POST /ds160/pdf devuelve 500 ante error interno de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
       if (String(sql).includes("SELECT * FROM formulario_ds160 WHERE id_usuario = $1")) {
         return Promise.reject(new Error("ds160 pdf failed"));
@@ -1051,8 +1051,8 @@ describe("app endpoints", () => {
     });
 
     const response = await request(app)
-      .get("/ds160/pdf")
-      .query({ correo: "ds160-pdf@example.com" });
+      .post("/ds160/pdf")
+      .send({ correo: "ds160-pdf@example.com" });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "ds160 pdf failed" });
@@ -1946,16 +1946,16 @@ describe("app endpoints", () => {
     expect(response.body).toEqual({ error: "Estado de documento invalido" });
   });
 
-  test("DELETE /documentos/:id elimina el registro y el archivo almacenado", async () => {
+  test("DELETE /documentos elimina el registro y el archivo almacenado con IDs en body", async () => {
     const response = await request(app)
-      .delete("/documentos/41")
-      .query({ usuario_id: 3 });
+      .delete("/documentos")
+      .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(200);
     expect(mockDeleteStoredFile).toHaveBeenCalledWith("local/mock-document.pdf");
   });
 
-  test("DELETE /documentos/:id devuelve 404 cuando el documento no existe", async () => {
+  test("DELETE /documentos devuelve 404 cuando el documento no existe", async () => {
     mockQuery.mockImplementation((sql, values) => {
       if (String(sql).includes("DELETE FROM documentos")) {
         return Promise.resolve({ rows: [] });
@@ -1964,35 +1964,35 @@ describe("app endpoints", () => {
     });
 
     const response = await request(app)
-      .delete("/documentos/404")
-      .query({ usuario_id: 3 });
+      .delete("/documentos")
+      .send({ documento_id: 404, usuario_id: 3 });
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Documento no encontrado" });
     expect(mockDeleteStoredFile).not.toHaveBeenCalled();
   });
 
-  test("DELETE /documentos/:id devuelve 400 cuando el id no es numerico", async () => {
+  test("DELETE /documentos devuelve 400 cuando el id no es numerico", async () => {
     const response = await request(app)
-      .delete("/documentos/abc")
-      .query({ usuario_id: 3 });
+      .delete("/documentos")
+      .send({ documento_id: "abc", usuario_id: 3 });
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ error: "documento_id debe ser numérico" });
     expect(mockDeleteStoredFile).not.toHaveBeenCalled();
   });
 
-  test("DELETE /documentos/:id devuelve 400 cuando usuario_id no es numerico", async () => {
+  test("DELETE /documentos devuelve 400 cuando usuario_id no es numerico", async () => {
     const response = await request(app)
-      .delete("/documentos/41")
-      .query({ usuario_id: "abc" });
+      .delete("/documentos")
+      .send({ documento_id: 41, usuario_id: "abc" });
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: "usuario_id debe ser numérico" });
+    expect(response.body).toEqual({ error: "usuario_id requerido en el body y debe ser numérico" });
     expect(mockDeleteStoredFile).not.toHaveBeenCalled();
   });
 
-  test("DELETE /documentos/:id devuelve 500 ante error interno de base de datos", async () => {
+  test("DELETE /documentos devuelve 500 ante error interno de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
       if (String(sql).includes("DELETE FROM documentos")) {
         return Promise.reject(new Error("document delete failed"));
@@ -2001,19 +2001,19 @@ describe("app endpoints", () => {
     });
 
     const response = await request(app)
-      .delete("/documentos/41")
-      .query({ usuario_id: 3 });
+      .delete("/documentos")
+      .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "No se pudo eliminar el documento" });
   });
 
-  test("DELETE /documentos/:id mantiene respuesta exitosa si falla deleteStoredFile", async () => {
+  test("DELETE /documentos mantiene respuesta exitosa si falla deleteStoredFile", async () => {
     mockDeleteStoredFile.mockRejectedValueOnce(new Error("delete storage failed"));
 
     const response = await request(app)
-      .delete("/documentos/41")
-      .query({ usuario_id: 3 });
+      .delete("/documentos")
+      .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ message: "Documento eliminado correctamente" });
@@ -2102,8 +2102,8 @@ describe("app endpoints", () => {
       });
 
       const getDs160Response = await request(app)
-        .get("/ds160")
-        .query({ correo: usuario.correo });
+        .post("/ds160/load")
+        .send({ correo: usuario.correo });
 
       expect(getDs160Response.status).toBe(200);
       expect(getDs160Response.body).toEqual({

@@ -360,19 +360,20 @@ Auth/sesion:
 
 - `POST /register`
 - `POST /login`
-- `GET /validar-sesion?correo=...`
+- `GET /validar-sesion` con token de sesión en `Authorization`
 
 Perfil/tramite:
 
 - `POST /guardar-perfil`
-- `GET /estado-tramite?correo=...`
-- `GET /usuario-perfil?correo=...`
+- `POST /estado-tramite` con `{ correo }` en body
+- `POST /usuario-perfil` con `{ correo }` en body
 - `PUT /usuario-perfil`
 - `PUT /tramite`
 
 DS-160:
 
-- `GET /ds160?correo=...`
+- `POST /ds160/load` con `{ correo }` en body
+- `POST /ds160/pdf` con `{ correo }` en body
 - `POST /ds160`
 
 Documentos/uploads:
@@ -380,7 +381,7 @@ Documentos/uploads:
 - `POST /upload`
 - `POST /documentos`
 - `GET /documentos/:usuarioId`
-- `DELETE /documentos/:id?usuario_id=...`
+- `DELETE /documentos` con `{ documento_id, usuario_id }` en body
 
 Banco de preguntas:
 

@@ -50,9 +50,35 @@ function createInterviewSessionController(interviewSessionService, { notificacio
     }
   }
 
+  async function listUserSessionsFromBody(req, res) {
+    try {
+      const { userId } = req.body || {};
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      const sessions = await interviewSessionService.listUserSessions(userId);
+      return res.json({ sessions });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
   async function getSession(req, res) {
     try {
       const session = await interviewSessionService.getSession(req.params.id);
+      return res.json({ session });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function getSessionFromBody(req, res) {
+    try {
+      const { sessionId } = req.body || {};
+      if (!sessionId) {
+        return res.status(400).json({ error: "sessionId requerido en el body" });
+      }
+      const session = await interviewSessionService.getSession(sessionId);
       return res.json({ session });
     } catch (error) {
       return handleError(res, error);
@@ -134,7 +160,9 @@ function createInterviewSessionController(interviewSessionService, { notificacio
     createSession,
     listSessions,
     listUserSessions,
+    listUserSessionsFromBody,
     getSession,
+    getSessionFromBody,
     getSessionAudio,
     updateFeedback,
   };

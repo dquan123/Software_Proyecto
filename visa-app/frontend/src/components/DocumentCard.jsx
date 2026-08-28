@@ -345,10 +345,14 @@ export default function DocumentCard({
     setUploadError("");
 
     try {
-      const response = await fetch(
-        buildApiUrl(`/documentos/${doc.storedDocumentId}?usuario_id=${usuarioId}`),
-        { method: "DELETE" }
-      );
+      const response = await fetch(buildApiUrl("/documentos"), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documento_id: doc.storedDocumentId,
+          usuario_id: usuarioId,
+        }),
+      });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));

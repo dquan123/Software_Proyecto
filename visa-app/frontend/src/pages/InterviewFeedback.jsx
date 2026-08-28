@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
@@ -59,6 +60,7 @@ function getAudioSource(audio) {
 
 export default function InterviewFeedback() {
   const { isValidating, session } = useRequireAuth();
+  const location = useLocation();
   const modoSenior = useModoSenior();
   const [feedbackSession, setFeedbackSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -73,13 +75,16 @@ export default function InterviewFeedback() {
         setLoadingSession(true);
         setSessionError("");
 
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get("session");
-        const endpoint = sessionId
-          ? `/interview-sessions/${sessionId}`
-          : `/interview-sessions/user/${session?.id}`;
-
-        const response = await fetch(buildApiUrl(endpoint), { signal: controller.signal });
+        const sessionId = location.state?.sessionId;
+        const response = await fetch(
+          buildApiUrl(sessionId ? "/interview-sessions/detail" : "/interview-sessions/user"),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sessionId ? { sessionId } : { userId: session?.id }),
+            signal: controller.signal,
+          }
+        );
         const data = await response.json();
 
         if (!response.ok) {
@@ -110,7 +115,7 @@ export default function InterviewFeedback() {
 
     fetchFeedbackSession();
     return () => controller.abort();
-  }, [isValidating, session?.id]);
+  }, [isValidating, location.state, session?.id]);
 
   const responses = useMemo(() => getResponses(feedbackSession), [feedbackSession]);
   const recordedCount = responses.filter((response) => response.recorded).length;

@@ -164,17 +164,26 @@ export default function Cronologia() {
         setLoading(true);
         setLoadError("");
 
-        const fetchJson = async (path) => {
-          const response = await fetch(buildApiUrl(path), { signal: controller.signal });
+        const fetchJson = async (path, options = {}) => {
+          const response = await fetch(buildApiUrl(path), { ...options, signal: controller.signal });
           if (!response.ok) throw new Error("No se pudo actualizar la cronología.");
           return response.json();
         };
 
-        const correo = encodeURIComponent(session.correo || "");
+        const correoBody = JSON.stringify({ correo: session.correo || "" });
+        const postJson = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: correoBody,
+        };
         const [tramiteResult, ds160Result, documentsResult] = await Promise.allSettled([
-          fetchJson(`/estado-tramite?correo=${correo}`),
-          fetchJson(`/ds160?correo=${correo}`),
-          fetchJson(`/documentos/${session.id}`),
+          fetchJson("/estado-tramite", postJson),
+          fetchJson("/ds160/load", postJson),
+          fetchJson("/documentos/listar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ usuario_id: session.id }),
+          }),
         ]);
 
         if (controller.signal.aborted) return;
