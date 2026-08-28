@@ -15,7 +15,7 @@ desarrollo/Docker usan fallback local y en produccion pueden usar R2. El panel
 admin reproduce los audios desde `GET /interview-sessions/:id/audio/:questionId`,
 por lo que no depende de URLs publicas del bucket. Ese endpoint esta pensado
 para reproductores HTML (`<audio>`), por eso puede cargarse directamente como
-`src` tanto desde cliente como desde administrador.
+`src` tanto desde cliente como desde administrador..
 
 ## Usuarios de prueba
 
