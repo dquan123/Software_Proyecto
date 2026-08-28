@@ -27,7 +27,10 @@ export default function NotificationCenter({ userId, unreadCount = 0 }) {
     const controller = new AbortController();
     requestControllerRef.current = controller;
     try {
-      const response = await fetch(buildApiUrl(`/notificaciones/${userId}`), {
+      const response = await fetch(buildApiUrl("/notificaciones/listar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
         signal: controller.signal,
       });
       if (!response.ok) throw new Error("No se pudieron cargar las notificaciones.");

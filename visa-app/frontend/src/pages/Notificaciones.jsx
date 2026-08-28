@@ -41,7 +41,12 @@ export default function Notificaciones() {
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}`), { signal });
+      const res = await fetch(buildApiUrl("/notificaciones/listar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.id }),
+        signal,
+      });
       if (!res.ok) throw new Error("No se pudieron cargar las notificaciones");
       const data = await res.json();
       setNotificaciones(data.notificaciones || []);
@@ -82,8 +87,10 @@ export default function Notificaciones() {
     setMarcandoTodas(true);
     setErrorAccion("");
     try {
-      const res = await fetch(buildApiUrl(`/notificaciones/${session.id}/leer-todas`), {
+      const res = await fetch(buildApiUrl("/notificaciones/leer-todas"), {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.id }),
       });
       if (!res.ok) throw new Error("Error al marcar todas");
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));

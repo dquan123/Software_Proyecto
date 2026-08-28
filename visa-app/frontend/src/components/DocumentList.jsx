@@ -52,7 +52,11 @@ export default function DocumentList({ usuarioId, refreshKey = 0 }) {
         setLoading(true);
         setError("");
 
-        const response = await fetch(buildApiUrl(`/documentos/${usuarioId}`));
+        const response = await fetch(buildApiUrl("/documentos/listar"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuarioId }),
+        });
         if (!response.ok) {
           throw new Error("No se pudieron cargar los documentos.");
         }

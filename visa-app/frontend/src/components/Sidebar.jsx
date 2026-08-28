@@ -55,7 +55,11 @@ export default function Sidebar({ currentPage }) {
 
     const fetchNoLeidas = async () => {
       try {
-        const res = await fetch(buildApiUrl(`/notificaciones/${usuario.id}/no-leidas`));
+        const res = await fetch(buildApiUrl("/notificaciones/no-leidas"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: usuario.id }),
+        });
         if (!res.ok) return;
         const data = await res.json();
         setNoLeidas(data.total || 0);

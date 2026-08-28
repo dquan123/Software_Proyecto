@@ -77,8 +77,12 @@ describe("Dashboard", () => {
     expect(screen.getByText("1", { selector: ".dash-stat-card__value" })).toBeInTheDocument();
     expect(screen.getByText("Subir documentos")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/estado-tramite?correo=ana%40example.com"),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
+      expect.stringContaining("/estado-tramite"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ correo: "ana@example.com" }),
+        signal: expect.any(AbortSignal),
+      })
     );
   });
 

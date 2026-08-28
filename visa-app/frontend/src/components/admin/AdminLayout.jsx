@@ -23,9 +23,9 @@ import {
   Users,
 } from "lucide-react";
 import VisaGuideLogo from "../VisaGuideLogo";
+import { buildApiUrl } from "../../config/api";
 import useTheme from "../../hooks/useTheme";
 import { useAdminSession } from "./AdminSessionContext";
-import useAdminResource from "../../hooks/useAdminResource";
 import "../../styles/admin.css";
 import "../../styles/admin-prototype.css";
 
@@ -58,13 +58,35 @@ export default function AdminLayout({ children }) {
   const { isDark, toggleTheme } = useTheme();
   const userName = session?.nombre || "Administrador";
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const [notifications, setNotifications] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed);
   const notificationRef = useRef(null);
   const notificationTriggerRef = useRef(null);
   const menuTriggerRef = useRef(null);
-  const { data: notificationData, isLoading: notificationsLoading, error: notificationsError, retry: retryNotifications } = useAdminResource(`/notificaciones/${session.id_usuario || session.id}`);
-  const notifications = notificationData?.notificaciones || [];
+  const loadAdminNotifications = async () => {
+    const userId = session.id_usuario || session.id;
+    if (!userId) return;
+
+    try {
+      setNotificationsLoading(true);
+      setNotificationsError("");
+      const response = await fetch(buildApiUrl("/notificaciones/listar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!response.ok) throw new Error("No se pudieron cargar las notificaciones.");
+      const data = await response.json();
+      setNotifications(data.notificaciones || []);
+    } catch (error) {
+      setNotificationsError(error.message || "No se pudieron cargar las notificaciones.");
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!notificationsOpen) return undefined;
@@ -208,11 +230,11 @@ export default function AdminLayout({ children }) {
           <button ref={menuTriggerRef} type="button" className="admin-header__menu" aria-label={sidebarOpen ? "Cerrar menú administrativo" : "Abrir menú administrativo"} aria-controls="admin-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>{sidebarOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</button>
           <div className="admin-header__actions" role="group" aria-label="Notificaciones y perfil administrativo">
             <div className="admin-header__notifications" ref={notificationRef}>
-            <button ref={notificationTriggerRef} type="button" className="admin-header__notification" aria-label="Notificaciones" aria-haspopup="true" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>
+            <button ref={notificationTriggerRef} type="button" className="admin-header__notification" aria-label="Notificaciones" aria-haspopup="true" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => { const nextOpen = !open; if (nextOpen) loadAdminNotifications(); return nextOpen; })}>
               <Bell size={22} strokeWidth={2} aria-hidden="true" />
               {notifications.some((item) => !item.leido) && <span aria-hidden="true" />}
             </button>
-            {notificationsOpen && <section className="admin-notification-menu" aria-label="Notificaciones administrativas"><header><strong>Notificaciones</strong><button type="button" onClick={() => { setNotificationsOpen(false); notificationTriggerRef.current?.focus(); }} aria-label="Cerrar notificaciones">×</button></header>{notificationsLoading ? <p role="status">Cargando…</p> : notificationsError ? <div role="alert"><p>{notificationsError}</p><button type="button" onClick={retryNotifications}>Reintentar</button></div> : notifications.length ? <ul>{notifications.slice(0, 8).map((item) => <li key={item.id}><strong>{item.titulo}</strong><span>{item.mensaje}</span></li>)}</ul> : <p>Sin notificaciones.</p>}</section>}
+            {notificationsOpen && <section className="admin-notification-menu" aria-label="Notificaciones administrativas"><header><strong>Notificaciones</strong><button type="button" onClick={() => { setNotificationsOpen(false); notificationTriggerRef.current?.focus(); }} aria-label="Cerrar notificaciones">×</button></header>{notificationsLoading ? <p role="status">Cargando…</p> : notificationsError ? <div role="alert"><p>{notificationsError}</p><button type="button" onClick={loadAdminNotifications}>Reintentar</button></div> : notifications.length ? <ul>{notifications.slice(0, 8).map((item) => <li key={item.id}><strong>{item.titulo}</strong><span>{item.mensaje}</span></li>)}</ul> : <p>Sin notificaciones.</p>}</section>}
             </div>
             <NavLink className="admin-header__user" to="/admin/profile" aria-label={`Abrir perfil de ${userName}`}>
             <div>

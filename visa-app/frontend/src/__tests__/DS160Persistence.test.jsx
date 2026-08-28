@@ -24,12 +24,12 @@ describe("DS-160 navigation persistence", () => {
       paisNacimiento: "Guatemala",
     };
 
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url, options = {}) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
       const requestUrl = String(url);
       if (requestUrl.includes("/validar-sesion")) {
         return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
       }
-      if (requestUrl.includes("/ds160") && (!options.method || options.method === "GET")) {
+      if (requestUrl.includes("/ds160/load")) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ datos, seccion_actual: 1, completado: false }),
@@ -47,7 +47,10 @@ describe("DS-160 navigation persistence", () => {
     await user.click(screen.getByRole("button", { name: "Siguiente →" }));
 
     await waitFor(() => {
-      const saveCall = fetchMock.mock.calls.find(([, options]) => options?.method === "POST");
+      const saveCall = fetchMock.mock.calls.find(([url, options]) => {
+        const requestUrl = String(url);
+        return requestUrl.endsWith("/ds160") && options?.method === "POST";
+      });
       expect(saveCall).toBeDefined();
       expect(JSON.parse(saveCall[1].body)).toMatchObject({ seccion_actual: 2 });
     });

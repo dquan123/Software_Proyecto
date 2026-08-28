@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
@@ -126,6 +127,7 @@ function TipIcon({ tone }) {
 
 export default function Entrevista() {
   const { isValidating, session } = useRequireAuth();
+  const navigate = useNavigate();
   const modoSenior = useModoSenior();
   const [latestFeedback, setLatestFeedback] = useState(null);
   const latestResponses = Array.isArray(latestFeedback?.responses)
@@ -147,10 +149,12 @@ export default function Entrevista() {
 
     async function fetchLatestFeedback() {
       try {
-        const response = await fetch(
-          buildApiUrl(`/interview-sessions/user/${session.id}`),
-          { signal: controller.signal }
-        );
+        const response = await fetch(buildApiUrl("/interview-sessions/user"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: session.id }),
+          signal: controller.signal,
+        });
         const data = await response.json();
 
         if (!response.ok) {
@@ -255,11 +259,7 @@ export default function Entrevista() {
                 </p>
                 <button
                   type="button"
-                  onClick={() =>
-                    (window.location.href = `/entrevista/retroalimentacion?session=${encodeURIComponent(
-                      latestFeedback.id
-                    )}`)
-                  }
+                  onClick={() => navigate("/entrevista/retroalimentacion", { state: { sessionId: latestFeedback.id } })}
                 >
                   Ver retroalimentación
                 </button>

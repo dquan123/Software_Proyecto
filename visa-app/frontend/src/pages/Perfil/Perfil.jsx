@@ -135,10 +135,12 @@ export default function Perfil() {
         setCargando(true);
         setErrorCarga("");
 
-        const res = await fetch(
-          `${buildApiUrl("/usuario-perfil")}?correo=${encodeURIComponent(session.correo)}`,
-          { signal: controller.signal }
-        );
+        const res = await fetch(buildApiUrl("/usuario-perfil"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo: session.correo }),
+          signal: controller.signal,
+        });
 
         if (!res.ok) throw new Error("No se pudo cargar tu perfil.");
 

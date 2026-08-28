@@ -20,9 +20,35 @@ function createNotificacionController(notificacionService) {
     }
   }
 
+  async function listarDesdeBody(req, res) {
+    try {
+      const { userId } = req.body || {};
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      const notificaciones = await notificacionService.listarPorUsuario(userId);
+      return res.json({ notificaciones });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
   async function contarNoLeidas(req, res) {
     try {
       const total = await notificacionService.contarNoLeidas(req.params.userId);
+      return res.json({ total });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async function contarNoLeidasDesdeBody(req, res) {
+    try {
+      const { userId } = req.body || {};
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      const total = await notificacionService.contarNoLeidas(userId);
       return res.json({ total });
     } catch (error) {
       return handleError(res, error);
@@ -44,7 +70,11 @@ function createNotificacionController(notificacionService) {
 
   async function marcarTodasLeidas(req, res) {
     try {
-      const actualizadas = await notificacionService.marcarTodasLeidas(req.params.userId);
+      const { userId } = req.body || {};
+      if (!userId) {
+        return res.status(400).json({ error: "userId requerido en el body" });
+      }
+      const actualizadas = await notificacionService.marcarTodasLeidas(userId);
       return res.json({
         message: "Notificaciones marcadas como leídas",
         actualizadas,
@@ -89,7 +119,16 @@ function createNotificacionController(notificacionService) {
     }
   }
 
-  return { listar, contarNoLeidas, marcarLeida, marcarTodasLeidas, crear, eliminar };
+  return {
+    listar,
+    listarDesdeBody,
+    contarNoLeidas,
+    contarNoLeidasDesdeBody,
+    marcarLeida,
+    marcarTodasLeidas,
+    crear,
+    eliminar,
+  };
 }
 
 module.exports = createNotificacionController;

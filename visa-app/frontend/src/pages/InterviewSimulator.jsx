@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { buildApiUrl } from "../config/api";
 import useModoSenior from "../hooks/useModoSenior";
@@ -226,6 +227,7 @@ function AnalysisCard({ type, title, subtitle, quote, notes }) {
 
 export default function InterviewSimulator() {
   const { isValidating, session } = useRequireAuth();
+  const navigate = useNavigate();
   const modoSenior = useModoSenior();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [recordings, setRecordings] = useState({});
@@ -402,7 +404,7 @@ export default function InterviewSimulator() {
         );
       }
 
-      window.location.href = `/entrevista/retroalimentacion?session=${data.session.id}`;
+      navigate("/entrevista/retroalimentacion", { state: { sessionId: data.session.id } });
     } catch (submitError) {
       setError(
         submitError.message ||

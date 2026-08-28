@@ -300,7 +300,10 @@ export default function DS160Form() {
         : localStorage.getItem("correoUsuario");
       if (!correo) { setCargando(false); return; }
       try {
-        const res  = await fetch(`${buildApiUrl("/ds160")}?correo=${encodeURIComponent(correo)}`, {
+        const res = await fetch(buildApiUrl("/ds160/load"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error();
@@ -538,7 +541,11 @@ export default function DS160Form() {
 
     setDescargandoPdf(true);
     try {
-      const response = await fetch(`${buildApiUrl("/ds160/pdf")}?correo=${encodeURIComponent(correo)}`);
+      const response = await fetch(buildApiUrl("/ds160/pdf"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo }),
+      });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "No se pudo descargar el PDF.");
