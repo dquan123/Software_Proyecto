@@ -1329,4 +1329,6 @@ app.put("/tramite", async (req, res) => {
   }
 });
 
+app.use(upload.handleUploadError);
+
 module.exports = app;
