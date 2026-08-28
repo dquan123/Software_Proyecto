@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("path"); //Prueba 
 
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
