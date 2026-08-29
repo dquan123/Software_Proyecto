@@ -1403,6 +1403,37 @@ describe("app endpoints", () => {
     });
   });
 
+  test("POST /interview-sessions rechaza audio con extension no permitida", async () => {
+    const response = await request(app)
+      .post("/interview-sessions")
+      .field(
+        "session",
+        JSON.stringify({
+          user: {
+            id: 4,
+            nombre: "Usuario Entrevista",
+            correo: "entrevista@example.com",
+          },
+          questions: [
+            {
+              id: "purpose",
+              text: "Cual es el motivo principal de su viaje?",
+              recorded: true,
+              duration: 35,
+            },
+          ],
+        })
+      )
+      .attach("audio_purpose", Buffer.from("audio falso"), {
+        filename: "purpose.js",
+        contentType: "audio/webm",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Tipo de archivo no permitido" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
+  });
+
   test("GET /interview-sessions/:id/audio/:questionId sirve audio almacenado para reproductores HTML", async () => {
     mockGetStoredFile.mockResolvedValueOnce({
       stream: Readable.from(["audio de prueba"]),
@@ -1460,6 +1491,96 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.documento).toMatchObject({ id: 41, documento_key: "passport" });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /upload acepta imagen JPG valida", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Fotografia")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.from("jpg de prueba"), {
+        filename: "foto.jpg",
+        contentType: "image/jpeg",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Archivo subido correctamente");
+    expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /upload rechaza archivo exe", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Ejecutable")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.from("exe de prueba"), {
+        filename: "archivo.exe",
+        contentType: "application/octet-stream",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Tipo de archivo no permitido" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
+  });
+
+  test("POST /upload rechaza archivo js", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Script")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.from("console.log('x')"), {
+        filename: "script.js",
+        contentType: "application/javascript",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Tipo de archivo no permitido" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
+  });
+
+  test("POST /upload rechaza MIME permitido con extension peligrosa", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Archivo falso")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.from("pdf falso"), {
+        filename: "payload.exe",
+        contentType: "application/pdf",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Tipo de archivo no permitido" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
+  });
+
+  test("POST /upload rechaza archivos sin extension valida", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Sin extension")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.from("sin extension"), {
+        filename: "documento",
+        contentType: "application/pdf",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "El archivo debe tener una extensión válida" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
+  });
+
+  test("POST /upload rechaza archivos que exceden 5 MB", async () => {
+    const response = await request(app)
+      .post("/upload")
+      .field("nombre", "Archivo grande")
+      .field("usuario_id", "3")
+      .attach("file", Buffer.alloc((5 * 1024 * 1024) + 1), {
+        filename: "grande.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(response.status).toBe(413);
+    expect(response.body).toEqual({ error: "El archivo excede el límite de 5 MB" });
+    expect(mockUploadStoredFile).not.toHaveBeenCalled();
   });
 
   test("POST /upload devuelve 400 cuando falta el archivo", async () => {
@@ -1574,6 +1695,23 @@ describe("app endpoints", () => {
       documento_key: "previous_visa",
       estado: "review",
     });
+    expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /documentos acepta imagen PNG valida", async () => {
+    const response = await request(app)
+      .post("/documentos")
+      .field("nombre", "Fotografia")
+      .field("tipo", "image/png")
+      .field("usuario_id", "3")
+      .field("documento_key", "photo")
+      .attach("file", Buffer.from("png de prueba"), {
+        filename: "foto.png",
+        contentType: "image/png",
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBe("Documento guardado correctamente");
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
   });
 
