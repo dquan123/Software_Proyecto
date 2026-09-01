@@ -63,6 +63,19 @@ ALTER TABLE tramite
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor);
 
+CREATE TABLE IF NOT EXISTS process_change_history (
+  id SERIAL PRIMARY KEY,
+  process_id INT NOT NULL REFERENCES tramite(id_tramite) ON DELETE CASCADE,
+  field_name VARCHAR(100) NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  changed_by INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS process_change_history_process_idx
+ON process_change_history(process_id, changed_at DESC, id DESC);
+
 -- Tabla para guardar el formulario DS-160
 CREATE TABLE IF NOT EXISTS formulario_ds160 (
   id_formulario SERIAL PRIMARY KEY,

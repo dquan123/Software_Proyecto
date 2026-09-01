@@ -243,6 +243,210 @@ describe("admin process management", () => {
     );
   });
 
+  test("records history when an admin changes process status", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      estado: "Pendiente",
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+    };
+    const { app, pool } = createApp(async (sql, values = []) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("INSERT INTO process_change_history")) {
+        return { rows: [{ id: 1, process_id: values[0], field_name: values[1], old_value: values[2], new_value: values[3], changed_by: values[4], changed_at: "2026-08-10T10:00:00.000Z" }] };
+      }
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "Pendiente", etapaActual: "Formulario DS-160", asesorId: null })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO process_change_history"),
+      [21, "estado", "En proceso", "Pendiente", 1]
+    );
+  });
+
+  test("records history when an admin changes process stage", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      etapa_actual: "Cita consular",
+      progreso: 51,
+      siguiente_paso: "Programar cita",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+    };
+    const { app, pool } = createApp(async (sql, values = []) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("SELECT id FROM notificaciones")) return { rows: [] };
+      if (sql.includes("INSERT INTO process_change_history")) {
+        return { rows: [{ id: 2, process_id: values[0], field_name: values[1], old_value: values[2], new_value: values[3], changed_by: values[4], changed_at: "2026-08-10T10:00:00.000Z" }] };
+      }
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 91 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "En proceso", etapaActual: "Cita consular", asesorId: null })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO process_change_history"),
+      [21, "etapa_actual", "Formulario DS-160", "Cita consular", 1]
+    );
+  });
+
+  test("records history when an admin changes the assigned advisor", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      id_asesor: 5,
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+      asesor_nombre: "Laura Vasquez",
+      asesor_correo: "laura@visaguide.com",
+    };
+    const { app, pool } = createApp(async (sql, values = []) => {
+      if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("rol = 'asesor'")) return { rows: [{ id_usuario: 5 }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      if (sql.includes("INSERT INTO process_change_history")) {
+        return { rows: [{ id: 3, process_id: values[0], field_name: values[1], old_value: values[2], new_value: values[3], changed_by: values[4], changed_at: "2026-08-10T10:00:00.000Z" }] };
+      }
+      if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 92 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "En proceso", etapaActual: "Formulario DS-160", asesorId: 5 })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO process_change_history"),
+      [21, "id_asesor", null, "5", 1]
+    );
+  });
+
+  test("does not record duplicated history when values do not change", async () => {
+    const currentRow = {
+      id_tramite: 21,
+      id_usuario: 8,
+      estado: "En proceso",
+      etapa_actual: "Formulario DS-160",
+      id_asesor: null,
+    };
+    const refreshedRow = {
+      ...currentRow,
+      progreso: 17,
+      siguiente_paso: "Completar formulario",
+      mensaje: "",
+      solicitante_nombre: "Carlos Mendoza",
+      solicitante_correo: "carlos@example.com",
+      solicitante_perfil: "Renovacion B1/B2",
+    };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite, id_usuario, estado")) return { rows: [currentRow] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("JOIN usuario applicant")) return { rows: [refreshedRow] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .put("/admin/processes/21")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ estado: "En proceso", etapaActual: "Formulario DS-160", asesorId: null })
+      .expect(200);
+
+    expect(pool.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO process_change_history"),
+      expect.anything()
+    );
+  });
+
+  test("returns process history records to an admin", async () => {
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("SELECT id_tramite") && sql.includes("FROM tramite")) return { rows: [{ id_tramite: 21 }] };
+      if (sql.includes("FROM process_change_history h")) {
+        return {
+          rows: [{
+            id: 7,
+            process_id: 21,
+            field_name: "estado",
+            old_value: "En proceso",
+            new_value: "Pendiente",
+            changed_by: 1,
+            changed_by_nombre: "Admin",
+            changed_by_correo: "admin@test.dev",
+            changed_at: "2026-08-10T10:00:00.000Z",
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/processes/21/history")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body.history).toEqual([{
+      id: 7,
+      processId: 21,
+      fieldName: "estado",
+      oldValue: "En proceso",
+      newValue: "Pendiente",
+      changedBy: { id: 1, nombre: "Admin", correo: "admin@test.dev" },
+      changedAt: "2026-08-10T10:00:00.000Z",
+    }]);
+  });
+
   test("notifies the applicant when an admin changes process status", async () => {
     const currentRow = {
       id_tramite: 21,
