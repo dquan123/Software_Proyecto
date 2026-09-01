@@ -1,4 +1,5 @@
 const express = require("express");
+const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
 
 const VALID_STATES = new Set(["En proceso", "Pendiente", "Aprobado", "Inactivo", "Completado"]);
 const STAGES = {
@@ -194,6 +195,7 @@ async function notifyProcessUpdates(notificacionService, { processId, userId, pr
 
 module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
   const router = express.Router();
+  const processHistoryService = createProcessChangeHistoryService(pool);
 
   router.use(requireAdmin);
 
@@ -227,6 +229,33 @@ module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaR
     } catch (error) {
       console.error("ERROR ADMIN PROCESSES:", error);
       res.status(500).json({ error: "No fue posible cargar los trámites" });
+    }
+  });
+
+  router.get("/:id/history", async (req, res) => {
+    const processId = Number(req.params.id);
+
+    if (!Number.isInteger(processId) || processId <= 0) {
+      return res.status(400).json({ error: "Trámite inválido" });
+    }
+
+    try {
+      await schemaReady;
+
+      const processResult = await pool.query(
+        `SELECT id_tramite
+         FROM tramite
+         WHERE id_tramite = $1
+         LIMIT 1`,
+        [processId]
+      );
+      if (!processResult.rows.length) return res.status(404).json({ error: "Trámite no encontrado" });
+
+      const history = await processHistoryService.listByProcess(processId);
+      return res.json({ history });
+    } catch (error) {
+      console.error("ERROR ADMIN PROCESS HISTORY:", error);
+      return res.status(500).json({ error: "No fue posible cargar el historial del trámite" });
     }
   });
 
@@ -368,6 +397,16 @@ module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaR
       `, [processId]);
 
       const refreshedProcess = refreshed.rows[0];
+      await processHistoryService.recordChanges({
+        processId,
+        changedBy: req.auth?.id_usuario || null,
+        changes: [
+          processHistoryService.buildChange("estado", currentProcess.estado, refreshedProcess.estado),
+          processHistoryService.buildChange("etapa_actual", currentProcess.etapa_actual, refreshedProcess.etapa_actual),
+          processHistoryService.buildChange("id_asesor", currentProcess.id_asesor, refreshedProcess.id_asesor),
+        ],
+      });
+
       await notifyProcessUpdates(notificacionService, {
         processId,
         userId: refreshedProcess.id_usuario || currentProcess.id_usuario,

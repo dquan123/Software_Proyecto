@@ -30,6 +30,17 @@ function mockAdminSession() {
     solicitante: { id: 8, nombre: "Carlos Mendoza", correo: "carlos@example.com", perfil: "Renovación B1/B2" },
     asesor: null,
   };
+  let processHistory = [
+    {
+      id: 1,
+      processId: 21,
+      fieldName: "estado",
+      oldValue: "En proceso",
+      newValue: "Pendiente",
+      changedAt: "2026-08-10T10:00:00.000Z",
+      changedBy: { id: 1, nombre: "Admin General", correo: "admin@prueba.com" },
+    },
+  ];
   let adminSettings = { nombre_comercial: "VisaGuide", razon_social: "", sitio_web: "", idioma: "es", zona_horaria: "America/Guatemala", notificaciones_automaticas: true };
   let adminUsers = [
     { id: 1, nombre: "Admin General", correo: "admin@prueba.com", rol: "admin", perfil: null, activo: true, telefono: "", ciudad: "", pais: "", asignados: 0, pendientes: 0, asesor: null, actividad: "2026-08-10T10:00:00.000Z" },
@@ -222,6 +233,12 @@ function mockAdminSession() {
         }),
       });
     }
+    if (String(url).endsWith("/admin/processes/21/history") && (!options.method || options.method === "GET")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ history: processHistory }),
+      });
+    }
     if (String(url).endsWith("/admin/processes/21") && (!options.method || options.method === "GET")) {
       return Promise.resolve({
         ok: true,
@@ -298,6 +315,18 @@ function mockAdminSession() {
         etapaActual: payload.etapaActual,
         asesor: payload.asesorId ? { id: Number(payload.asesorId), nombre: "Laura Vásquez", correo: "laura@visaguide.com" } : null,
       };
+      processHistory = [
+        {
+          id: processHistory.length + 1,
+          processId: 21,
+          fieldName: "estado",
+          oldValue: "En proceso",
+          newValue: payload.estado,
+          changedAt: "2026-08-10T10:00:00.000Z",
+          changedBy: { id: 1, nombre: "Admin General", correo: "admin@prueba.com" },
+        },
+        ...processHistory,
+      ];
       return Promise.resolve({ ok: true, json: async () => ({ tramite: managedProcess }) });
     }
     if (String(url).includes("/admin/metrics/processes.csv")) {
@@ -684,6 +713,10 @@ describe("panel de administracion", () => {
     expect(screen.getByText("Documento ilegible.")).toBeInTheDocument();
     expect(screen.getAllByText("Buena preparacion").length).toBeGreaterThan(0);
     expect(screen.getByText("Documento aprobado")).toBeInTheDocument();
+    const historySection = screen.getByRole("heading", { name: "Historial de cambios" }).closest("section");
+    expect(within(historySection).getByText("Estado")).toBeInTheDocument();
+    expect(within(historySection).getByText("Pendiente")).toBeInTheDocument();
+    expect(within(historySection).getByText("admin@prueba.com")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Gestionar tramite" })).toHaveAttribute("href", "/admin/processes");
     expect(screen.getAllByRole("link", { name: "Ver documentos" })[0]).toHaveAttribute("href", "/admin/documents");
     expect(screen.getAllByRole("link", { name: "Revisar entrevistas" })[0]).toHaveAttribute("href", "/admin/interviews");

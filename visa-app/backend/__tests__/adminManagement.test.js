@@ -192,7 +192,8 @@ describe("admin management integration", () => {
     const { app, pool } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
       if (sql.includes("rol = 'asesor' AND activo")) return { rows: [{ id_usuario: 7, nombre: "Laura" }] };
-      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22 }] };
+      if (sql.includes("SELECT id_tramite, id_usuario, id_asesor FROM tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: null }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: 7 }] };
       return { rows: [] };
     });
 
@@ -212,7 +213,8 @@ describe("admin management integration", () => {
     const { app, pool } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
       if (sql.includes("rol = 'asesor' AND activo")) return { rows: [{ id_usuario: 7, nombre: "Laura" }] };
-      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4 }] };
+      if (sql.includes("SELECT id_tramite, id_usuario, id_asesor FROM tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: null }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: 7 }] };
       if (sql.includes("INSERT INTO admin_activity")) return { rows: [{ id: 12 }] };
       if (sql.includes("INSERT INTO notificaciones")) return { rows: [{ id: 93 }] };
       return { rows: [] };
@@ -233,6 +235,30 @@ describe("admin management integration", () => {
         "info",
         "tramite-22-asesor",
       ]
+    );
+  });
+
+  test("records process history when an assignment is created", async () => {
+    const { app, pool } = createApp(async (sql, values = []) => {
+      if (sql.includes("FROM usuario WHERE id_usuario") && !sql.includes("rol = 'asesor'")) return { rows: [admin] };
+      if (sql.includes("rol = 'asesor' AND activo")) return { rows: [{ id_usuario: 7, nombre: "Laura" }] };
+      if (sql.includes("SELECT id_tramite, id_usuario, id_asesor FROM tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: null }] };
+      if (sql.includes("UPDATE tramite")) return { rows: [{ id_tramite: 22, id_usuario: 4, id_asesor: 7 }] };
+      if (sql.includes("INSERT INTO process_change_history")) {
+        return { rows: [{ id: 1, process_id: values[0], field_name: values[1], old_value: values[2], new_value: values[3], changed_by: values[4], changed_at: "2026-08-10T10:00:00.000Z" }] };
+      }
+      return { rows: [] };
+    });
+
+    await request(app)
+      .post("/admin/assignments")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ tramiteId: 22, asesorId: 7 })
+      .expect(200);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO process_change_history"),
+      [22, "id_asesor", null, "7", 1]
     );
   });
 

@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   ExternalLink,
   FileText,
+  History,
   MessageSquareText,
   UserRound,
 } from "lucide-react";
@@ -54,11 +55,29 @@ function getLatestInterviewFeedback(sessions) {
   return sessions.find((session) => session.feedback)?.feedback || "";
 }
 
+function getHistoryFieldLabel(fieldName) {
+  const labels = {
+    estado: "Estado",
+    etapa_actual: "Etapa actual",
+    id_asesor: "Asesor asignado",
+    observaciones: "Observaciones",
+  };
+  return labels[fieldName] || fieldName || "Campo";
+}
+
+function formatHistoryValue(value) {
+  if (value === null || value === undefined || value === "") return "Sin valor";
+  return value;
+}
+
 export default function AdminProcessDetail() {
   const { id } = useParams();
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
   const [revision, setRevision] = useState(0);
 
   const loadDetail = useCallback((signal) => {
@@ -82,10 +101,35 @@ export default function AdminProcessDetail() {
       });
   }, [id]);
 
+  const loadHistory = useCallback((signal) => {
+    return fetch(buildApiUrl(`/admin/processes/${id}/history`), {
+      signal,
+      headers: getAdminHeaders(),
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No fue posible cargar el historial de cambios.");
+        return data;
+      })
+      .then((data) => setHistory(data.history || []))
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") {
+          setHistory([]);
+          setHistoryError(requestError.message || "No fue posible cargar el historial de cambios.");
+        }
+      })
+      .finally(() => {
+        if (!signal?.aborted) setHistoryLoading(false);
+      });
+  }, [id]);
+
   const retryLoad = () => {
     setDetail(null);
     setIsLoading(true);
     setError("");
+    setHistory([]);
+    setHistoryLoading(true);
+    setHistoryError("");
     setRevision((value) => value + 1);
   };
 
@@ -94,6 +138,12 @@ export default function AdminProcessDetail() {
     loadDetail(controller.signal);
     return () => controller.abort();
   }, [loadDetail, revision]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadHistory(controller.signal);
+    return () => controller.abort();
+  }, [loadHistory, revision]);
 
   const summary = useMemo(() => {
     if (!detail) return null;
@@ -147,6 +197,45 @@ export default function AdminProcessDetail() {
             <article><small>Entrevistas revisadas</small><strong>{summary.interviews}</strong></article>
             <article><small>Notificaciones sin leer</small><strong>{summary.notifications}</strong></article>
             <article><small>Asesor asignado</small><strong>{detail.tramite.asesor?.nombre || "Sin asignar"}</strong></article>
+          </section>
+
+          <section className="admin-panel-card">
+            <div className="admin-panel-card__header">
+              <div>
+                <h2><History aria-hidden="true" size={22} /> Historial de cambios</h2>
+                <p>Cambios administrativos registrados para este tramite.</p>
+              </div>
+            </div>
+            {historyLoading && !historyError && (
+              <div className="admin-table-state">Cargando historial...</div>
+            )}
+            {!historyLoading && historyError && (
+              <div className="admin-table-state admin-table-state--error">{historyError}</div>
+            )}
+            {!historyLoading && !historyError && history.length === 0 && (
+              <div className="admin-empty-state admin-empty-state--compact"><strong>Sin cambios registrados</strong></div>
+            )}
+            {!historyLoading && !historyError && history.length > 0 && (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Fecha</th><th>Usuario</th><th>Campo</th><th>Valor anterior</th><th>Valor nuevo</th></tr></thead>
+                  <tbody>
+                    {history.map((change) => (
+                      <tr key={change.id}>
+                        <td>{formatDate(change.changedAt)}</td>
+                        <td>
+                          <strong>{change.changedBy?.nombre || "Administrador"}</strong>
+                          <small>{change.changedBy?.correo || "Sin correo disponible"}</small>
+                        </td>
+                        <td>{getHistoryFieldLabel(change.fieldName)}</td>
+                        <td>{formatHistoryValue(change.oldValue)}</td>
+                        <td>{formatHistoryValue(change.newValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <div className="admin-request-layout">

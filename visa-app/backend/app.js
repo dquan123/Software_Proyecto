@@ -117,6 +117,21 @@ async function ensureTramiteSchema() {
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
   await pool.query("CREATE INDEX IF NOT EXISTS tramite_asesor_idx ON tramite(id_asesor)");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS process_change_history (
+      id SERIAL PRIMARY KEY,
+      process_id INT NOT NULL REFERENCES tramite(id_tramite) ON DELETE CASCADE,
+      field_name VARCHAR(100) NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      changed_by INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+      changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS process_change_history_process_idx
+    ON process_change_history(process_id, changed_at DESC, id DESC)
+  `);
 }
 
 async function ensureAdminSchema() {
