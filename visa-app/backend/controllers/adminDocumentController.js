@@ -1,4 +1,4 @@
-function createAdminDocumentController(adminDocumentService, { notificacionService } = {}) {
+function createAdminDocumentController(adminDocumentService, { notificacionService, activityLogService } = {}) {
   function hasOwn(body, key) {
     return Object.prototype.hasOwnProperty.call(body || {}, key);
   }
@@ -91,6 +91,25 @@ function createAdminDocumentController(adminDocumentService, { notificacionServi
 
       const documento = await adminDocumentService.updateDocumentStatus(documentId, payload);
       await notifyDocumentUpdate(documento, { statusChanged, feedbackChanged });
+      await activityLogService?.logActivity({
+        req,
+        actor: req.auth,
+        userId: documento.usuario_id,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: statusChanged ? "document.status_updated" : "document.feedback_updated",
+        entityType: "documento",
+        entityId: documento.id,
+        description: statusChanged
+          ? "Estado de documento actualizado por administrador"
+          : "Observaciones de documento actualizadas por administrador",
+        metadata: {
+          estado: documento.estado,
+          documentoKey: documento.documento_key,
+          solicitante: documento.usuario?.correo,
+        },
+      });
 
       return res.json({
         message: statusChanged

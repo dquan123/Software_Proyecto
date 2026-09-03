@@ -770,6 +770,10 @@ describe("app endpoints", () => {
       nombre: "Nuevo Usuario",
       correo: "nuevo@example.com",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["user.registered", "usuario", "Usuario registrado"])
+    );
   });
 
   test("POST /register guarda la contraseña como hash bcrypt, no en texto plano", async () => {
@@ -878,6 +882,27 @@ describe("app endpoints", () => {
       correo: "login@example.com",
       rol: "cliente",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["user.login", "usuario", "Login exitoso"])
+    );
+  });
+
+  test("POST /login no falla si el log de actividad no se puede registrar", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("INSERT INTO activity_logs")) {
+        return Promise.reject(new Error("activity log unavailable"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/login").send({
+      correo: "login@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
   });
 
   test("POST /login devuelve 403 cuando la cuenta esta desactivada", async () => {
@@ -1055,6 +1080,10 @@ describe("app endpoints", () => {
     expect(response.headers["content-disposition"]).toBe('attachment; filename="ds160-17.pdf"');
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["ds160.pdf_exported", "formulario_ds160", "PDF DS-160 descargado"])
+    );
   });
 
   test("POST /ds160/pdf devuelve 400 cuando falta el correo", async () => {
@@ -1124,6 +1153,10 @@ describe("app endpoints", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO formulario_ds160"),
       [12, JSON.stringify(datos), 2, false]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["ds160.saved", "formulario_ds160", "Formulario DS-160 creado"])
     );
   });
 
@@ -1531,6 +1564,10 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.documento).toMatchObject({ id: 41, documento_key: "passport" });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["document.uploaded", "documento", "Documento cargado"])
+    );
   });
 
   test("POST /upload acepta imagen JPG valida", async () => {
@@ -1647,6 +1684,10 @@ describe("app endpoints", () => {
       documento_key: null,
     });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["document.uploaded", "documento", "Documento cargado"])
+    );
   });
 
   test("POST /upload devuelve 400 cuando usuario_id no es numerico", async () => {

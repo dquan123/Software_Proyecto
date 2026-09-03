@@ -9,7 +9,7 @@ describe("admin management integration", () => {
   const admin = { id_usuario: 1, correo: "admin@test.dev", nombre: "Admin", rol: "admin" };
   const client = { id_usuario: 4, correo: "client@test.dev", nombre: "Cliente", rol: "cliente" };
 
-  function createApp(query) {
+  function createApp(query, overrides = {}) {
     const pool = { query: jest.fn(query) };
     const app = express();
     app.use(express.json());
@@ -17,6 +17,7 @@ describe("admin management integration", () => {
       requireAdmin: createRoleMiddleware(pool, ["admin"]),
       schemaReady: Promise.resolve(),
       notificacionService: createNotificacionService(pool),
+      ...overrides,
     }));
     return { app, pool };
   }
@@ -28,6 +29,94 @@ describe("admin management integration", () => {
       .get("/admin/users")
       .set("Authorization", `Bearer ${issueSessionToken(client)}`)
       .expect(403);
+  });
+
+  test("returns paginated activity logs to an admin", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("FROM activity_logs")) {
+        return {
+          rows: [{
+            id: 12,
+            user_id: 4,
+            admin_id: null,
+            user_email: "client@test.dev",
+            role: "cliente",
+            action: "user.login",
+            entity_type: "usuario",
+            entity_id: "4",
+            description: "Login exitoso",
+            metadata: {},
+            ip_address: "127.0.0.1",
+            user_agent: "supertest",
+            created_at: "2026-09-01T10:00:00.000Z",
+            total: "1",
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/activity-logs?action=login&limit=25")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      page: 1,
+      limit: 25,
+      total: 1,
+      logs: [{ action: "user.login", userEmail: "client@test.dev" }],
+    });
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("FROM activity_logs"),
+      expect.arrayContaining(["%login%", 25, 0])
+    );
+  });
+
+  test("runs email reminders and records an activity log", async () => {
+    const candidate = {
+      user_id: 4,
+      recipient_email: "client@test.dev",
+      reminder_type: "pending_document",
+      entity_type: "documento",
+      entity_id: "41",
+      subject: "Recordatorio",
+      body: "Contenido",
+      metadata: {},
+    };
+    const emailReminderService = {
+      listReminderCandidates: jest.fn(async () => [candidate, { ...candidate, entity_id: "42" }]),
+      sendReminder: jest.fn()
+        .mockResolvedValueOnce({ status: "dry_run" })
+        .mockResolvedValueOnce({ status: "skipped", reason: "duplicate" }),
+    };
+    const activityLogService = {
+      listLogs: jest.fn(),
+      logActivity: jest.fn(async () => null),
+    };
+    const { app } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      return { rows: [] };
+    }, { emailReminderService, activityLogService });
+
+    const response = await request(app)
+      .post("/admin/email-reminders/run")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      encontrados: 2,
+      enviados: 0,
+      dryRun: 1,
+      omitidosDuplicado: 1,
+      errores: 0,
+    });
+    expect(emailReminderService.sendReminder).toHaveBeenCalledTimes(2);
+    expect(activityLogService.logActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: "email_reminders.run",
+      metadata: expect.objectContaining({ encontrados: 2, dryRun: 1, omitidosDuplicado: 1 }),
+    }));
   });
 
   test("returns dashboard metrics, workload, activity and attention from database queries", async () => {

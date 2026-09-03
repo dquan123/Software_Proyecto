@@ -19,6 +19,8 @@ const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = req
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
+const createActivityLogService = require("./services/activityLogService");
+const createEmailReminderService = require("./services/emailReminderService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 
@@ -269,6 +271,16 @@ notificacionService.ensureSchema().catch((error) => {
   console.error("ERROR NOTIFICACIONES SCHEMA:", error);
 });
 
+const activityLogService = createActivityLogService(pool);
+activityLogService.ensureSchema().catch((error) => {
+  console.error("ERROR ACTIVITY LOG SCHEMA:", error);
+});
+
+const emailReminderService = createEmailReminderService(pool);
+emailReminderService.ensureSchema().catch((error) => {
+  console.error("ERROR EMAIL REMINDER SCHEMA:", error);
+});
+
 async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
   try {
     await notificacionService.notificarCambioEtapa(userId, etapa, titulo, mensaje);
@@ -421,13 +433,13 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService }));
+app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService, activityLogService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
-app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService }));
-app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService }));
-app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService }));
+app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService, activityLogService }));
+app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService, activityLogService }));
+app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService, activityLogService, emailReminderService }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {
@@ -520,6 +532,17 @@ app.post("/register", async (req, res) => {
        ON CONFLICT DO NOTHING`,
       [usuario.id_usuario]
     );
+    await activityLogService.logActivity({
+      req,
+      actor: usuario,
+      userId: usuario.id_usuario,
+      userEmail: usuario.correo,
+      role: usuario.rol,
+      action: "user.registered",
+      entityType: "usuario",
+      entityId: usuario.id_usuario,
+      description: "Usuario registrado",
+    });
     res.json({
       message: "Usuario guardado en BD",
       data: usuario,
@@ -561,6 +584,18 @@ app.post("/login", async (req, res) => {
       if (usuarioRow.activo === false) {
         return res.status(403).json({ error: "Cuenta desactivada. Contacta a un administrador." });
       }
+      const usuario = presentLoginUser(result.rows[0]);
+      await activityLogService.logActivity({
+        req,
+        actor: usuario,
+        userId: usuario.id_usuario,
+        userEmail: usuario.correo,
+        role: usuario.rol,
+        action: "user.login",
+        entityType: "usuario",
+        entityId: usuario.id_usuario,
+        description: "Login exitoso",
+      });
       const usuario = presentLoginUser(usuarioRow);
       res.json({
         success: true,
@@ -599,6 +634,18 @@ app.post("/guardar-perfil", async (req, res) => {
     }
 
     const usuario = result.rows[0];
+    await activityLogService.logActivity({
+      req,
+      actor: usuario,
+      userId: usuario.id_usuario,
+      userEmail: usuario.correo,
+      role: usuario.rol || "cliente",
+      action: "profile.selected",
+      entityType: "usuario",
+      entityId: usuario.id_usuario,
+      description: "Perfil de visa guardado",
+      metadata: { perfil },
+    });
 
     // Avanzar tramite a etapa 2 si el progreso es menor a 17
     const tramiteResult = await pool.query(
@@ -666,6 +713,21 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
     }));
+    await activityLogService.logActivity({
+      req,
+      userId: documento.usuario_id,
+      userEmail: null,
+      role: "cliente",
+      action: "document.uploaded",
+      entityType: "documento",
+      entityId: documento.id,
+      description: "Documento cargado",
+      metadata: {
+        nombre: documento.nombre,
+        tipo: documento.tipo,
+        documentoKey: documento.documento_key,
+      },
+    });
 
     res.json({
       message: "Archivo subido correctamente",
@@ -843,7 +905,28 @@ app.put("/usuario-perfil", async (req, res) => {
     }
  
     const u = result.rows[0];
- 
+    await activityLogService.logActivity({
+      req,
+      actor: u,
+      userId: u.id_usuario,
+      userEmail: u.correo,
+      role: "cliente",
+      action: "profile.updated",
+      entityType: "usuario",
+      entityId: u.id_usuario,
+      description: "Perfil de usuario actualizado",
+      metadata: {
+        campos: Object.keys({
+          ...(nombre !== undefined ? { nombre: true } : {}),
+          ...(telefono !== undefined ? { telefono: true } : {}),
+          ...(ciudad !== undefined ? { ciudad: true } : {}),
+          ...(pais !== undefined ? { pais: true } : {}),
+          ...(notificacionesEmail !== undefined ? { notificacionesEmail: true } : {}),
+          ...(idioma !== undefined ? { idioma: true } : {}),
+        }),
+      },
+    });
+
     res.json({
       message: "Perfil actualizado correctamente",
       usuario: {
@@ -909,6 +992,21 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
     }));
+    await activityLogService.logActivity({
+      req,
+      userId: documento.usuario_id,
+      userEmail: null,
+      role: "cliente",
+      action: "document.uploaded",
+      entityType: "documento",
+      entityId: documento.id,
+      description: "Documento cargado",
+      metadata: {
+        nombre: documento.nombre,
+        tipo: documento.tipo,
+        documentoKey: documento.documento_key,
+      },
+    });
 
     return res.status(201).json({
       message: "Documento guardado correctamente",
@@ -1111,6 +1209,16 @@ async function handleDs160Pdf(req, res) {
     if (formResult.rows.length === 0) {
       return res.status(404).json({ error: "Formulario DS-160 no encontrado" });
     }
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "ds160.pdf_exported",
+      entityType: "formulario_ds160",
+      entityId: formResult.rows[0].id_formulario,
+      description: "PDF DS-160 descargado",
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="ds160-${userId}.pdf"`);
@@ -1215,7 +1323,9 @@ app.post("/ds160", async (req, res) => {
 
     let result;
 
-    if (existingForm.rows.length === 0) {
+    const isNewForm = existingForm.rows.length === 0;
+
+    if (isNewForm) {
       // Crear nuevo formulario
       result = await pool.query(
         `INSERT INTO formulario_ds160 (id_usuario, datos, seccion_actual, completado, updated_at) 
@@ -1233,6 +1343,20 @@ app.post("/ds160", async (req, res) => {
         [JSON.stringify(datos || {}), seccion_actual || 1, completado || false, userId]
       );
     }
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "ds160.saved",
+      entityType: "formulario_ds160",
+      entityId: result.rows[0].id_formulario,
+      description: isNewForm ? "Formulario DS-160 creado" : "Formulario DS-160 actualizado",
+      metadata: {
+        seccionActual: result.rows[0].seccion_actual,
+        completado: result.rows[0].completado,
+      },
+    });
 
     // Si el DS-160 se marcó como completado, avanzar tramite a etapa 3
     if (completado) {
@@ -1352,6 +1476,22 @@ app.put("/tramite", async (req, res) => {
         );
       }
     }
+
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "process.updated",
+      entityType: "tramite",
+      entityId: tramite.id_tramite,
+      description: "Trámite actualizado",
+      metadata: {
+        estado: tramite.estado,
+        etapaActual: tramite.etapa_actual,
+        progreso: tramite.progreso,
+      },
+    });
 
     return res.json({
       message: "Trámite actualizado correctamente",
