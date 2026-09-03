@@ -1,5 +1,6 @@
 const express = require("express");
 const request = require("supertest");
+const bcrypt = require("bcrypt");
 const { createRoleMiddleware, issueSessionToken } = require("../auth");
 const createAdminManagementRoutes = require("../routes/adminManagementRoutes");
 const createNotificacionService = require("../services/notificacionService");
@@ -89,6 +90,45 @@ describe("admin management integration", () => {
       .get("/admin/users/999")
       .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
       .expect(404);
+  });
+
+  test("hashes the password when an admin creates a user", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("INSERT INTO usuario")) return { rows: [{ ...client, id_usuario: 20 }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .post("/admin/users")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ nombre: "Nuevo Cliente", correo: "nuevo@test.dev", contrasena: "clave123", rol: "cliente" })
+      .expect(201);
+
+    const insertCall = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO usuario"));
+    const storedPassword = insertCall[1][2];
+    expect(storedPassword).not.toBe("clave123");
+    expect(storedPassword).toMatch(/^\$2[aby]\$/);
+    expect(bcrypt.compareSync("clave123", storedPassword)).toBe(true);
+  });
+
+  test("hashes the password when an admin creates an advisor", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("INSERT INTO usuario")) return { rows: [{ ...client, id_usuario: 21, rol: "asesor" }] };
+      return { rows: [] };
+    });
+
+    await request(app)
+      .post("/admin/advisors")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .send({ nombre: "Nuevo Asesor", correo: "asesor@test.dev", contrasena: "clave123" })
+      .expect(201);
+
+    const insertCall = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO usuario"));
+    const storedPassword = insertCall[1][2];
+    expect(storedPassword).not.toBe("clave123");
+    expect(storedPassword).toMatch(/^\$2[aby]\$/);
   });
 
   test("updates a user's editable profile fields", async () => {
