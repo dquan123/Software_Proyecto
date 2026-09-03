@@ -19,6 +19,7 @@ const createInterviewSessionService = require("./services/interviewSessionServic
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
 const createActivityLogService = require("./services/activityLogService");
+const createEmailReminderService = require("./services/emailReminderService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 
@@ -262,6 +263,11 @@ notificacionService.ensureSchema().catch((error) => {
 const activityLogService = createActivityLogService(pool);
 activityLogService.ensureSchema().catch((error) => {
   console.error("ERROR ACTIVITY LOG SCHEMA:", error);
+});
+
+const emailReminderService = createEmailReminderService(pool);
+emailReminderService.ensureSchema().catch((error) => {
+  console.error("ERROR EMAIL REMINDER SCHEMA:", error);
 });
 
 async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
