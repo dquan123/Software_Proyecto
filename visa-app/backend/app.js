@@ -18,6 +18,7 @@ const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = req
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
+const createActivityLogService = require("./services/activityLogService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 
@@ -256,6 +257,11 @@ interviewSessionService.ensureSchema().catch((error) => {
 const notificacionService = createNotificacionService(pool);
 notificacionService.ensureSchema().catch((error) => {
   console.error("ERROR NOTIFICACIONES SCHEMA:", error);
+});
+
+const activityLogService = createActivityLogService(pool);
+activityLogService.ensureSchema().catch((error) => {
+  console.error("ERROR ACTIVITY LOG SCHEMA:", error);
 });
 
 async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {

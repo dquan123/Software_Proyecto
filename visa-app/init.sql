@@ -140,6 +140,31 @@ CREATE TABLE IF NOT EXISTS admin_activity (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS activity_logs (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  admin_id INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  user_email VARCHAR(200),
+  role VARCHAR(30),
+  action VARCHAR(120) NOT NULL,
+  entity_type VARCHAR(80),
+  entity_id VARCHAR(120),
+  description TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  ip_address VARCHAR(80),
+  user_agent TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS activity_logs_created_at_idx
+ON activity_logs(created_at DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS activity_logs_user_idx
+ON activity_logs(user_id, admin_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS activity_logs_action_idx
+ON activity_logs(action);
+
 CREATE TABLE IF NOT EXISTS interview_sessions (
   id SERIAL PRIMARY KEY,
   user_id INT REFERENCES usuario(id_usuario),
