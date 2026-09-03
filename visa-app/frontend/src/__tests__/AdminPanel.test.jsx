@@ -169,6 +169,29 @@ function mockAdminSession() {
       adminSettings = { ...adminSettings, ...JSON.parse(options.body || "{}") };
       return Promise.resolve({ ok: true, json: async () => ({ configuracion: adminSettings }) });
     }
+    if (String(url).includes("/admin/activity-logs")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          logs: [{
+            id: 1,
+            userId: 4,
+            adminId: null,
+            userEmail: "cliente@example.com",
+            role: "cliente",
+            action: "user.login",
+            entityType: "usuario",
+            entityId: "4",
+            description: "Login exitoso",
+            createdAt: "2026-09-01T10:00:00.000Z",
+          }],
+          page: 1,
+          pages: 1,
+          total: 1,
+          limit: 50,
+        }),
+      });
+    }
     if (String(url).endsWith("/admin/documents")) {
       return Promise.resolve({
         ok: true,
@@ -450,10 +473,27 @@ describe("panel de administracion", () => {
       "Entrevistas",
       "Banco de preguntas",
       "Reportes",
+      "Actividad",
       "Configuración",
     ]);
     expect(screen.getByRole("link", { name: /Mi perfil/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cerrar sesi/ })).toBeInTheDocument();
+  });
+
+  it("muestra la consulta de logs de actividad", async () => {
+    window.history.pushState({}, "", "/admin/activity-logs");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Logs de Actividad" })).toBeInTheDocument();
+    expect(await screen.findByText("user.login")).toBeInTheDocument();
+    expect(screen.getByText("cliente@example.com")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/activity-logs?"),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: `Bearer ${adminSession.token}` }),
+      })
+    );
   });
 
   it("rechaza una sesión local fabricada con correo de administrador", async () => {

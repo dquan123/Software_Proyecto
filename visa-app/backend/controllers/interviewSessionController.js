@@ -1,4 +1,4 @@
-function createInterviewSessionController(interviewSessionService, { notificacionService } = {}) {
+function createInterviewSessionController(interviewSessionService, { notificacionService, activityLogService } = {}) {
   function handleError(res, error) {
     const status = error.statusCode || 500;
     const message =
@@ -18,6 +18,20 @@ function createInterviewSessionController(interviewSessionService, { notificacio
         req.files || [],
         { baseUrl: `${req.protocol}://${req.get("host")}` }
       );
+      await activityLogService?.logActivity({
+        req,
+        userId: session.user_id,
+        userEmail: session.user_email,
+        role: "cliente",
+        action: "interview.session_created",
+        entityType: "interview_session",
+        entityId: session.id,
+        description: "Sesión de entrevista registrada",
+        metadata: {
+          status: session.status,
+          responses: Array.isArray(session.responses) ? session.responses.length : 0,
+        },
+      });
 
       return res.status(201).json({
         message: "Sesión de entrevista guardada correctamente",
@@ -146,6 +160,22 @@ function createInterviewSessionController(interviewSessionService, { notificacio
           console.error("ERROR INTERVIEW FEEDBACK NOTIFICATION:", notificationError);
         }
       }
+      await activityLogService?.logActivity({
+        req,
+        actor: req.auth,
+        userId: session.user_id,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "interview.feedback_updated",
+        entityType: "interview_session",
+        entityId: session.id,
+        description: "Retroalimentación de entrevista guardada por administrador",
+        metadata: {
+          rating: session.rating,
+          userEmail: session.user_email,
+        },
+      });
 
       return res.json({
         message: "Retroalimentación guardada correctamente",

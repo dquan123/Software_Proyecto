@@ -1,5 +1,6 @@
 const express = require("express");
 const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
+const createActivityLogService = require("../services/activityLogService");
 
 const VALID_ROLES = new Set(["cliente", "asesor", "admin"]);
 const VALID_DS160_STATES = new Set(["en_progreso", "por_revisar", "correccion", "aprobado"]);
@@ -27,9 +28,10 @@ function presentUser(row) {
   };
 }
 
-module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
+module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService, activityLogService }) {
   const router = express.Router();
   const processHistoryService = createProcessChangeHistoryService(pool);
+  const activeActivityLogService = activityLogService || createActivityLogService(pool);
   router.use(requireAdmin);
 
   async function logActivity(actorId, action, detail = "") {
@@ -42,6 +44,24 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
       console.error("ERROR ADMIN ACTIVITY:", error);
     }
   }
+
+  router.get("/activity-logs", async (req, res) => {
+    try {
+      const result = await activeActivityLogService.listLogs({
+        page: req.query.page,
+        limit: req.query.limit,
+        userId: req.query.userId,
+        action: req.query.action,
+        role: req.query.role,
+        from: req.query.from,
+        to: req.query.to,
+      });
+      return res.json(result);
+    } catch (error) {
+      console.error("ERROR ADMIN ACTIVITY LOGS:", error);
+      return res.status(500).json({ error: "No fue posible cargar los logs de actividad" });
+    }
+  });
 
   router.get("/dashboard", async (_req, res) => {
     try {
@@ -352,6 +372,22 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
         ],
       });
       await logActivity(req.auth.id_usuario, "Solicitud asignada", `Trámite ${tramiteId} → ${advisor.rows[0].nombre}`);
+      await activeActivityLogService.logActivity({
+        req,
+        actor: req.auth,
+        userId: result.rows[0].id_usuario,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "advisor.assigned",
+        entityType: "tramite",
+        entityId: tramiteId,
+        description: "Asesor asignado a trámite",
+        metadata: {
+          asesorId,
+          asesorNombre: advisor.rows[0].nombre,
+        },
+      });
       if (notificacionService && result.rows[0].id_usuario) {
         try {
           await notificacionService.crearNotificacion({

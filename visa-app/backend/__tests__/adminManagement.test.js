@@ -29,6 +29,49 @@ describe("admin management integration", () => {
       .expect(403);
   });
 
+  test("returns paginated activity logs to an admin", async () => {
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("FROM activity_logs")) {
+        return {
+          rows: [{
+            id: 12,
+            user_id: 4,
+            admin_id: null,
+            user_email: "client@test.dev",
+            role: "cliente",
+            action: "user.login",
+            entity_type: "usuario",
+            entity_id: "4",
+            description: "Login exitoso",
+            metadata: {},
+            ip_address: "127.0.0.1",
+            user_agent: "supertest",
+            created_at: "2026-09-01T10:00:00.000Z",
+            total: "1",
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/activity-logs?action=login&limit=25")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      page: 1,
+      limit: 25,
+      total: 1,
+      logs: [{ action: "user.login", userEmail: "client@test.dev" }],
+    });
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("FROM activity_logs"),
+      expect.arrayContaining(["%login%", 25, 0])
+    );
+  });
+
   test("returns dashboard metrics, workload, activity and attention from database queries", async () => {
     const { app } = createApp(async (sql) => {
       if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };

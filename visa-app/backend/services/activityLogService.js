@@ -65,6 +65,12 @@ function presentActivityLog(row) {
   };
 }
 
+function toPositiveInteger(value, fallback, max) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+  return max ? Math.min(parsed, max) : parsed;
+}
+
 module.exports = function createActivityLogService(pool) {
   async function ensureSchema() {
     await pool.query(`
@@ -138,14 +144,74 @@ module.exports = function createActivityLogService(pool) {
         ]
       );
 
-      return presentActivityLog(result.rows[0]);
+      return result.rows[0] ? presentActivityLog(result.rows[0]) : null;
     } catch (error) {
       console.error("ERROR ACTIVITY LOG:", error);
       return null;
     }
   }
 
-  return { ensureSchema, logActivity, presentActivityLog };
+  async function listLogs(filters = {}) {
+    await ensureSchema();
+
+    const page = toPositiveInteger(filters.page, 1);
+    const limit = toPositiveInteger(filters.limit, 50, 100);
+    const offset = (page - 1) * limit;
+    const where = [];
+    const values = [];
+
+    if (filters.userId) {
+      values.push(Number(filters.userId));
+      where.push(`(user_id = $${values.length} OR admin_id = $${values.length})`);
+    }
+
+    if (filters.action) {
+      values.push(`%${String(filters.action).trim()}%`);
+      where.push(`action ILIKE $${values.length}`);
+    }
+
+    if (filters.role) {
+      values.push(String(filters.role).trim());
+      where.push(`role = $${values.length}`);
+    }
+
+    if (filters.from) {
+      values.push(filters.from);
+      where.push(`created_at >= $${values.length}`);
+    }
+
+    if (filters.to) {
+      values.push(filters.to);
+      where.push(`created_at <= $${values.length}`);
+    }
+
+    values.push(limit);
+    const limitParam = values.length;
+    values.push(offset);
+    const offsetParam = values.length;
+
+    const result = await pool.query(
+      `SELECT id, user_id, admin_id, user_email, role, action, entity_type,
+              entity_id, description, metadata, ip_address, user_agent,
+              created_at, COUNT(*) OVER() AS total
+       FROM activity_logs
+       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+       ORDER BY created_at DESC, id DESC
+       LIMIT $${limitParam} OFFSET $${offsetParam}`,
+      values
+    );
+
+    const total = Number(result.rows[0]?.total) || 0;
+    return {
+      logs: result.rows.map(presentActivityLog),
+      page,
+      limit,
+      total,
+      pages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  return { ensureSchema, logActivity, listLogs, presentActivityLog };
 };
 
 module.exports.sanitizeMetadata = sanitizeMetadata;

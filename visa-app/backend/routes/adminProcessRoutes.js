@@ -193,7 +193,7 @@ async function notifyProcessUpdates(notificacionService, { processId, userId, pr
   })));
 }
 
-module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
+module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaReady, notificacionService, activityLogService }) {
   const router = express.Router();
   const processHistoryService = createProcessChangeHistoryService(pool);
 
@@ -415,6 +415,23 @@ module.exports = function createAdminProcessRoutes(pool, { requireAdmin, schemaR
           estado: refreshedProcess.estado,
           etapa_actual: refreshedProcess.etapa_actual,
           id_asesor: refreshedProcess.id_asesor,
+        },
+      });
+      await activityLogService?.logActivity({
+        req,
+        actor: req.auth,
+        userId: refreshedProcess.id_usuario || currentProcess.id_usuario,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "process.admin_updated",
+        entityType: "tramite",
+        entityId: processId,
+        description: "Trámite actualizado por administrador",
+        metadata: {
+          estado: refreshedProcess.estado,
+          etapaActual: refreshedProcess.etapa_actual,
+          asesorId: refreshedProcess.id_asesor,
         },
       });
 
