@@ -169,6 +169,64 @@ function mockAdminSession() {
       adminSettings = { ...adminSettings, ...JSON.parse(options.body || "{}") };
       return Promise.resolve({ ok: true, json: async () => ({ configuracion: adminSettings }) });
     }
+    if (String(url).includes("/admin/activity-logs")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          logs: [{
+            id: 1,
+            userId: 4,
+            adminId: null,
+            userEmail: "cliente@example.com",
+            role: "cliente",
+            action: "user.login",
+            entityType: "usuario",
+            entityId: "4",
+            description: "Login exitoso",
+            metadata: { metodo: "password" },
+            ipAddress: "127.0.0.1",
+            userAgent: "Vitest",
+            createdAt: "2026-09-01T10:00:00.000Z",
+          }],
+          page: 1,
+          pages: 1,
+          total: 1,
+          limit: 50,
+        }),
+      });
+    }
+    if (String(url).endsWith("/admin/email-reminders/run") && options.method === "POST") {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          encontrados: 2,
+          enviados: 0,
+          dryRun: 1,
+          omitidosDuplicado: 1,
+          errores: 0,
+          detalles: [
+            {
+              reminderType: "pending_document",
+              entityType: "documento",
+              entityId: "41",
+              recipientEmail: "demo@example.com",
+              status: "dry_run",
+              reason: "safe-mode",
+              error: "",
+            },
+            {
+              reminderType: "upcoming_interview",
+              entityType: "tramite",
+              entityId: "21",
+              recipientEmail: "carlos@example.com",
+              status: "skipped",
+              reason: "duplicate",
+              error: "",
+            },
+          ],
+        }),
+      });
+    }
     if (String(url).endsWith("/admin/documents")) {
       return Promise.resolve({
         ok: true,
@@ -450,10 +508,31 @@ describe("panel de administracion", () => {
       "Entrevistas",
       "Banco de preguntas",
       "Reportes",
+      "Actividad",
+      "Recordatorios",
       "Configuración",
     ]);
     expect(screen.getByRole("link", { name: /Mi perfil/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cerrar sesi/ })).toBeInTheDocument();
+  });
+
+  it("muestra la consulta de logs de actividad", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/activity-logs");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Logs de Actividad" })).toBeInTheDocument();
+    expect(await screen.findByText("user.login")).toBeInTheDocument();
+    expect(screen.getByText("cliente@example.com")).toBeInTheDocument();
+    await user.click(screen.getByText("Ver detalles"));
+    expect(screen.getByText("127.0.0.1")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/activity-logs?"),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: `Bearer ${adminSession.token}` }),
+      })
+    );
   });
 
   it("rechaza una sesión local fabricada con correo de administrador", async () => {
@@ -555,6 +634,7 @@ describe("panel de administracion", () => {
     ["/admin/questions", "Banco de preguntas"],
     ["/admin/processes", "Todas las solicitudes"],
     ["/admin/reports", "Reportes y Analíticas"],
+    ["/admin/email-reminders", "Recordatorios por email"],
     ["/admin/settings", "Configuración"],
     ["/admin/profile", "Mi Perfil"],
   ])("carga la ruta base %s", async (path, pageTitle) => {
@@ -596,6 +676,8 @@ describe("panel de administracion", () => {
       expect(screen.getByRole("heading", { name: "Nuevas solicitudes por mes" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Solicitudes por etapa" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Estado de Documentos" })).toBeInTheDocument();
+    } else if (path === "/admin/email-reminders") {
+      expect(screen.getByRole("button", { name: "Ejecutar recordatorios" })).toBeInTheDocument();
     } else if (path === "/admin/users") {
       expect(await screen.findByText("Cliente Prueba")).toBeInTheDocument();
       expect(screen.getByText("Laura Vásquez")).toBeInTheDocument();
@@ -636,6 +718,30 @@ describe("panel de administracion", () => {
     expect(createObjectURL).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:reporte-csv");
     clickSpy.mockRestore();
+  });
+
+  it("ejecuta recordatorios por email desde el panel admin", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/admin/email-reminders");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Recordatorios por email" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ejecutar recordatorios" }));
+
+    expect(await screen.findByText("Encontrados")).toBeInTheDocument();
+    expect(screen.getAllByText("Dry run").length).toBeGreaterThan(0);
+    expect(screen.getByText("Duplicados")).toBeInTheDocument();
+    expect(screen.getByText("demo@example.com")).toBeInTheDocument();
+    expect(screen.getByText("carlos@example.com")).toBeInTheDocument();
+    expect(screen.getByText("safe-mode")).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/email-reminders/run"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: `Bearer ${adminSession.token}` }),
+      })
+    );
   });
 
   it("permite filtrar y desactivar preguntas desde el panel", async () => {

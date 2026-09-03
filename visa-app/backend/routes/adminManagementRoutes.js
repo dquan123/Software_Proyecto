@@ -1,7 +1,11 @@
 const express = require("express");
+const bcrypt = require("bcrypt");
 const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
 const { parseAdminSearch, buildDashboardCohort } = require("../services/adminSearchFilter");
+const createActivityLogService = require("../services/activityLogService");
+const createEmailReminderService = require("../services/emailReminderService");
 
+const SALT_ROUNDS = 10;
 const VALID_ROLES = new Set(["cliente", "asesor", "admin"]);
 const VALID_DS160_STATES = new Set(["en_progreso", "por_revisar", "correccion", "aprobado"]);
 
@@ -29,9 +33,11 @@ function presentUser(row) {
   };
 }
 
-module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService }) {
+module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService, activityLogService, emailReminderService }) {
   const router = express.Router();
   const processHistoryService = createProcessChangeHistoryService(pool);
+  const activeActivityLogService = activityLogService || createActivityLogService(pool);
+  const activeEmailReminderService = emailReminderService || createEmailReminderService(pool);
   router.use(requireAdmin);
 
   async function logActivity(actorId, action, detail = "") {
@@ -46,6 +52,93 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
   }
 
   router.get("/dashboard", async (req, res) => {
+  router.get("/activity-logs", async (req, res) => {
+    try {
+      const result = await activeActivityLogService.listLogs({
+        page: req.query.page,
+        limit: req.query.limit,
+        userId: req.query.userId,
+        action: req.query.action,
+        role: req.query.role,
+        from: req.query.from,
+        to: req.query.to,
+      });
+      return res.json(result);
+    } catch (error) {
+      console.error("ERROR ADMIN ACTIVITY LOGS:", error);
+      return res.status(500).json({ error: "No fue posible cargar los logs de actividad" });
+    }
+  });
+
+  router.post("/email-reminders/run", async (req, res) => {
+    const summary = {
+      encontrados: 0,
+      enviados: 0,
+      dryRun: 0,
+      omitidosDuplicado: 0,
+      errores: 0,
+      detalles: [],
+    };
+
+    try {
+      const candidates = await activeEmailReminderService.listReminderCandidates();
+      summary.encontrados = candidates.length;
+
+      for (const candidate of candidates) {
+        try {
+          const result = await activeEmailReminderService.sendReminder(candidate);
+          if (result.status === "sent") summary.enviados += 1;
+          if (result.status === "dry_run") summary.dryRun += 1;
+          if (result.status === "skipped" && result.reason === "duplicate") summary.omitidosDuplicado += 1;
+          if (result.status === "failed") summary.errores += 1;
+          summary.detalles.push({
+            reminderType: candidate.reminder_type,
+            entityType: candidate.entity_type,
+            entityId: candidate.entity_id,
+            recipientEmail: candidate.recipient_email,
+            status: result.status,
+            reason: result.reason || "",
+            error: result.error || "",
+          });
+        } catch (error) {
+          summary.errores += 1;
+          summary.detalles.push({
+            reminderType: candidate.reminder_type,
+            entityType: candidate.entity_type,
+            entityId: candidate.entity_id,
+            recipientEmail: candidate.recipient_email,
+            status: "failed",
+            error: error.message || "No fue posible ejecutar el recordatorio",
+          });
+        }
+      }
+
+      await activeActivityLogService.logActivity({
+        req,
+        actor: req.auth,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "email_reminders.run",
+        entityType: "email_reminders",
+        description: "Ejecución de recordatorios por email",
+        metadata: {
+          encontrados: summary.encontrados,
+          enviados: summary.enviados,
+          dryRun: summary.dryRun,
+          omitidosDuplicado: summary.omitidosDuplicado,
+          errores: summary.errores,
+        },
+      });
+
+      return res.json(summary);
+    } catch (error) {
+      console.error("ERROR RUN EMAIL REMINDERS:", error);
+      return res.status(500).json({ error: "No fue posible ejecutar los recordatorios por email" });
+    }
+  });
+
+  router.get("/dashboard", async (_req, res) => {
     try {
       const filter = parseAdminSearch(req.query);
       const cohort = filter.active ? buildDashboardCohort(filter) : null;
@@ -211,8 +304,9 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     if (!VALID_ROLES.has(rol)) return res.status(400).json({ error: "Rol inválido" });
     try {
       await schemaReady;
+      const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
       const result = await pool.query(`INSERT INTO usuario (nombre, correo, contrasena, rol)
-        VALUES ($1, $2, $3, $4) RETURNING *`, [nombre.trim(), correo.trim().toLowerCase(), contrasena, rol]);
+        VALUES ($1, $2, $3, $4) RETURNING *`, [nombre.trim(), correo.trim().toLowerCase(), contrasenaHash, rol]);
       await logActivity(req.auth.id_usuario, "Usuario creado", `${nombre.trim()} · ${rol}`);
       res.status(201).json({ usuario: presentUser(result.rows[0]) });
     } catch (error) {
@@ -300,9 +394,10 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
     try {
       await schemaReady;
+      const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
       const result = await pool.query(`INSERT INTO usuario (nombre, correo, contrasena, rol)
         VALUES ($1, $2, $3, 'asesor') RETURNING *`,
-      [nombre.trim(), correo.trim().toLowerCase(), contrasena]);
+      [nombre.trim(), correo.trim().toLowerCase(), contrasenaHash]);
       await logActivity(req.auth.id_usuario, "Asesor creado", nombre.trim());
       res.status(201).json({ asesor: presentUser(result.rows[0]) });
     } catch (error) {
@@ -358,6 +453,22 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
         ],
       });
       await logActivity(req.auth.id_usuario, "Solicitud asignada", `Trámite ${tramiteId} → ${advisor.rows[0].nombre}`);
+      await activeActivityLogService.logActivity({
+        req,
+        actor: req.auth,
+        userId: result.rows[0].id_usuario,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "advisor.assigned",
+        entityType: "tramite",
+        entityId: tramiteId,
+        description: "Asesor asignado a trámite",
+        metadata: {
+          asesorId,
+          asesorNombre: advisor.rows[0].nombre,
+        },
+      });
       if (notificacionService && result.rows[0].id_usuario) {
         try {
           await notificacionService.crearNotificacion({

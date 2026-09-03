@@ -34,6 +34,8 @@ const AdminAssignments = lazy(() => import("./pages/admin/AdminAssignments"));
 const AdminDS160 = lazy(() => import("./pages/admin/AdminDS160"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
+const AdminActivityLogs = lazy(() => import("./pages/admin/AdminActivityLogs"));
+const AdminEmailReminders = lazy(() => import("./pages/admin/AdminEmailReminders"));
 
 // ── Apply saved theme on app start ──
 const savedTheme = localStorage.getItem("vg-theme");
@@ -120,6 +122,8 @@ function App() {
         <Route path="/admin/ds160"                    element={<RequireAdmin><AdminDS160 /></RequireAdmin>} />
         <Route path="/admin/profile"                  element={<RequireAdmin><AdminProfile /></RequireAdmin>} />
         <Route path="/admin/questions"                element={<RequireAdmin><AdminQuestions /></RequireAdmin>} />
+        <Route path="/admin/activity-logs"            element={<RequireAdmin><AdminActivityLogs /></RequireAdmin>} />
+        <Route path="/admin/email-reminders"          element={<RequireAdmin><AdminEmailReminders /></RequireAdmin>} />
         <Route path="/questions"                      element={<QuestionBank />} />
         <Route path="/documents"                      element={<Documents />} />
         <Route path="/ds160"                          element={<DS160Form />} />

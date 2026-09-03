@@ -3,6 +3,7 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const express = require("express");
+const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
 const cors = require("cors");
 const { createCorsOptions } = require("./config/cors");
@@ -18,6 +19,8 @@ const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = req
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
+const createActivityLogService = require("./services/activityLogService");
+const createEmailReminderService = require("./services/emailReminderService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 
@@ -33,6 +36,7 @@ if (process.env.NODE_ENV !== "production") {
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
+const SALT_ROUNDS = 10;
 
 // Conexión a PostgreSQL
 const pool = new Pool({
@@ -194,12 +198,21 @@ const testUsers = [
 async function seedTestUsers() {
   await userSchemaReady;
 
+  const hashedTestUsers = await Promise.all(
+    testUsers.map(async ([nombre, correo, contrasena, rol]) => [
+      nombre,
+      correo,
+      await bcrypt.hash(contrasena, SALT_ROUNDS),
+      rol,
+    ])
+  );
+
   await pool.query(
     `
       INSERT INTO usuario(nombre, correo, contrasena, rol)
       SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
       FROM (VALUES
-        ${testUsers.map((_, index) => {
+        ${hashedTestUsers.map((_, index) => {
           const base = index * 4;
           return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
         }).join(",\n        ")}
@@ -208,7 +221,7 @@ async function seedTestUsers() {
         SELECT 1 FROM usuario u WHERE u.correo = seed.correo
       )
     `,
-    testUsers.flat()
+    hashedTestUsers.flat()
   );
 }
 
@@ -256,6 +269,16 @@ interviewSessionService.ensureSchema().catch((error) => {
 const notificacionService = createNotificacionService(pool);
 notificacionService.ensureSchema().catch((error) => {
   console.error("ERROR NOTIFICACIONES SCHEMA:", error);
+});
+
+const activityLogService = createActivityLogService(pool);
+activityLogService.ensureSchema().catch((error) => {
+  console.error("ERROR ACTIVITY LOG SCHEMA:", error);
+});
+
+const emailReminderService = createEmailReminderService(pool);
+emailReminderService.ensureSchema().catch((error) => {
+  console.error("ERROR EMAIL REMINDER SCHEMA:", error);
 });
 
 async function notificarCambioEtapa(userId, etapa, titulo, mensaje) {
@@ -410,13 +433,13 @@ app.get("/", (req, res) => {
   res.send("Backend funcionando");
 });
 
-app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService }));
+app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService, activityLogService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
-app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService }));
-app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService }));
-app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService }));
+app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService, activityLogService }));
+app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService, activityLogService }));
+app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService, activityLogService, emailReminderService }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {
@@ -496,9 +519,10 @@ app.post("/register", async (req, res) => {
   try {
     await userSchemaReady;
     await tramiteSchemaReady;
+    const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
     const result = await pool.query(
       "INSERT INTO usuario(nombre, correo, contrasena, rol) VALUES($1,$2,$3,'cliente') RETURNING *",
-      [nombre, correo, contrasena]
+      [nombre, correo, contrasenaHash]
     );
 
     const usuario = presentLoginUser(result.rows[0]);
@@ -508,6 +532,17 @@ app.post("/register", async (req, res) => {
        ON CONFLICT DO NOTHING`,
       [usuario.id_usuario]
     );
+    await activityLogService.logActivity({
+      req,
+      actor: usuario,
+      userId: usuario.id_usuario,
+      userEmail: usuario.correo,
+      role: usuario.rol,
+      action: "user.registered",
+      entityType: "usuario",
+      entityId: usuario.id_usuario,
+      description: "Usuario registrado",
+    });
     res.json({
       message: "Usuario guardado en BD",
       data: usuario,
@@ -526,17 +561,42 @@ app.post("/login", async (req, res) => {
   try {
     await testUsersReady;
     const result = await pool.query(
-      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo
+      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo, contrasena
        FROM usuario
-       WHERE correo=$1 AND contrasena=$2`,
-      [correo, contrasena]
+       WHERE correo=$1`,
+      [correo]
     );
 
-    if (result.rows.length > 0) {
-      if (result.rows[0].activo === false) {
+    const usuarioRow = result.rows[0];
+    let passwordMatches = false;
+    if (usuarioRow) {
+      const storedIsHashed = /^\$2[aby]\$/.test(usuarioRow.contrasena || "");
+      if (storedIsHashed) {
+        passwordMatches = await bcrypt.compare(contrasena || "", usuarioRow.contrasena);
+      } else if (contrasena && usuarioRow.contrasena === contrasena) {
+        passwordMatches = true;
+        const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
+        await pool.query("UPDATE usuario SET contrasena = $1 WHERE id_usuario = $2", [contrasenaHash, usuarioRow.id_usuario]);
+      }
+    }
+
+    if (passwordMatches) {
+      if (usuarioRow.activo === false) {
         return res.status(403).json({ error: "Cuenta desactivada. Contacta a un administrador." });
       }
       const usuario = presentLoginUser(result.rows[0]);
+      await activityLogService.logActivity({
+        req,
+        actor: usuario,
+        userId: usuario.id_usuario,
+        userEmail: usuario.correo,
+        role: usuario.rol,
+        action: "user.login",
+        entityType: "usuario",
+        entityId: usuario.id_usuario,
+        description: "Login exitoso",
+      });
+      const usuario = presentLoginUser(usuarioRow);
       res.json({
         success: true,
         message: "Login exitoso",
@@ -574,6 +634,18 @@ app.post("/guardar-perfil", async (req, res) => {
     }
 
     const usuario = result.rows[0];
+    await activityLogService.logActivity({
+      req,
+      actor: usuario,
+      userId: usuario.id_usuario,
+      userEmail: usuario.correo,
+      role: usuario.rol || "cliente",
+      action: "profile.selected",
+      entityType: "usuario",
+      entityId: usuario.id_usuario,
+      description: "Perfil de visa guardado",
+      metadata: { perfil },
+    });
 
     // Avanzar tramite a etapa 2 si el progreso es menor a 17
     const tramiteResult = await pool.query(
@@ -641,6 +713,21 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
     }));
+    await activityLogService.logActivity({
+      req,
+      userId: documento.usuario_id,
+      userEmail: null,
+      role: "cliente",
+      action: "document.uploaded",
+      entityType: "documento",
+      entityId: documento.id,
+      description: "Documento cargado",
+      metadata: {
+        nombre: documento.nombre,
+        tipo: documento.tipo,
+        documentoKey: documento.documento_key,
+      },
+    });
 
     res.json({
       message: "Archivo subido correctamente",
@@ -818,7 +905,28 @@ app.put("/usuario-perfil", async (req, res) => {
     }
  
     const u = result.rows[0];
- 
+    await activityLogService.logActivity({
+      req,
+      actor: u,
+      userId: u.id_usuario,
+      userEmail: u.correo,
+      role: "cliente",
+      action: "profile.updated",
+      entityType: "usuario",
+      entityId: u.id_usuario,
+      description: "Perfil de usuario actualizado",
+      metadata: {
+        campos: Object.keys({
+          ...(nombre !== undefined ? { nombre: true } : {}),
+          ...(telefono !== undefined ? { telefono: true } : {}),
+          ...(ciudad !== undefined ? { ciudad: true } : {}),
+          ...(pais !== undefined ? { pais: true } : {}),
+          ...(notificacionesEmail !== undefined ? { notificacionesEmail: true } : {}),
+          ...(idioma !== undefined ? { idioma: true } : {}),
+        }),
+      },
+    });
+
     res.json({
       message: "Perfil actualizado correctamente",
       usuario: {
@@ -884,6 +992,21 @@ app.post("/documentos", upload.single("file"), async (req, res) => {
       documentoKey: documento_key?.trim() || null,
       storageKey: uploadedFile.key,
     }));
+    await activityLogService.logActivity({
+      req,
+      userId: documento.usuario_id,
+      userEmail: null,
+      role: "cliente",
+      action: "document.uploaded",
+      entityType: "documento",
+      entityId: documento.id,
+      description: "Documento cargado",
+      metadata: {
+        nombre: documento.nombre,
+        tipo: documento.tipo,
+        documentoKey: documento.documento_key,
+      },
+    });
 
     return res.status(201).json({
       message: "Documento guardado correctamente",
@@ -1086,6 +1209,16 @@ async function handleDs160Pdf(req, res) {
     if (formResult.rows.length === 0) {
       return res.status(404).json({ error: "Formulario DS-160 no encontrado" });
     }
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "ds160.pdf_exported",
+      entityType: "formulario_ds160",
+      entityId: formResult.rows[0].id_formulario,
+      description: "PDF DS-160 descargado",
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="ds160-${userId}.pdf"`);
@@ -1190,7 +1323,9 @@ app.post("/ds160", async (req, res) => {
 
     let result;
 
-    if (existingForm.rows.length === 0) {
+    const isNewForm = existingForm.rows.length === 0;
+
+    if (isNewForm) {
       // Crear nuevo formulario
       result = await pool.query(
         `INSERT INTO formulario_ds160 (id_usuario, datos, seccion_actual, completado, updated_at) 
@@ -1208,6 +1343,20 @@ app.post("/ds160", async (req, res) => {
         [JSON.stringify(datos || {}), seccion_actual || 1, completado || false, userId]
       );
     }
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "ds160.saved",
+      entityType: "formulario_ds160",
+      entityId: result.rows[0].id_formulario,
+      description: isNewForm ? "Formulario DS-160 creado" : "Formulario DS-160 actualizado",
+      metadata: {
+        seccionActual: result.rows[0].seccion_actual,
+        completado: result.rows[0].completado,
+      },
+    });
 
     // Si el DS-160 se marcó como completado, avanzar tramite a etapa 3
     if (completado) {
@@ -1327,6 +1476,22 @@ app.put("/tramite", async (req, res) => {
         );
       }
     }
+
+    await activityLogService.logActivity({
+      req,
+      userId,
+      userEmail: correo,
+      role: "cliente",
+      action: "process.updated",
+      entityType: "tramite",
+      entityId: tramite.id_tramite,
+      description: "Trámite actualizado",
+      metadata: {
+        estado: tramite.estado,
+        etapaActual: tramite.etapa_actual,
+        progreso: tramite.progreso,
+      },
+    });
 
     return res.json({
       message: "Trámite actualizado correctamente",

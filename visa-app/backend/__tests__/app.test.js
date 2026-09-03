@@ -1,5 +1,8 @@
 const request = require("supertest");
 const { Readable } = require("stream");
+const bcrypt = require("bcrypt");
+
+const LOGIN_TEST_PASSWORD_HASH = bcrypt.hashSync("1234", 10);
 
 const mockQuery = jest.fn();
 const mockConnect = jest.fn(() => Promise.resolve());
@@ -88,8 +91,8 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
-  if (normalized.includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
-    if (values?.[0] === "login@example.com" && values?.[1] === "1234") {
+  if (normalized.includes("FROM usuario WHERE correo=$1")) {
+    if (values?.[0] === "login@example.com") {
       return Promise.resolve({
         rows: [
           {
@@ -98,6 +101,7 @@ function defaultQueryHandler(sql, values) {
             correo: "login@example.com",
             perfil: "turismo_negocios",
             rol: "cliente",
+            contrasena: LOGIN_TEST_PASSWORD_HASH,
           },
         ],
       });
@@ -576,12 +580,8 @@ function createIntegrationFlowQueryHandler() {
       return { rows: [state.user] };
     }
 
-    if (normalized.includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
-      if (
-        state.user &&
-        values?.[0] === state.user.correo &&
-        values?.[1] === state.user.contrasena
-      ) {
+    if (normalized.includes("FROM usuario WHERE correo=$1")) {
+      if (state.user && values?.[0] === state.user.correo) {
         return { rows: [state.user] };
       }
       return { rows: [] };
@@ -770,6 +770,24 @@ describe("app endpoints", () => {
       nombre: "Nuevo Usuario",
       correo: "nuevo@example.com",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["user.registered", "usuario", "Usuario registrado"])
+    );
+  });
+
+  test("POST /register guarda la contraseña como hash bcrypt, no en texto plano", async () => {
+    await request(app).post("/register").send({
+      nombre: "Nuevo Usuario",
+      correo: "nuevo@example.com",
+      contrasena: "1234",
+    });
+
+    const insertCall = mockQuery.mock.calls.find(([sql]) => String(sql).includes("INSERT INTO usuario"));
+    const storedPassword = insertCall[1][2];
+    expect(storedPassword).not.toBe("1234");
+    expect(storedPassword).toMatch(/^\$2[aby]\$/);
+    expect(bcrypt.compareSync("1234", storedPassword)).toBe(true);
   });
 
   test("POST /register devuelve 500 cuando el correo ya existe", async () => {
@@ -864,13 +882,34 @@ describe("app endpoints", () => {
       correo: "login@example.com",
       rol: "cliente",
     });
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["user.login", "usuario", "Login exitoso"])
+    );
+  });
+
+  test("POST /login no falla si el log de actividad no se puede registrar", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).includes("INSERT INTO activity_logs")) {
+        return Promise.reject(new Error("activity log unavailable"));
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/login").send({
+      correo: "login@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
   });
 
   test("POST /login devuelve 403 cuando la cuenta esta desactivada", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
-        if (values?.[0] === "inactivo@example.com" && values?.[1] === "1234") {
-          return Promise.resolve({ rows: [{ id_usuario: 9, nombre: "Inactivo", correo: "inactivo@example.com", perfil: null, rol: "cliente", activo: false }] });
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
+        if (values?.[0] === "inactivo@example.com") {
+          return Promise.resolve({ rows: [{ id_usuario: 9, nombre: "Inactivo", correo: "inactivo@example.com", perfil: null, rol: "cliente", activo: false, contrasena: LOGIN_TEST_PASSWORD_HASH }] });
         }
         return Promise.resolve({ rows: [] });
       }
@@ -884,6 +923,32 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({ error: "Cuenta desactivada. Contacta a un administrador." });
+  });
+
+  test("POST /login migra una contraseña legada en texto plano a bcrypt al iniciar sesion con exito", async () => {
+    mockQuery.mockImplementation((sql, values) => {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
+        if (values?.[0] === "legado@example.com") {
+          return Promise.resolve({ rows: [{ id_usuario: 15, nombre: "Usuario Legado", correo: "legado@example.com", perfil: null, rol: "cliente", activo: true, contrasena: "1234" }] });
+        }
+        return Promise.resolve({ rows: [] });
+      }
+      if (String(sql).includes("UPDATE usuario SET contrasena")) {
+        return Promise.resolve({ rows: [] });
+      }
+      return defaultQueryHandler(sql, values);
+    });
+
+    const response = await request(app).post("/login").send({
+      correo: "legado@example.com",
+      contrasena: "1234",
+    });
+
+    expect(response.status).toBe(200);
+    const updateCall = mockQuery.mock.calls.find(([sql]) => String(sql).includes("UPDATE usuario SET contrasena"));
+    expect(updateCall).toBeDefined();
+    expect(updateCall[1][0]).toMatch(/^\$2[aby]\$/);
+    expect(updateCall[1][1]).toBe(15);
   });
 
   test("POST /login devuelve 401 con credenciales incorrectas", async () => {
@@ -917,7 +982,7 @@ describe("app endpoints", () => {
 
   test("POST /login devuelve 500 ante error simulado de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1 AND contrasena=$2")) {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
         return Promise.reject(new Error("connection timeout"));
       }
       return defaultQueryHandler(sql, values);
@@ -1015,6 +1080,10 @@ describe("app endpoints", () => {
     expect(response.headers["content-disposition"]).toBe('attachment; filename="ds160-17.pdf"');
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["ds160.pdf_exported", "formulario_ds160", "PDF DS-160 descargado"])
+    );
   });
 
   test("POST /ds160/pdf devuelve 400 cuando falta el correo", async () => {
@@ -1084,6 +1153,10 @@ describe("app endpoints", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO formulario_ds160"),
       [12, JSON.stringify(datos), 2, false]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["ds160.saved", "formulario_ds160", "Formulario DS-160 creado"])
     );
   });
 
@@ -1491,6 +1564,10 @@ describe("app endpoints", () => {
     expect(response.status).toBe(200);
     expect(response.body.documento).toMatchObject({ id: 41, documento_key: "passport" });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["document.uploaded", "documento", "Documento cargado"])
+    );
   });
 
   test("POST /upload acepta imagen JPG valida", async () => {
@@ -1607,6 +1684,10 @@ describe("app endpoints", () => {
       documento_key: null,
     });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO activity_logs"),
+      expect.arrayContaining(["document.uploaded", "documento", "Documento cargado"])
+    );
   });
 
   test("POST /upload devuelve 400 cuando usuario_id no es numerico", async () => {
