@@ -3,6 +3,8 @@ import { CalendarDays, Clock3, X } from "lucide-react";
 import { buildApiUrl } from "../config/api";
 import { getAdminHeaders } from "../utils/adminHeaders";
 import { AdminSearch, AdminTabs } from "./admin/AdminShared";
+import AdminAdvancedFilters from "./admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, advisorOptions, matchesAdminFilters } from "../utils/adminFilters";
 
 function getErrorMessage(data, fallback) { return data?.error || data?.message || fallback; }
 function getSessionResponses(session) { return Array.isArray(session?.responses) ? session.responses : []; }
@@ -35,6 +37,7 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const closeButtonRef = useRef(null);
   const triggerRef = useRef(null);
 
@@ -84,12 +87,13 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [selectedInterviewSession, showHeader]);
 
+  const advisors = useMemo(() => advisorOptions(interviewSessions.map((item) => ({ id: item.advisor_id, nombre: item.advisor_name }))), [interviewSessions]);
   const pendingInterviewSessions = useMemo(() => interviewSessions.filter((item) => item.status !== "reviewed"), [interviewSessions]);
   const visibleInterviewSessions = useMemo(() => interviewSessions.filter((item) => {
     const matchesStatus = statusFilter === "all" || (statusFilter === "pending" ? item.status !== "reviewed" : item.status === "reviewed");
     const searchable = `${item.user_name || ""} ${item.user_email || ""}`.toLowerCase();
-    return matchesStatus && searchable.includes(query.toLowerCase());
-  }), [interviewSessions, query, statusFilter]);
+    return matchesStatus && matchesAdminFilters(filters, item.created_at, item.advisor_id) && searchable.includes(query.toLowerCase());
+  }), [interviewSessions, query, statusFilter, filters]);
   const selectedResponses = useMemo(() => getSessionResponses(selectedInterviewSession), [selectedInterviewSession]);
   const selectedRecordedCount = selectedResponses.filter((response) => response.recorded).length;
 
@@ -109,7 +113,7 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(getErrorMessage(data, "No se pudo guardar la retroalimentación."));
-      setInterviewSessions((current) => current.map((item) => item.id === data.session.id ? data.session : item));
+      setInterviewSessions((current) => current.map((item) => item.id === data.session.id ? { ...item, ...data.session } : item));
       setSelectedInterviewSession(data.session);
       notify({ type: "success", title: "Retroalimentación guardada", message: "El usuario ya puede consultar las observaciones." });
     } catch (feedbackError) {
@@ -143,6 +147,9 @@ export default function InterviewReviewPanel({ showHeader = false, onToast }) {
       <header className="admin-page-heading"><div><h1>Entrevistas</h1><p>Monitor de citas y simuladores a nivel agencia.</p></div></header>
       <AdminTabs value={statusFilter} onChange={setStatusFilter} label="Filtrar entrevistas" items={[{ value: "all", label: "Próximas" }, { value: "pending", label: "Preparación pendiente" }, { value: "reviewed", label: "Completadas" }]} />
       <section className="admin-list-card">
+        <AdminAdvancedFilters value={filters} onChange={setFilters} advisors={advisors} status={statusFilter}
+          statuses={[{ value: "all", label: "Todas" }, { value: "pending", label: "Pendiente de revisión" }, { value: "reviewed", label: "Completada" }]}
+          onStatusChange={setStatusFilter} onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setStatusFilter("all"); setQuery(""); }} />
         <div className="admin-list-toolbar"><AdminSearch value={query} onChange={setQuery} placeholder="Buscar solicitante..." /></div>
         {sessionsLoading ? <p className="admin-table-state" role="status">Cargando entrevistas...</p> : sessionsError ? <div className="admin-table-state" role="alert"><p>{sessionsError}</p><button className="admin-secondary-button" type="button" onClick={() => fetchInterviewSessions()}>Reintentar</button></div> : (
           <div className="admin-table-wrap"><table className="admin-table admin-interviews-table"><thead><tr><th>Solicitante</th><th>Cita</th><th>Asesor</th><th>Preparación</th><th>Acción</th></tr></thead><tbody>{visibleInterviewSessions.length ? visibleInterviewSessions.map((item) => {

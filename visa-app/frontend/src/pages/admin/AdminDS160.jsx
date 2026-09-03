@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, advisorOptions, matchesAdminFilters } from "../../utils/adminFilters";
 import { AdminPageHeader, AdminResourceState, AdminSearch, AdminTabs } from "../../components/admin/AdminShared";
 import useAdminResource, { adminRequest } from "../../hooks/useAdminResource";
 
@@ -24,6 +26,7 @@ export default function AdminDS160() {
   const resource = useAdminResource("/admin/ds160");
   const [tab, setTab] = useState("todos");
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState(null);
   const [draftStatus, setDraftStatus] = useState("por_revisar");
@@ -31,10 +34,11 @@ export default function AdminDS160() {
   const closeButtonRef = useRef(null);
   const triggerRef = useRef(null);
   const forms = useMemo(() => resource.data?.formularios || [], [resource.data]);
+  const advisors = useMemo(() => advisorOptions(forms.map((item) => ({ id: item.asesor_id, nombre: item.asesor }))), [forms]);
   const filtered = useMemo(() => forms.filter((item) => {
     const searchable = `${item.nombre || ""} ${item.correo || ""} ${item.perfil || ""}`.toLowerCase();
-    return (tab === "todos" || item.estado_revision === tab) && searchable.includes(query.toLowerCase());
-  }), [forms, query, tab]);
+    return (tab === "todos" || item.estado_revision === tab) && matchesAdminFilters(filters, item.created_at, item.asesor_id) && searchable.includes(query.toLowerCase());
+  }), [forms, query, tab, filters]);
 
   useEffect(() => {
     if (!selected) return undefined;
@@ -75,6 +79,8 @@ export default function AdminDS160() {
       {notice && <p className="admin-feedback" role="status">{notice}</p>}
       <AdminTabs value={tab} onChange={setTab} items={states} label="Filtrar formularios" />
       <section className="admin-list-card">
+        <AdminAdvancedFilters value={filters} onChange={setFilters} advisors={advisors} status={tab} statuses={states} onStatusChange={setTab}
+          onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setTab("todos"); setQuery(""); }} />
         <div className="admin-list-toolbar"><AdminSearch value={query} onChange={setQuery} placeholder="Buscar formulario..." /></div>
         <AdminResourceState {...resource} isEmpty={!forms.length} empty="No hay formularios DS-160 registrados." />
         {!resource.isLoading && !resource.error && forms.length > 0 && (

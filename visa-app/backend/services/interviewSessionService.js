@@ -173,15 +173,18 @@ function createInterviewSessionService(pool) {
 
     if (status) {
       values.push(status);
-      where.push(`status = $${values.length}`);
+      where.push(`s.status = $${values.length}`);
     }
 
     const result = await pool.query(
-      `SELECT id, user_id, user_name, user_email, status, responses,
-              feedback, rating, created_at, reviewed_at
-       FROM interview_sessions
+      `SELECT s.id, s.user_id, s.user_name, s.user_email, s.status, s.responses,
+              s.feedback, s.rating, s.created_at, s.reviewed_at,
+              advisor.id_usuario AS advisor_id, advisor.nombre AS advisor_name
+       FROM interview_sessions s
+       LEFT JOIN tramite t ON t.id_usuario = s.user_id
+       LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
        ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-       ORDER BY created_at DESC, id DESC`,
+       ORDER BY s.created_at DESC, s.id DESC`,
       values
     );
 

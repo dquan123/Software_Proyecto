@@ -28,6 +28,7 @@ export default function useAdminResource(path) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [settledRequest, setSettledRequest] = useState(null);
   const retry = useCallback(() => {
     setIsLoading(true);
     setError("");
@@ -37,15 +38,16 @@ export default function useAdminResource(path) {
   useEffect(() => {
     const controller = new AbortController();
     adminRequest(path, { signal: controller.signal })
-      .then(setData)
+      .then((nextData) => { if (!controller.signal.aborted) { setData(nextData); setError(""); } })
       .catch((requestError) => {
-        if (requestError.name !== "AbortError") setError(requestError.message);
+        if (!controller.signal.aborted && requestError.name !== "AbortError") setError(requestError.message);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
+        if (!controller.signal.aborted) { setIsLoading(false); setSettledRequest({ path, revision }); }
       });
     return () => controller.abort();
   }, [path, revision]);
 
-  return { data, setData, isLoading, error, retry };
+  const isCurrentRequest = settledRequest?.path === path && settledRequest?.revision === revision;
+  return { data: isCurrentRequest ? data : null, setData, isLoading: isLoading || !isCurrentRequest, error: isCurrentRequest ? error : "", retry };
 }

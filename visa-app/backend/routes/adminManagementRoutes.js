@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
+const { parseAdminSearch, buildDashboardCohort } = require("../services/adminSearchFilter");
 const createActivityLogService = require("../services/activityLogService");
 const createEmailReminderService = require("../services/emailReminderService");
 
@@ -27,6 +28,7 @@ function presentUser(row) {
     asignados: number(row.asignados),
     pendientes: number(row.pendientes),
     asesor: row.asesor_nombre || null,
+    asesorId: row.asesor_id || null,
     actividad: row.last_activity || row.updated_at || null,
   };
 }
@@ -49,6 +51,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
   }
 
+  router.get("/dashboard", async (req, res) => {
   router.get("/activity-logs", async (req, res) => {
     try {
       const result = await activeActivityLogService.listLogs({
@@ -137,9 +140,12 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
 
   router.get("/dashboard", async (_req, res) => {
     try {
+      const filter = parseAdminSearch(req.query);
+      const cohort = filter.active ? buildDashboardCohort(filter) : null;
+      const query = (sql) => cohort ? pool.query(`${cohort.cte} ${sql}`, cohort.values) : pool.query(sql);
       await schemaReady;
       const [summary, workload, activity, attention] = await Promise.all([
-        pool.query(`SELECT
+        query(`SELECT
           (SELECT COUNT(*) FROM tramite WHERE estado NOT IN ('Completado', 'Aprobado')) AS solicitudes_activas,
           (SELECT COUNT(*) FROM tramite WHERE id_asesor IS NULL) AS sin_asignar,
           (SELECT COUNT(*) FROM usuario WHERE rol = 'asesor' AND activo = TRUE) AS asesores_activos,
@@ -150,13 +156,13 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
           (SELECT COUNT(*) FROM tramite WHERE estado IN ('Completado', 'Aprobado') OR progreso >= 100) AS solicitudes_completadas,
           (SELECT COALESCE(AVG(progreso), 0) FROM tramite) AS progreso_promedio,
           (SELECT COUNT(*) FROM tramite) AS solicitudes_total`),
-        pool.query(`SELECT u.id_usuario AS id, u.nombre,
+        query(`SELECT u.id_usuario AS id, u.nombre,
           COUNT(t.id_tramite) AS asignados,
           COUNT(t.id_tramite) FILTER (WHERE t.estado IN ('Pendiente','En proceso')) AS pendientes
           FROM usuario u LEFT JOIN tramite t ON t.id_asesor = u.id_usuario
           WHERE u.rol = 'asesor' AND u.activo = TRUE
           GROUP BY u.id_usuario, u.nombre ORDER BY asignados DESC, u.nombre LIMIT 4`),
-        pool.query(`SELECT actividad.id, actividad.accion, actividad.detalle,
+        query(`SELECT actividad.id, actividad.accion, actividad.detalle,
             actividad.created_at, actividad.actor, actividad.tipo, actividad.destino
           FROM (
             SELECT CONCAT('admin-', a.id) AS id, a.accion, a.detalle, a.created_at,
@@ -176,7 +182,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
             FROM interview_sessions i
           ) actividad
           ORDER BY actividad.created_at DESC LIMIT 10`),
-        pool.query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual,
+        query(`SELECT t.id_tramite AS id, t.estado, t.etapa_actual,
           applicant.nombre, applicant.correo, applicant.perfil,
           advisor.nombre AS asesor
           FROM tramite t JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
@@ -211,6 +217,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
         atencion: attention.rows,
       });
     } catch (error) {
+      if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
       console.error("ERROR ADMIN DASHBOARD:", error);
       res.status(500).json({ error: "No fue posible cargar el panel administrativo" });
     }
@@ -223,7 +230,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
         (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario) AS asignados,
         (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario
           AND assigned.estado IN ('Pendiente','En proceso')) AS pendientes,
-        advisor.nombre AS asesor_nombre,
+        advisor.nombre AS asesor_nombre, advisor.id_usuario AS asesor_id,
         COALESCE(client_process.updated_at, u.updated_at) AS last_activity
         FROM usuario u
         LEFT JOIN tramite client_process ON client_process.id_usuario = u.id_usuario
@@ -245,7 +252,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
         (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario) AS asignados,
         (SELECT COUNT(*) FROM tramite assigned WHERE assigned.id_asesor = u.id_usuario
           AND assigned.estado IN ('Pendiente','En proceso')) AS pendientes,
-        advisor.nombre AS asesor_nombre,
+        advisor.nombre AS asesor_nombre, advisor.id_usuario AS asesor_id,
         COALESCE(client_process.updated_at, u.updated_at) AS last_activity
         FROM usuario u
         LEFT JOIN tramite client_process ON client_process.id_usuario = u.id_usuario
@@ -486,7 +493,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     try {
       await schemaReady;
       const result = await pool.query(`SELECT f.id_formulario AS id, f.id_usuario, f.seccion_actual,
-        f.completado, f.estado_revision, f.feedback_revision, f.updated_at,
+        f.completado, f.estado_revision, f.feedback_revision, f.created_at, f.updated_at,
         u.nombre, u.correo, u.perfil, advisor.id_usuario AS asesor_id, advisor.nombre AS asesor
         FROM formulario_ds160 f JOIN usuario u ON u.id_usuario = f.id_usuario
         LEFT JOIN usuario advisor ON advisor.id_usuario = f.id_asesor

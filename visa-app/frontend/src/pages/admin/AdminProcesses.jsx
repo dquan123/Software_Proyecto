@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, matchesAdminFilters } from "../../utils/adminFilters";
 import { buildApiUrl } from "../../config/api";
 
 const STATES = ["En proceso", "Pendiente", "Aprobado", "Inactivo", "Completado"];
@@ -31,6 +33,7 @@ export default function AdminProcesses() {
   const [advisors, setAdvisors] = useState([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const [sortOrder, setSortOrder] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -70,12 +73,13 @@ export default function AdminProcesses() {
     const matches = processes.filter((process) => {
       const matchesStatus = statusFilter === "Todos" || process.estado === statusFilter;
       const searchable = `${process.solicitante.nombre} ${process.solicitante.correo} ${process.solicitante.perfil}`.toLocaleLowerCase("es");
-      return matchesStatus && (!normalizedQuery || searchable.includes(normalizedQuery));
+      return matchesStatus && matchesAdminFilters(filters, process.createdAt, process.asesor?.id) && (!normalizedQuery || searchable.includes(normalizedQuery));
     });
     return matches.sort((left, right) => sortOrder === "oldest" ? left.id - right.id : right.id - left.id);
-  }, [processes, query, sortOrder, statusFilter]);
+  }, [processes, query, sortOrder, statusFilter, filters]);
   const pageCount = Math.max(1, Math.ceil(filteredProcesses.length / 8));
-  const visibleProcesses = filteredProcesses.slice((page - 1) * 8, page * 8);
+  const currentPage = Math.min(page, pageCount);
+  const visibleProcesses = filteredProcesses.slice((currentPage - 1) * 8, currentPage * 8);
 
   const openManager = (process) => {
     setSelected(process);
@@ -128,10 +132,10 @@ export default function AdminProcesses() {
       <section className="admin-process-toolbar" aria-label="Buscar y filtrar trámites">
         <label className="admin-process-search">
           <Search size={22} aria-hidden="true" />
-          <span className="sr-only">Buscar solicitud</span>
+          <span className="visually-hidden">Buscar solicitud</span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); setPage(1); }}
             placeholder="Buscar por nombre o correo..."
           />
         </label>
@@ -144,14 +148,10 @@ export default function AdminProcesses() {
           </button>
         </div>
         {showFilters && (
-          <div className="admin-process-filter-panel">
-            <label>Estado
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option>Todos</option>
-                {STATES.map((status) => <option key={status}>{status}</option>)}
-              </select>
-            </label>
-          </div>
+          <AdminAdvancedFilters value={filters} onChange={(value) => { setFilters(value); setPage(1); }} advisors={advisors}
+            status={statusFilter} statuses={[{ value: "Todos", label: "Todos" }, ...STATES.map((value) => ({ value, label: value }))]}
+            onStatusChange={(value) => { setStatusFilter(value); setPage(1); }}
+            onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setStatusFilter("Todos"); setQuery(""); setPage(1); }} />
         )}
       </section>
 
@@ -186,9 +186,9 @@ export default function AdminProcesses() {
         <footer className="admin-process-results">
           <span>Mostrando {visibleProcesses.length} de {filteredProcesses.length} solicitudes</span>
           <div aria-label="Paginación">
-            <button type="button" aria-label="Página anterior" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft aria-hidden="true" /></button>
-            <span>{page} / {pageCount}</span>
-            <button type="button" aria-label="Página siguiente" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)}><ChevronRight aria-hidden="true" /></button>
+            <button type="button" aria-label="Página anterior" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft aria-hidden="true" /></button>
+            <span>{currentPage} / {pageCount}</span>
+            <button type="button" aria-label="Página siguiente" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight aria-hidden="true" /></button>
           </div>
         </footer>
       </section>
