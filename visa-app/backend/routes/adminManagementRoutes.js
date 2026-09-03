@@ -1,6 +1,7 @@
 const express = require("express");
 const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
 const createActivityLogService = require("../services/activityLogService");
+const createEmailReminderService = require("../services/emailReminderService");
 
 const VALID_ROLES = new Set(["cliente", "asesor", "admin"]);
 const VALID_DS160_STATES = new Set(["en_progreso", "por_revisar", "correccion", "aprobado"]);
@@ -28,10 +29,11 @@ function presentUser(row) {
   };
 }
 
-module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService, activityLogService }) {
+module.exports = function createAdminManagementRoutes(pool, { requireAdmin, schemaReady, notificacionService, activityLogService, emailReminderService }) {
   const router = express.Router();
   const processHistoryService = createProcessChangeHistoryService(pool);
   const activeActivityLogService = activityLogService || createActivityLogService(pool);
+  const activeEmailReminderService = emailReminderService || createEmailReminderService(pool);
   router.use(requireAdmin);
 
   async function logActivity(actorId, action, detail = "") {
@@ -60,6 +62,74 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     } catch (error) {
       console.error("ERROR ADMIN ACTIVITY LOGS:", error);
       return res.status(500).json({ error: "No fue posible cargar los logs de actividad" });
+    }
+  });
+
+  router.post("/email-reminders/run", async (req, res) => {
+    const summary = {
+      encontrados: 0,
+      enviados: 0,
+      dryRun: 0,
+      omitidosDuplicado: 0,
+      errores: 0,
+      detalles: [],
+    };
+
+    try {
+      const candidates = await activeEmailReminderService.listReminderCandidates();
+      summary.encontrados = candidates.length;
+
+      for (const candidate of candidates) {
+        try {
+          const result = await activeEmailReminderService.sendReminder(candidate);
+          if (result.status === "sent") summary.enviados += 1;
+          if (result.status === "dry_run") summary.dryRun += 1;
+          if (result.status === "skipped" && result.reason === "duplicate") summary.omitidosDuplicado += 1;
+          if (result.status === "failed") summary.errores += 1;
+          summary.detalles.push({
+            reminderType: candidate.reminder_type,
+            entityType: candidate.entity_type,
+            entityId: candidate.entity_id,
+            recipientEmail: candidate.recipient_email,
+            status: result.status,
+            reason: result.reason || "",
+            error: result.error || "",
+          });
+        } catch (error) {
+          summary.errores += 1;
+          summary.detalles.push({
+            reminderType: candidate.reminder_type,
+            entityType: candidate.entity_type,
+            entityId: candidate.entity_id,
+            recipientEmail: candidate.recipient_email,
+            status: "failed",
+            error: error.message || "No fue posible ejecutar el recordatorio",
+          });
+        }
+      }
+
+      await activeActivityLogService.logActivity({
+        req,
+        actor: req.auth,
+        adminId: req.auth?.id_usuario,
+        userEmail: req.auth?.correo,
+        role: req.auth?.rol || "admin",
+        action: "email_reminders.run",
+        entityType: "email_reminders",
+        description: "Ejecución de recordatorios por email",
+        metadata: {
+          encontrados: summary.encontrados,
+          enviados: summary.enviados,
+          dryRun: summary.dryRun,
+          omitidosDuplicado: summary.omitidosDuplicado,
+          errores: summary.errores,
+        },
+      });
+
+      return res.json(summary);
+    } catch (error) {
+      console.error("ERROR RUN EMAIL REMINDERS:", error);
+      return res.status(500).json({ error: "No fue posible ejecutar los recordatorios por email" });
     }
   });
 

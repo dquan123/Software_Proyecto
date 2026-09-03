@@ -30,6 +30,12 @@ export default function AdminActivityLogs() {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
 
+  const reload = () => {
+    setIsLoading(true);
+    setError("");
+    setRevision((value) => value + 1);
+  };
+
   const query = useMemo(() => {
     const params = new URLSearchParams();
     params.set("limit", String(pagination.limit));
@@ -43,8 +49,6 @@ export default function AdminActivityLogs() {
   useEffect(() => {
     const controller = new AbortController();
     const token = getToken();
-    setIsLoading(true);
-    setError("");
 
     fetch(buildApiUrl(`/admin/activity-logs?${query}`), {
       signal: controller.signal,
@@ -76,8 +80,16 @@ export default function AdminActivityLogs() {
   }, [query, revision]);
 
   const updateFilter = (key, value) => {
+    setIsLoading(true);
+    setError("");
     setFilters((current) => ({ ...current, [key]: value }));
     setPagination((current) => ({ ...current, page: 1 }));
+  };
+
+  const changePage = (page) => {
+    setIsLoading(true);
+    setError("");
+    setPagination((current) => ({ ...current, page }));
   };
 
   return (
@@ -86,7 +98,7 @@ export default function AdminActivityLogs() {
         title="Logs de Actividad"
         description="Registro administrativo de acciones importantes realizadas en la plataforma."
         action={(
-          <button className="admin-secondary-button" type="button" onClick={() => setRevision((value) => value + 1)}>
+          <button className="admin-secondary-button" type="button" onClick={reload}>
             <RefreshCcw aria-hidden="true" size={18} />
             Actualizar
           </button>
@@ -132,7 +144,7 @@ export default function AdminActivityLogs() {
       <AdminResourceState
         isLoading={isLoading}
         error={error}
-        retry={() => setRevision((value) => value + 1)}
+        retry={reload}
         isEmpty={!isLoading && !error && logs.length === 0}
         empty="No hay logs de actividad para los filtros seleccionados."
       />
@@ -178,8 +190,8 @@ export default function AdminActivityLogs() {
           <footer className="admin-pagination">
             <span>Página {pagination.page} de {pagination.pages}</span>
             <div>
-              <button type="button" disabled={pagination.page <= 1} onClick={() => setPagination((current) => ({ ...current, page: current.page - 1 }))}>Anterior</button>
-              <button type="button" disabled={pagination.page >= pagination.pages} onClick={() => setPagination((current) => ({ ...current, page: current.page + 1 }))}>Siguiente</button>
+              <button type="button" disabled={pagination.page <= 1} onClick={() => changePage(pagination.page - 1)}>Anterior</button>
+              <button type="button" disabled={pagination.page >= pagination.pages} onClick={() => changePage(pagination.page + 1)}>Siguiente</button>
             </div>
           </footer>
         </section>

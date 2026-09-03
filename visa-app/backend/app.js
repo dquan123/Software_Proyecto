@@ -428,7 +428,7 @@ app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
 app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService, activityLogService }));
 app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService, activityLogService }));
-app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService, activityLogService }));
+app.use("/admin", createAdminManagementRoutes(pool, { requireAdmin, schemaReady: adminSchemaReady, notificacionService, activityLogService, emailReminderService }));
 
 // ENDPOINT: validar sesión (verifica si el usuario existe en BD)
 app.get("/validar-sesion", requireSession, (req, res) => {
@@ -900,7 +900,7 @@ app.put("/usuario-perfil", async (req, res) => {
         }),
       },
     });
-  
+
     res.json({
       message: "Perfil actualizado correctamente",
       usuario: {
@@ -1331,7 +1331,7 @@ app.post("/ds160", async (req, res) => {
         completado: result.rows[0].completado,
       },
     });
- 
+
     // Si el DS-160 se marcó como completado, avanzar tramite a etapa 3
     if (completado) {
       const tramiteDs = await pool.query(
