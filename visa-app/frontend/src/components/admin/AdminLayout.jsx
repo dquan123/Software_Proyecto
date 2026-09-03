@@ -13,6 +13,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  MailCheck,
   MessageSquareText,
   Menu,
   Moon,
@@ -42,6 +43,7 @@ const adminNavItems = [
   { label: "Banco de preguntas", path: "/admin/questions", icon: <BookOpenText size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Reportes", path: "/admin/reports", icon: <BarChart3 size={20} strokeWidth={2} aria-hidden="true" /> },
   { label: "Actividad", path: "/admin/activity-logs", icon: <Activity size={20} strokeWidth={2} aria-hidden="true" /> },
+  { label: "Recordatorios", path: "/admin/email-reminders", icon: <MailCheck size={20} strokeWidth={2} aria-hidden="true" /> },
 ];
 
 const ADMIN_SIDEBAR_COLLAPSED_KEY = "vg-admin-sidebar-collapsed";

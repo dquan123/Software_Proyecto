@@ -22,6 +22,19 @@ function actorLabel(log) {
   return "Sistema";
 }
 
+function hasDetails(log) {
+  return Boolean(
+    log.ipAddress ||
+    log.userAgent ||
+    (log.metadata && Object.keys(log.metadata).length > 0)
+  );
+}
+
+function formatMetadata(metadata) {
+  if (!metadata || Object.keys(metadata).length === 0) return "";
+  return JSON.stringify(metadata, null, 2);
+}
+
 export default function AdminActivityLogs() {
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 50 });
@@ -166,6 +179,7 @@ export default function AdminActivityLogs() {
                   <th>Acción</th>
                   <th>Entidad</th>
                   <th>Descripción</th>
+                  <th>Detalles</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,6 +196,30 @@ export default function AdminActivityLogs() {
                       <small>{log.entityId || "Sin ID"}</small>
                     </td>
                     <td>{log.description || "Sin descripción"}</td>
+                    <td>
+                      {hasDetails(log) ? (
+                        <details className="admin-log-details">
+                          <summary>Ver detalles</summary>
+                          <dl>
+                            {log.ipAddress && (
+                              <div>
+                                <dt>IP</dt>
+                                <dd>{log.ipAddress}</dd>
+                              </div>
+                            )}
+                            {log.userAgent && (
+                              <div>
+                                <dt>User agent</dt>
+                                <dd>{log.userAgent}</dd>
+                              </div>
+                            )}
+                          </dl>
+                          {formatMetadata(log.metadata) && <pre>{formatMetadata(log.metadata)}</pre>}
+                        </details>
+                      ) : (
+                        "Sin detalles"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
