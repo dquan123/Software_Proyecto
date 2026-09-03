@@ -1,8 +1,10 @@
 const express = require("express");
+const bcrypt = require("bcrypt");
 const createProcessChangeHistoryService = require("../services/processChangeHistoryService");
 const createActivityLogService = require("../services/activityLogService");
 const createEmailReminderService = require("../services/emailReminderService");
 
+const SALT_ROUNDS = 10;
 const VALID_ROLES = new Set(["cliente", "asesor", "admin"]);
 const VALID_DS160_STATES = new Set(["en_progreso", "por_revisar", "correccion", "aprobado"]);
 
@@ -295,8 +297,9 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     if (!VALID_ROLES.has(rol)) return res.status(400).json({ error: "Rol inválido" });
     try {
       await schemaReady;
+      const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
       const result = await pool.query(`INSERT INTO usuario (nombre, correo, contrasena, rol)
-        VALUES ($1, $2, $3, $4) RETURNING *`, [nombre.trim(), correo.trim().toLowerCase(), contrasena, rol]);
+        VALUES ($1, $2, $3, $4) RETURNING *`, [nombre.trim(), correo.trim().toLowerCase(), contrasenaHash, rol]);
       await logActivity(req.auth.id_usuario, "Usuario creado", `${nombre.trim()} · ${rol}`);
       res.status(201).json({ usuario: presentUser(result.rows[0]) });
     } catch (error) {
@@ -384,9 +387,10 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
     try {
       await schemaReady;
+      const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
       const result = await pool.query(`INSERT INTO usuario (nombre, correo, contrasena, rol)
         VALUES ($1, $2, $3, 'asesor') RETURNING *`,
-      [nombre.trim(), correo.trim().toLowerCase(), contrasena]);
+      [nombre.trim(), correo.trim().toLowerCase(), contrasenaHash]);
       await logActivity(req.auth.id_usuario, "Asesor creado", nombre.trim());
       res.status(201).json({ asesor: presentUser(result.rows[0]) });
     } catch (error) {

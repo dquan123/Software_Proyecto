@@ -3,6 +3,7 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const express = require("express");
+const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
 const cors = require("cors");
 const { createCorsOptions } = require("./config/cors");
@@ -35,6 +36,7 @@ if (process.env.NODE_ENV !== "production") {
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
+const SALT_ROUNDS = 10;
 
 // Conexión a PostgreSQL
 const pool = new Pool({
@@ -196,12 +198,21 @@ const testUsers = [
 async function seedTestUsers() {
   await userSchemaReady;
 
+  const hashedTestUsers = await Promise.all(
+    testUsers.map(async ([nombre, correo, contrasena, rol]) => [
+      nombre,
+      correo,
+      await bcrypt.hash(contrasena, SALT_ROUNDS),
+      rol,
+    ])
+  );
+
   await pool.query(
     `
       INSERT INTO usuario(nombre, correo, contrasena, rol)
       SELECT seed.nombre, seed.correo, seed.contrasena, seed.rol
       FROM (VALUES
-        ${testUsers.map((_, index) => {
+        ${hashedTestUsers.map((_, index) => {
           const base = index * 4;
           return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
         }).join(",\n        ")}
@@ -210,7 +221,7 @@ async function seedTestUsers() {
         SELECT 1 FROM usuario u WHERE u.correo = seed.correo
       )
     `,
-    testUsers.flat()
+    hashedTestUsers.flat()
   );
 }
 
@@ -508,9 +519,10 @@ app.post("/register", async (req, res) => {
   try {
     await userSchemaReady;
     await tramiteSchemaReady;
+    const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
     const result = await pool.query(
       "INSERT INTO usuario(nombre, correo, contrasena, rol) VALUES($1,$2,$3,'cliente') RETURNING *",
-      [nombre, correo, contrasena]
+      [nombre, correo, contrasenaHash]
     );
 
     const usuario = presentLoginUser(result.rows[0]);
@@ -549,14 +561,27 @@ app.post("/login", async (req, res) => {
   try {
     await testUsersReady;
     const result = await pool.query(
-      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo
+      `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo, contrasena
        FROM usuario
-       WHERE correo=$1 AND contrasena=$2`,
-      [correo, contrasena]
+       WHERE correo=$1`,
+      [correo]
     );
 
-    if (result.rows.length > 0) {
-      if (result.rows[0].activo === false) {
+    const usuarioRow = result.rows[0];
+    let passwordMatches = false;
+    if (usuarioRow) {
+      const storedIsHashed = /^\$2[aby]\$/.test(usuarioRow.contrasena || "");
+      if (storedIsHashed) {
+        passwordMatches = await bcrypt.compare(contrasena || "", usuarioRow.contrasena);
+      } else if (contrasena && usuarioRow.contrasena === contrasena) {
+        passwordMatches = true;
+        const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
+        await pool.query("UPDATE usuario SET contrasena = $1 WHERE id_usuario = $2", [contrasenaHash, usuarioRow.id_usuario]);
+      }
+    }
+
+    if (passwordMatches) {
+      if (usuarioRow.activo === false) {
         return res.status(403).json({ error: "Cuenta desactivada. Contacta a un administrador." });
       }
       const usuario = presentLoginUser(result.rows[0]);
@@ -571,6 +596,7 @@ app.post("/login", async (req, res) => {
         entityId: usuario.id_usuario,
         description: "Login exitoso",
       });
+      const usuario = presentLoginUser(usuarioRow);
       res.json({
         success: true,
         message: "Login exitoso",
