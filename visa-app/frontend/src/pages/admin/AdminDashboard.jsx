@@ -1,5 +1,8 @@
 import { BriefcaseBusiness, CheckCircle2, ClipboardCheck, FileClock, Gauge, MessageSquareText, UserRoundPlus, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS } from "../../utils/adminFilters";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { AdminGroupedBarChart } from "../../components/admin/AdminCharts";
 import { AdminResourceState } from "../../components/admin/AdminShared";
@@ -25,7 +28,15 @@ function formatActivityDate(value) {
 }
 
 export default function AdminDashboard() {
-  const resource = useAdminResource("/admin/dashboard");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
+  const [status, setStatus] = useState("");
+  const params = new URLSearchParams();
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.advisor) params.set("advisor", filters.advisor);
+  if (status) params.set("status", status);
+  const resource = useAdminResource(`/admin/dashboard${params.size ? `?${params}` : ""}`);
+  const advisors = useAdminResource("/admin/advisors");
   const candidate = resource.data;
   const data = candidate?.resumen
     && Array.isArray(candidate.cargaAsesores)
@@ -37,8 +48,14 @@ export default function AdminDashboard() {
 
   return <AdminLayout>
     <section className="admin-hero"><h1>Panel de Administración Global</h1><p>Supervisa el rendimiento, la carga de trabajo y el estado general de la plataforma.</p></section>
+    <AdminAdvancedFilters value={filters} onChange={setFilters} advisors={advisors.data?.asesores || []}
+      dateLabel="Fecha de creación de la solicitud (UTC)" status={status}
+      statuses={[{ value: "", label: "Todos" }, ...["En proceso", "Pendiente", "Aprobado", "Inactivo", "Completado"].map((value) => ({ value, label: value }))]}
+      onStatusChange={setStatus} onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setStatus(""); }} />
+    <p>Los indicadores y la actividad se limitan a las solicitudes seleccionadas. Al filtrar, se omiten los eventos administrativos sin solicitud asociada.</p>
+    {advisors.error && <p role="alert">No se pudieron cargar los asesores. <button type="button" onClick={advisors.retry}>Reintentar asesores</button></p>}
     <AdminResourceState {...resource} />
-    {data && <>
+    {data && !resource.isLoading && !resource.error && <>
       <section className="admin-stats-grid" aria-label="Indicadores administrativos">
         {headlineStats.map(([label, key, path, tone, icon]) => <article className={`admin-stat-card admin-stat-card--${tone}`} key={key}><span className="admin-stat-card__icon">{icon}</span><strong>{data.resumen[key]}</strong><h3>{label}</h3><Link to={path}>Ver detalles →</Link></article>)}
       </section>

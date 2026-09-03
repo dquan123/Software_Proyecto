@@ -1,4 +1,5 @@
 const express = require("express");
+const { parseAdminSearch, buildAdminCohort } = require("../services/adminSearchFilter");
 
 const ALLOWED_PERIODS = new Set([30, 90, 365]);
 
@@ -99,15 +100,18 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
 
   router.get("/processes", requireAdmin, async (req, res) => {
     try {
-      const filter = buildDateFilter(req.query);
-      const where = filter.clause ? `WHERE ${filter.clause}` : "";
-      const advisorFilter = buildDateFilter(req.query, "t.created_at");
-      const monthlyFilter = buildDateFilter(req.query, "t.created_at");
-      const documentFilter = buildDateFilter(req.query, "d.creado_en");
+      const search = parseAdminSearch(req.query);
+      const cohort = buildAdminCohort(search);
+      const filter = { ...search, values: cohort.values };
+      const where = "WHERE id_tramite IN (SELECT id_tramite FROM filtered_processes)";
+      const advisorFilter = { clause: "t.id_tramite IN (SELECT id_tramite FROM filtered_processes)", values: cohort.values };
+      const monthlyFilter = advisorFilter;
+      const documentFilter = { clause: search.active ? "d.usuario_id IN (SELECT id_usuario FROM filtered_processes)" : "", values: cohort.values };
+      const query = (sql, values) => pool.query(`${cohort.cte} ${sql}`, values);
       const [statusResult, stageResult, summaryResult, advisorResult, monthlyResult, documentResult] = await Promise.all([
-        pool.query(`SELECT estado AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY estado ORDER BY estado`, filter.values),
-        pool.query(`SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY etapa_actual ORDER BY etapa_actual`, filter.values),
-        pool.query(`
+        query(`SELECT estado AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY estado ORDER BY estado`, filter.values),
+        query(`SELECT etapa_actual AS label, COUNT(*) AS total FROM tramite ${where} GROUP BY etapa_actual ORDER BY etapa_actual`, filter.values),
+        query(`
           SELECT
             COUNT(*) AS total,
             COALESCE(AVG(progreso), 0) AS progreso_promedio,
@@ -115,12 +119,14 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
             COUNT(*) FILTER (WHERE id_asesor IS NULL) AS sin_asignar,
             COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400)
               FILTER (WHERE estado = 'Aprobado' OR progreso >= 100), 0) AS tiempo_promedio_dias,
-            (SELECT COUNT(*) FROM documentos WHERE estado IN ('pending', 'review')) +
-              (SELECT COUNT(*) FROM formulario_ds160 WHERE estado_revision = 'por_revisar') AS revisiones_pendientes
+            (SELECT COUNT(*) FROM documentos WHERE estado IN ('pending', 'review')
+              ${search.active ? "AND usuario_id IN (SELECT id_usuario FROM filtered_processes)" : ""}) +
+              (SELECT COUNT(*) FROM formulario_ds160 WHERE estado_revision = 'por_revisar'
+              ${search.active ? "AND id_usuario IN (SELECT id_usuario FROM filtered_processes)" : ""}) AS revisiones_pendientes
           FROM tramite
           ${where}
         `, filter.values),
-        pool.query(`
+        query(`
           SELECT
             advisor.id_usuario AS id,
             advisor.nombre,
@@ -132,14 +138,15 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
           LEFT JOIN tramite t ON t.id_asesor = advisor.id_usuario
             ${advisorFilter.clause ? `AND ${advisorFilter.clause}` : ""}
           WHERE advisor.rol = 'asesor'
+            ${search.active ? "AND advisor.id_usuario IN (SELECT id_asesor FROM filtered_processes)" : ""}
           GROUP BY advisor.id_usuario, advisor.nombre
           ORDER BY asignados DESC, advisor.nombre ASC
           LIMIT 6
         `, advisorFilter.values),
-        pool.query(`WITH months AS (
+        query(`, months AS (
           SELECT generate_series(
-            date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
-            date_trunc('month', CURRENT_DATE),
+            COALESCE((SELECT date_trunc('month', MIN(created_at)) FROM filtered_processes), date_trunc('month', CURRENT_DATE)),
+            COALESCE((SELECT date_trunc('month', MAX(created_at)) FROM filtered_processes), date_trunc('month', CURRENT_DATE)),
             INTERVAL '1 month'
           ) AS month
         )
@@ -148,7 +155,7 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
         LEFT JOIN tramite t ON date_trunc('month', t.created_at) = months.month
           ${monthlyFilter.clause ? `AND ${monthlyFilter.clause}` : ""}
         GROUP BY months.month ORDER BY months.month`, monthlyFilter.values),
-        pool.query(`SELECT d.estado AS label, COUNT(*) AS total
+        query(`SELECT d.estado AS label, COUNT(*) AS total
           FROM documentos d ${documentFilter.clause ? `WHERE ${documentFilter.clause}` : ""}
           GROUP BY d.estado ORDER BY d.estado`, documentFilter.values),
       ]);
@@ -169,7 +176,7 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
         tiempoPromedioDias: Number(summary.tiempo_promedio_dias) || 0,
         revisionesPendientes: Number(summary.revisiones_pendientes) || 0,
         tasaExito: total ? Math.round((completed / total) * 100) : 0,
-        periodo: { days: filter.days, from: filter.from, to: filter.to },
+        periodo: { days: filter.days, from: filter.from || null, to: filter.to || null },
         cargaAsesores: advisorResult.rows.map((row) => ({
           id: row.id,
           nombre: row.nombre,
@@ -186,16 +193,15 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
 
   router.get("/processes.csv", requireAdmin, async (req, res) => {
     try {
-      const filter = buildDateFilter(req.query, "t.created_at");
-      const where = filter.clause ? `WHERE ${filter.clause}` : "";
+      const filter = buildAdminCohort(parseAdminSearch(req.query));
       const result = await pool.query(`
+        ${filter.cte}
         SELECT t.id_tramite, applicant.nombre AS solicitante, applicant.correo,
           applicant.perfil, t.estado, t.etapa_actual, t.progreso,
           advisor.nombre AS asesor, t.created_at, t.updated_at
-        FROM tramite t
+        FROM filtered_processes t
         JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
         LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
-        ${where}
         ORDER BY t.created_at DESC, t.id_tramite DESC
       `, filter.values);
 

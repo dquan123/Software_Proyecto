@@ -82,7 +82,7 @@ describe("admin authorization and metrics", () => {
       if (sql.includes("GROUP BY etapa_actual")) return { rows: [{ label: "Documentos", total: "2" }] };
       if (sql.includes("progreso_promedio")) return { rows: [{ total: "5", progreso_promedio: "46.4", completados: "1", sin_asignar: "2", tiempo_promedio_dias: "14", revisiones_pendientes: "4" }] };
       if (sql.includes("advisor.rol = 'asesor'")) return { rows: [{ id: 7, nombre: "Laura", asignados: "3", pendientes: "2" }] };
-      if (sql.includes("WITH months AS")) return { rows: [{ label: "2026-08", total: "2" }] };
+      if (sql.includes("months AS")) return { rows: [{ label: "2026-08", total: "2" }] };
       if (sql.includes("FROM documentos d")) return { rows: [{ label: "approved", total: "3" }] };
       return { rows: [] };
     });
@@ -148,7 +148,7 @@ describe("admin authorization and metrics", () => {
       ["2026-07-01", "2026-07-31"]
     );
     expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("d.creado_en < ($2::date + INTERVAL '1 day')"),
+      expect.stringContaining("d.usuario_id IN (SELECT id_usuario FROM filtered_processes)"),
       ["2026-07-01", "2026-07-31"]
     );
   });

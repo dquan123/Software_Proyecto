@@ -65,9 +65,13 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
         d.actualizado_en,
         d.storage_key,
         u.nombre AS usuario_nombre,
-        u.correo AS usuario_correo
+        u.correo AS usuario_correo,
+        advisor.id_usuario AS asesor_id,
+        advisor.nombre AS asesor_nombre
       FROM documentos d
       LEFT JOIN usuario u ON u.id_usuario = d.usuario_id
+      LEFT JOIN tramite t ON t.id_usuario = d.usuario_id
+      LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
       ORDER BY d.actualizado_en DESC, d.creado_en DESC
     `);
 
@@ -107,9 +111,13 @@ function createAdminDocumentService(pool, { schemaReady = Promise.resolve() } = 
         SELECT
           updated.*,
           u.nombre AS usuario_nombre,
-          u.correo AS usuario_correo
+          u.correo AS usuario_correo,
+          advisor.id_usuario AS asesor_id,
+          advisor.nombre AS asesor_nombre
         FROM updated
         LEFT JOIN usuario u ON u.id_usuario = updated.usuario_id
+        LEFT JOIN tramite t ON t.id_usuario = updated.usuario_id
+        LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
       `,
       values
     );

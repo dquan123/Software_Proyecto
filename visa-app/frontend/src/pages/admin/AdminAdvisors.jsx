@@ -1,6 +1,8 @@
 import { Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, advisorOptions, matchesAdminFilters } from "../../utils/adminFilters";
 import { AdminPageHeader, AdminResourceState, AdminSearch } from "../../components/admin/AdminShared";
 import useAdminResource, { adminRequest } from "../../hooks/useAdminResource";
 
@@ -8,14 +10,15 @@ export default function AdminAdvisors() {
   const resource = useAdminResource("/admin/advisors");
   const [query, setQuery] = useState("");
   const [availability, setAvailability] = useState("all");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ nombre: "", correo: "", contrasena: "" });
   const [notice, setNotice] = useState("");
   const advisors = useMemo(() => resource.data?.asesores || [], [resource.data]);
   const filtered = useMemo(() => advisors.filter((item) => {
     const available = item.disponible && item.activo;
-    return (availability === "all" || (availability === "available" ? available : !available)) && `${item.nombre} ${item.correo}`.toLowerCase().includes(query.toLowerCase());
-  }), [advisors, availability, query]);
+    return (availability === "all" || (availability === "available" ? available : !available)) && matchesAdminFilters(filters, item.createdAt, item.id) && `${item.nombre} ${item.correo}`.toLowerCase().includes(query.toLowerCase());
+  }), [advisors, availability, query, filters]);
   const average = advisors.length ? Math.round(advisors.reduce((sum, item) => sum + item.asignados, 0) / advisors.length) : 0;
   const teamLoad = advisors.length ? Math.round(advisors.reduce((sum, item) => sum + item.asignados / item.capacidad, 0) / advisors.length * 100) : 0;
   const loadLabel = teamLoad >= 90 ? "Alta" : teamLoad >= 75 ? "Moderada" : "Óptima";
@@ -45,6 +48,8 @@ export default function AdminAdvisors() {
   return <AdminLayout>
     <AdminPageHeader title="Asesores" description="Gestiona el equipo de asesores, su carga de trabajo y disponibilidad." action={<button className="admin-primary-button admin-primary-button--navy" type="button" onClick={() => setModal(true)}><Plus aria-hidden="true" />Nuevo asesor</button>} />
     {notice && <p className="admin-feedback" role="status">{notice}</p>}
+    <AdminAdvancedFilters value={filters} onChange={setFilters} advisors={advisorOptions(advisors)} allowUnassigned={false}
+      onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setQuery(""); setAvailability("all"); }} />
     <section className="admin-summary-grid admin-advisor-summary"><article><small>Total asesores</small><strong>{advisors.length}</strong></article><article><small>Casos promedio</small><strong>{average}</strong></article><article className="admin-summary-wide"><div><small>Carga general del equipo</small><strong>{loadLabel}</strong></div><span className="admin-team-load" aria-label={`Carga general ${teamLoad}%`}><i style={{ width: `${Math.min(100, teamLoad)}%` }} /></span></article></section>
     <section className="admin-list-card"><div className="admin-list-toolbar"><AdminSearch value={query} onChange={setQuery} placeholder="Buscar asesor..." /><label className="admin-filter-select"><span>Disponibilidad</span><select value={availability} onChange={(event) => setAvailability(event.target.value)}><option value="all">Todos</option><option value="available">Disponibles</option><option value="unavailable">No disponibles</option></select></label></div><AdminResourceState {...resource} isEmpty={!advisors.length} empty="No hay asesores registrados." />
       {!resource.isLoading && !resource.error && (filtered.length ? <div className="admin-advisor-grid">{filtered.map((advisor) => <article className="admin-advisor-card" key={advisor.id}><header><b>{advisor.nombre.slice(0,2).toUpperCase()}</b><div><h3>{advisor.nombre}</h3><span>{advisor.correo}</span></div></header><dl><div><dt>Casos asignados</dt><dd>{advisor.asignados}</dd></div><div><dt>Acciones pendientes</dt><dd>{advisor.pendientes}</dd></div></dl><footer><span className={`admin-status admin-status--${advisor.disponible && advisor.activo ? "approved" : "correction"}`}>{advisor.disponible && advisor.activo ? "Disponible" : "No disponible"}</span><button type="button" onClick={() => toggleAvailability(advisor)}>Cambiar estado</button></footer></article>)}</div> : advisors.length > 0 && <div className="admin-resource-state">No hay asesores que coincidan con los filtros.</div>)}

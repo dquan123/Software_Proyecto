@@ -376,7 +376,7 @@ describe("panel de administracion", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Panel de Administración Global" })).toBeInTheDocument();
     expect(await screen.findByText("Solicitudes activas")).toBeInTheDocument();
-    expect(screen.getByText("Sin asignar")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sin asignar" })).toBeInTheDocument();
     expect(screen.getByText("Asesores activos")).toBeInTheDocument();
     expect(screen.getByText("DS-160 pendientes")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Métricas adicionales" })).toBeInTheDocument();
@@ -593,7 +593,7 @@ describe("panel de administracion", () => {
     } else if (path === "/admin/reports") {
       expect(await screen.findByText("Total activas")).toBeInTheDocument();
       expect(screen.getByText("Tiempo promedio")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Nuevas solicitudes (últimos 6 meses)" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Nuevas solicitudes por mes" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Solicitudes por etapa" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Estado de Documentos" })).toBeInTheDocument();
     } else if (path === "/admin/users") {

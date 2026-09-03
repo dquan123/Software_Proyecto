@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Eye, Save, X } from "lucide-react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, advisorOptions, matchesAdminFilters } from "../../utils/adminFilters";
 import { AdminPageHeader, AdminSearch, AdminTabs } from "../../components/admin/AdminShared";
 import { buildApiUrl } from "../../config/api";
 import { openDocumentPreview } from "../../utils/documentPreview";
@@ -72,6 +74,7 @@ export default function AdminDocuments() {
   const [feedbackModalDraft, setFeedbackModalDraft] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const [revision, setRevision] = useState(0);
 
   const loadDocuments = useCallback((signal) => {
@@ -106,11 +109,13 @@ export default function AdminDocuments() {
     return () => controller.abort();
   }, [loadDocuments, revision]);
 
+  const advisors = useMemo(() => advisorOptions(documents.map((item) => ({ id: item.asesor_id, nombre: item.asesor_nombre }))), [documents]);
   const visibleDocuments = useMemo(() => documents.filter((document) => {
-    const matchesStatus = statusFilter === "all" || document.estado === statusFilter;
+    const normalizedStatus = document.estado === "rejected" ? "correction" : document.estado;
+    const matchesStatus = statusFilter === "all" || normalizedStatus === statusFilter;
     const text = `${document.nombre || ""} ${document.documento_key || ""} ${document.usuario?.nombre || ""} ${document.usuario?.correo || ""}`.toLowerCase();
-    return matchesStatus && text.includes(query.toLowerCase());
-  }), [documents, query, statusFilter]);
+    return matchesStatus && matchesAdminFilters(filters, document.creado_en, document.asesor_id) && text.includes(query.toLowerCase());
+  }), [documents, query, statusFilter, filters]);
   const totals = useMemo(() => ({
     pending: documents.filter((item) => item.estado === "pending").length,
     review: documents.filter((item) => item.estado === "review").length,
@@ -236,6 +241,9 @@ const updateDocumentStatus = async (documentId, status) => {
       </section>
       <AdminTabs value={statusFilter} onChange={setStatusFilter} label="Filtrar documentos por estado" items={[{ value: "all", label: "Todos" }, { value: "pending", label: "Pendiente" }, { value: "review", label: "En revisión" }, { value: "approved", label: "Aprobado" }, { value: "correction", label: "Corrección" }]} />
       <section className="admin-panel-card admin-documents">
+        <AdminAdvancedFilters value={filters} onChange={setFilters} advisors={advisors} status={statusFilter}
+          statuses={[{ value: "all", label: "Todos" }, ...Object.entries(statusLabels).filter(([value]) => value !== "rejected").map(([value, label]) => ({ value, label }))]}
+          onStatusChange={setStatusFilter} onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setStatusFilter("all"); setQuery(""); }} />
         <div className="admin-panel-card__header">
           <AdminSearch value={query} onChange={setQuery} placeholder="Buscar por documento o solicitante..." />
         </div>
@@ -295,7 +303,7 @@ const updateDocumentStatus = async (documentId, status) => {
                       <strong className="admin-table-primary">{document.usuario?.nombre || "Usuario sin nombre"}</strong>
                       <span className="admin-table-secondary">{document.usuario?.perfil || document.usuario?.correo || "Perfil no disponible"}</span>
                     </td>
-                    <td>{document.asesor || document.usuario?.asesor || "Sin asignar"}</td>
+                    <td>{document.asesor_nombre || document.asesor || document.usuario?.asesor || "Sin asignar"}</td>
                     <td><span className={`admin-status admin-status--${document.estado || "pending"}`}>{getStatusLabel(document.estado)}</span></td>
                     <td>
                       <button type="button" className="admin-action-button" disabled={isRowBusy} onClick={() => openFeedbackModal(document)}>Ver revisión</button>

@@ -2,6 +2,8 @@ import { Pencil, Plus, Power, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QuestionBankModal from "../../components/QuestionBankModal";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AdminAdvancedFilters from "../../components/admin/AdminAdvancedFilters";
+import { EMPTY_ADMIN_FILTERS, matchesAdminFilters } from "../../utils/adminFilters";
 import {
   AdminPageHeader,
   AdminPagination,
@@ -23,6 +25,7 @@ export default function AdminQuestions() {
   const [category, setCategory] = useState("all");
   const [difficulty, setDifficulty] = useState("all");
   const [status, setStatus] = useState("all");
+  const [filters, setFilters] = useState(EMPTY_ADMIN_FILTERS);
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
   const [deleteQuestion, setDeleteQuestion] = useState(null);
@@ -35,9 +38,10 @@ export default function AdminQuestions() {
       (category === "all" || item.category === category)
       && (difficulty === "all" || item.difficulty === difficulty)
       && (status === "all" || (status === "active" ? item.activo !== false : item.activo === false))
+      && matchesAdminFilters(filters, item.created_at, null)
       && `${item.question} ${item.category}`.toLowerCase().includes(query.toLowerCase())
     )),
-    [category, difficulty, query, questions, status]
+    [category, difficulty, query, questions, status, filters]
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -126,6 +130,8 @@ export default function AdminQuestions() {
         <article><small>Inactivas</small><strong>{inactiveCount}</strong></article>
       </section>
       <section className="admin-list-card">
+        <AdminAdvancedFilters value={filters} onChange={(value) => { setFilters(value); setPage(1); }}
+          onReset={() => { setFilters(EMPTY_ADMIN_FILTERS); setQuery(""); setCategory("all"); setDifficulty("all"); setStatus("all"); setPage(1); }} />
         <div className="admin-list-toolbar">
           <AdminSearch value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Buscar preguntas..." />
           <label className="admin-filter-select">
