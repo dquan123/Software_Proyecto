@@ -584,7 +584,7 @@ app.post("/login", async (req, res) => {
       if (usuarioRow.activo === false) {
         return res.status(403).json({ error: "Cuenta desactivada. Contacta a un administrador." });
       }
-      const usuario = presentLoginUser(result.rows[0]);
+      const usuario = presentLoginUser(usuarioRow);
       await activityLogService.logActivity({
         req,
         actor: usuario,
@@ -596,7 +596,6 @@ app.post("/login", async (req, res) => {
         entityId: usuario.id_usuario,
         description: "Login exitoso",
       });
-      const usuario = presentLoginUser(usuarioRow);
       res.json({
         success: true,
         message: "Login exitoso",
