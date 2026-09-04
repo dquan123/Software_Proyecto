@@ -1,5 +1,6 @@
 const express = require("express");
 const { parseAdminSearch, buildAdminCohort } = require("../services/adminSearchFilter");
+const { buildAdminProcessWorkbook } = require("../services/adminExcelReport");
 
 const ALLOWED_PERIODS = new Set([30, 90, 365]);
 
@@ -73,6 +74,22 @@ function buildProcessCsv(rows) {
     row.updated_at ? new Date(row.updated_at).toISOString() : "",
   ].map(csvCell).join(","));
   return `\uFEFF${headers.map(csvCell).join(",")}\r\n${lines.join("\r\n")}`;
+}
+
+async function getFilteredProcesses(pool, query) {
+  const search = parseAdminSearch(query);
+  const filter = buildAdminCohort(search);
+  const result = await pool.query(`
+    ${filter.cte}
+    SELECT t.id_tramite, applicant.nombre AS solicitante, applicant.correo,
+      applicant.perfil, t.estado, t.etapa_actual, t.progreso,
+      advisor.nombre AS asesor, t.created_at, t.updated_at
+    FROM filtered_processes t
+    JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
+    LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
+    ORDER BY t.created_at DESC, t.id_tramite DESC
+  `, filter.values);
+  return { rows: result.rows, filter: search };
 }
 
 module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
@@ -193,26 +210,32 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
 
   router.get("/processes.csv", requireAdmin, async (req, res) => {
     try {
-      const filter = buildAdminCohort(parseAdminSearch(req.query));
-      const result = await pool.query(`
-        ${filter.cte}
-        SELECT t.id_tramite, applicant.nombre AS solicitante, applicant.correo,
-          applicant.perfil, t.estado, t.etapa_actual, t.progreso,
-          advisor.nombre AS asesor, t.created_at, t.updated_at
-        FROM filtered_processes t
-        JOIN usuario applicant ON applicant.id_usuario = t.id_usuario
-        LEFT JOIN usuario advisor ON advisor.id_usuario = t.id_asesor
-        ORDER BY t.created_at DESC, t.id_tramite DESC
-      `, filter.values);
+      const { rows } = await getFilteredProcesses(pool, req.query);
 
       const filename = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.csv`;
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      return res.send(buildProcessCsv(result.rows));
+      return res.send(buildProcessCsv(rows));
     } catch (error) {
       if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
       console.error("ERROR ADMIN PROCESS CSV:", error);
       return res.status(500).json({ error: "No fue posible exportar el reporte" });
+    }
+  });
+
+  router.get("/processes.xlsx", requireAdmin, async (req, res) => {
+    try {
+      const { rows, filter } = await getFilteredProcesses(pool, req.query);
+      const workbook = await buildAdminProcessWorkbook(rows, filter);
+      const filename = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", workbook.length);
+      return res.send(workbook);
+    } catch (error) {
+      if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+      console.error("ERROR ADMIN PROCESS XLSX:", error);
+      return res.status(500).json({ error: "No fue posible exportar el reporte de Excel" });
     }
   });
 

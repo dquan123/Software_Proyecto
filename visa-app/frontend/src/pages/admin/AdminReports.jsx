@@ -89,7 +89,7 @@ export default function AdminReports() {
     setExportMessage("");
     try {
       const session = JSON.parse(localStorage.getItem("visaguide_session") || "null");
-      const response = await fetch(buildApiUrl(`/admin/metrics/processes.csv${query ? `?${query}` : ""}`), {
+      const response = await fetch(buildApiUrl(`/admin/metrics/processes.xlsx${query ? `?${query}` : ""}`), {
         headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
       });
       if (!response.ok) {
@@ -100,10 +100,10 @@ export default function AdminReports() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
-      setExportMessage("Reporte CSV exportado correctamente.");
+      setExportMessage("Reporte de Excel exportado correctamente.");
     } catch (requestError) {
       setExportMessage(requestError.message || "No fue posible exportar el reporte.");
     } finally {
@@ -118,7 +118,7 @@ export default function AdminReports() {
           <h1>Reportes y Analíticas</h1>
           <p>Estadísticas y métricas globales de la plataforma.</p>
         </div>
-        <div className="admin-report-actions"><label><span>Periodo</span><select value={range} onChange={(event) => selectRange(event.target.value)}><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option><option value="all">Todo el historial</option><option value="custom">Rango personalizado</option></select></label>{range === "custom" && <div className="admin-report-date-range"><CalendarDays aria-hidden="true" /><label><span>Desde</span><input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} /></label><label><span>Hasta</span><input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} /></label></div>}<button className="admin-primary-button admin-primary-button--navy" type="button" onClick={exportReport} disabled={!report || isLoading || Boolean(error) || Boolean(dateError) || isExporting || (range === "custom" && (!from || !to))}><Download aria-hidden="true" />{isExporting ? "Exportando…" : "Exportar CSV"}</button></div>
+        <div className="admin-report-actions"><label><span>Periodo</span><select value={range} onChange={(event) => selectRange(event.target.value)}><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option><option value="all">Todo el historial</option><option value="custom">Rango personalizado</option></select></label>{range === "custom" && <div className="admin-report-date-range"><CalendarDays aria-hidden="true" /><label><span>Desde</span><input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} /></label><label><span>Hasta</span><input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} /></label></div>}<button className="admin-primary-button admin-primary-button--navy" type="button" onClick={exportReport} disabled={!report || isLoading || Boolean(error) || Boolean(dateError) || isExporting || (range === "custom" && (!from || !to))}><Download aria-hidden="true" />{isExporting ? "Exportando…" : "Exportar Excel"}</button></div>
       </section>
       <AdminAdvancedFilters value={filters} onChange={setFilters} showDates={false} advisors={advisorResource.data?.asesores || []}
         status={status} statuses={[{ value: "", label: "Todos" }, ...["En proceso", "Pendiente", "Aprobado", "Inactivo", "Completado"].map((value) => ({ value, label: value }))]}
