@@ -51,7 +51,6 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
   }
 
-  router.get("/dashboard", async (req, res) => {
   router.get("/activity-logs", async (req, res) => {
     try {
       const result = await activeActivityLogService.listLogs({
@@ -138,7 +137,7 @@ module.exports = function createAdminManagementRoutes(pool, { requireAdmin, sche
     }
   });
 
-  router.get("/dashboard", async (_req, res) => {
+  router.get("/dashboard", async (req, res) => {
     try {
       const filter = parseAdminSearch(req.query);
       const cohort = filter.active ? buildDashboardCohort(filter) : null;
