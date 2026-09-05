@@ -44,12 +44,12 @@ describe("report and dashboard filter endpoints", () => {
     app.use("/admin", createManagement(pool, { requireAdmin, schemaReady: Promise.resolve() }));
     return { app, pool };
   }
-  test.each(["/metrics/processes", "/metrics/processes.csv", "/admin/dashboard"])("returns 400 for a reversed range: %s", async (path) => {
+  test.each(["/metrics/processes", "/metrics/processes.csv", "/metrics/processes.xlsx", "/admin/dashboard"])("returns 400 for a reversed range: %s", async (path) => {
     const { app, pool } = setup();
     await request(app).get(`${path}?from=2026-09-30&to=2026-09-01`).expect(400);
     expect(pool.query).not.toHaveBeenCalled();
   });
-  test.each(["/metrics/processes", "/metrics/processes.csv", "/admin/dashboard"])("applies the same parameters to every query: %s", async (path) => {
+  test.each(["/metrics/processes", "/metrics/processes.csv", "/metrics/processes.xlsx", "/admin/dashboard"])("applies the same parameters to every query: %s", async (path) => {
     const { app, pool } = setup();
     await request(app).get(path).query({ from: "2026-09-01", to: "2026-09-30", status: "Pendiente", advisor: "7" }).expect(200);
     expect(pool.query).toHaveBeenCalled();

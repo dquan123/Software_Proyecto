@@ -387,10 +387,10 @@ function mockAdminSession() {
       ];
       return Promise.resolve({ ok: true, json: async () => ({ tramite: managedProcess }) });
     }
-    if (String(url).includes("/admin/metrics/processes.csv")) {
+    if (String(url).includes("/admin/metrics/processes.xlsx")) {
       return Promise.resolve({
         ok: true,
-        blob: async () => new Blob(["ID,Solicitante\n21,Carlos"], { type: "text/csv" }),
+        blob: async () => new Blob(["xlsx"], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
       });
     }
     if (String(url).includes("/admin/metrics/processes")) {
@@ -686,9 +686,9 @@ describe("panel de administracion", () => {
     }
   });
 
-  it("filtra reportes por fechas personalizadas y exporta el mismo rango en CSV", async () => {
+  it("filtra reportes por fechas personalizadas y exporta el mismo rango en Excel", async () => {
     const user = userEvent.setup();
-    const createObjectURL = vi.fn(() => "blob:reporte-csv");
+    const createObjectURL = vi.fn(() => "blob:reporte-xlsx");
     const revokeObjectURL = vi.fn();
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
@@ -709,14 +709,14 @@ describe("panel de administracion", () => {
       expect.any(Object)
     ));
 
-    await user.click(screen.getByRole("button", { name: "Exportar CSV" }));
-    expect(await screen.findByText("Reporte CSV exportado correctamente.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Exportar Excel" }));
+    expect(await screen.findByText("Reporte de Excel exportado correctamente.")).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/admin/metrics/processes.csv?from=2026-07-01&to=2026-07-31"),
+      expect.stringContaining("/admin/metrics/processes.xlsx?from=2026-07-01&to=2026-07-31"),
       expect.any(Object)
     );
     expect(createObjectURL).toHaveBeenCalled();
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:reporte-csv");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:reporte-xlsx");
     clickSpy.mockRestore();
   });
 
