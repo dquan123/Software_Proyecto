@@ -1,7 +1,14 @@
 const express = require("express");
 const request = require("supertest");
+const ExcelJS = require("exceljs");
 const { createRoleMiddleware, issueSessionToken } = require("../auth");
 const createAdminMetricsRoutes = require("../routes/adminMetricsRoutes");
+
+function binaryParser(response, callback) {
+  const chunks = [];
+  response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+  response.on("end", () => callback(null, Buffer.concat(chunks)));
+}
 
 describe("admin authorization and metrics", () => {
   const previousEnv = process.env.NODE_ENV;
@@ -201,6 +208,43 @@ describe("admin authorization and metrics", () => {
     expect(response.text).toContain("'=Carlos Mendoza");
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("FROM tramite t"),
+      ["2026-07-01", "2026-07-31"]
+    );
+  });
+
+  test("exports filtered process rows as a valid Excel workbook", async () => {
+    const admin = { id_usuario: 1, correo: "admin@test.dev", rol: "admin" };
+    const { app, pool } = createApp(async (sql) => {
+      if (sql.includes("FROM usuario WHERE id_usuario")) return { rows: [admin] };
+      if (sql.includes("applicant.nombre AS solicitante")) return { rows: [{
+        id_tramite: 21,
+        solicitante: "Carlos Mendoza",
+        correo: "carlos@example.com",
+        perfil: "Turismo B1/B2",
+        estado: "En proceso",
+        etapa_actual: "Documentos",
+        progreso: 45,
+        asesor: "Laura Vásquez",
+        created_at: "2026-07-05T10:00:00.000Z",
+        updated_at: "2026-07-06T10:00:00.000Z",
+      }] };
+      return { rows: [] };
+    });
+
+    const response = await request(app)
+      .get("/admin/metrics/processes.xlsx?from=2026-07-01&to=2026-07-31")
+      .set("Authorization", `Bearer ${issueSessionToken(admin)}`)
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+
+    expect(response.headers["content-type"]).toContain("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    expect(response.headers["content-disposition"]).toMatch(/visaguide-reporte-\d{4}-\d{2}-\d{2}\.xlsx/);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(response.body);
+    expect(workbook.getWorksheet("Solicitudes").getCell("B4").value).toBe("Carlos Mendoza");
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("FROM filtered_processes t"),
       ["2026-07-01", "2026-07-31"]
     );
   });
