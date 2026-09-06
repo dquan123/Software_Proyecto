@@ -1,0 +1,5 @@
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+      SESSION_SECRET: visaguide_secret_key_2026
