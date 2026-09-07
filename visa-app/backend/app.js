@@ -27,6 +27,7 @@ const createActivityLogService = require("./services/activityLogService");
 const createEmailReminderService = require("./services/emailReminderService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
+const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -429,5 +430,7 @@ const MENSAJES_ETAPA = {
 
 
 app.use(upload.handleUploadError);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;
