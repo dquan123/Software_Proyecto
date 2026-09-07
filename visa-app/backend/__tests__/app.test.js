@@ -52,7 +52,7 @@ function defaultQueryHandler(sql, values) {
     return Promise.resolve({ rows: [{ total: 1 }] });
   }
 
-  if (normalized.includes("FROM usuario WHERE correo = $1")) {
+  if (normalized.includes("FROM usuario WHERE correo = $1") && !normalized.includes("contrasena")) {
     if (values?.[0] === "valido@example.com") {
       return Promise.resolve({ rows: [{ id_usuario: 1, nombre: "Valido", correo: values[0], perfil: "turismo_negocios", rol: "cliente" }] });
     }
@@ -91,7 +91,7 @@ function defaultQueryHandler(sql, values) {
     });
   }
 
-  if (normalized.includes("FROM usuario WHERE correo=$1")) {
+  if (normalized.includes("FROM usuario WHERE correo = $1")) {
     if (values?.[0] === "login@example.com") {
       return Promise.resolve({
         rows: [
@@ -580,7 +580,7 @@ function createIntegrationFlowQueryHandler() {
       return { rows: [state.user] };
     }
 
-    if (normalized.includes("FROM usuario WHERE correo=$1")) {
+    if (normalized.includes("FROM usuario WHERE correo = $1")) {
       if (state.user && values?.[0] === state.user.correo) {
         return { rows: [state.user] };
       }
@@ -907,7 +907,7 @@ describe("app endpoints", () => {
 
   test("POST /login devuelve 403 cuando la cuenta esta desactivada", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo = $1")) {
         if (values?.[0] === "inactivo@example.com") {
           return Promise.resolve({ rows: [{ id_usuario: 9, nombre: "Inactivo", correo: "inactivo@example.com", perfil: null, rol: "cliente", activo: false, contrasena: LOGIN_TEST_PASSWORD_HASH }] });
         }
@@ -927,7 +927,7 @@ describe("app endpoints", () => {
 
   test("POST /login migra una contraseña legada en texto plano a bcrypt al iniciar sesion con exito", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo = $1")) {
         if (values?.[0] === "legado@example.com") {
           return Promise.resolve({ rows: [{ id_usuario: 15, nombre: "Usuario Legado", correo: "legado@example.com", perfil: null, rol: "cliente", activo: true, contrasena: "1234" }] });
         }
@@ -982,7 +982,7 @@ describe("app endpoints", () => {
 
   test("POST /login devuelve 500 ante error simulado de base de datos", async () => {
     mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo=$1")) {
+      if (String(sql).replace(/\s+/g, " ").includes("FROM usuario WHERE correo = $1")) {
         return Promise.reject(new Error("connection timeout"));
       }
       return defaultQueryHandler(sql, values);

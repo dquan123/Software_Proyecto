@@ -226,7 +226,14 @@ module.exports = function createAdminMetricsRoutes(pool, { requireAdmin }) {
   router.get("/processes.xlsx", requireAdmin, async (req, res) => {
     try {
       const { rows, filter } = await getFilteredProcesses(pool, req.query);
-      const workbook = await buildAdminProcessWorkbook(rows, filter);
+      const cohort = buildAdminCohort(filter);
+      const documents = await pool.query(`${cohort.cte}
+        SELECT d.estado AS label, COUNT(*) AS total
+        FROM documentos d
+        WHERE d.usuario_id IN (SELECT id_usuario FROM filtered_processes)
+        GROUP BY d.estado
+        ORDER BY d.estado`, cohort.values);
+      const workbook = await buildAdminProcessWorkbook(rows, filter, { documentsByStatus: documents.rows });
       const filename = `visaguide-reporte-${new Date().toISOString().slice(0, 10)}.xlsx`;
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
