@@ -59,6 +59,7 @@ const SessionManager = {
       correo: userData.correo,
       perfil: userData.perfil || null,
       rol: userData.rol || "cliente",
+      emailVerificado: userData.emailVerificado !== false,
       token: token || userData.token || null,
       loginTime: new Date().toISOString(),
     }));
@@ -101,6 +102,7 @@ function App() {
         <Route path="/registro"                       element={<Registro />} />
         <Route path="/recuperar-contrasena"           element={<ForgotPassword />} />
         <Route path="/restablecer-contrasena"         element={<ResetPassword />} />
+        <Route path="/verificar-email"                element={<VerifyEmail />} />
         <Route path="/upload"                         element={<Upload />} />
         <Route path="/perfil"                         element={<Perfil />} />
         <Route path="/seleccion-perfil"               element={<ProfileSelection />} />
@@ -416,7 +418,7 @@ function Registro() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess("¡Registro exitoso! Continuando a la selección de perfil...");
+        setSuccess("¡Registro exitoso! Te enviamos un correo para verificar tu cuenta. Continuando a la selección de perfil...");
         SessionManager.saveSession(data.data, data.token);
         localStorage.setItem("correoUsuario", data.data.correo);
         navigate("/seleccion-perfil", { replace: true });
@@ -449,6 +451,74 @@ function Registro() {
 
       <footer className="auth-form-footer">
         <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+      </footer>
+    </AuthLayout>
+  );
+}
+
+/* ══════════════════════════
+   Verificar email
+   ══════════════════════════ */
+function VerifyEmail() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || "";
+  const [status, setStatus] = useState("verifying");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!token) { setStatus("error"); setMessage("El enlace de verificación no es válido."); return; }
+
+    const verify = async () => {
+      try {
+        const res = await fetch(buildApiUrl("/verificar-email"), {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const session = SessionManager.getSession();
+          if (session) {
+            localStorage.setItem("visaguide_session", JSON.stringify({ ...session, emailVerificado: true }));
+          }
+          setStatus("success");
+          setMessage(data.message || "Correo verificado correctamente.");
+        } else {
+          setStatus("error");
+          setMessage(data.error || "No fue posible verificar el correo.");
+        }
+      } catch {
+        setStatus("error");
+        setMessage("Error de conexión.");
+      }
+    };
+    verify();
+  }, [token]);
+
+  return (
+    <AuthLayout>
+      <header className="auth-form-heading">
+        <h2>Verificación de correo</h2>
+        <p>Confirmamos tu dirección de correo electrónico.</p>
+      </header>
+
+      {status === "verifying" && (
+        <div className="auth-message" role="status" aria-live="polite">
+          <Loader2 className="auth-spinner" aria-hidden="true" /><span>Verificando...</span>
+        </div>
+      )}
+      {status === "success" && (
+        <div className="auth-message auth-message--success" role="status" aria-live="polite">
+          <CheckCircle2 aria-hidden="true" /><span>{message}</span>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="auth-message auth-message--error" role="alert" aria-live="assertive">
+          <AlertCircle aria-hidden="true" /><span>{message}</span>
+        </div>
+      )}
+
+      <footer className="auth-form-footer">
+        <p><Link to="/login">Ir a iniciar sesión</Link></p>
       </footer>
     </AuthLayout>
   );

@@ -64,7 +64,7 @@ function createSessionMiddleware(pool) {
 
     try {
       const result = await pool.query(
-        `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo
+        `SELECT id_usuario, nombre, correo, perfil, COALESCE(rol, 'cliente') AS rol, activo, email_verificado
          FROM usuario WHERE id_usuario = $1`,
         [session.sub]
       );

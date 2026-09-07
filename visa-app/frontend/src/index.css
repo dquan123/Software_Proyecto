@@ -401,8 +401,61 @@ img, video, canvas, svg {
 
 .vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-theme-row,
 .vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-senior-row,
+.vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-email-verify-notice,
 .vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) button.vg-sidebar-label {
   display: none !important;
+}
+
+.vg-email-verify-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}
+
+.vg-email-verify-notice__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f59e0b;
+}
+
+.vg-email-verify-notice__row .vg-sidebar-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fcd34d;
+}
+
+.vg-email-verify-notice__close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  padding: 2px;
+}
+
+.vg-email-verify-notice__resend {
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.vg-email-verify-notice__resend:disabled {
+  cursor: default;
+  opacity: 0.7;
+  text-decoration: none;
 }
 
 .vg-sidebar:not(:hover):not(:focus-within):not(.vg-sidebar--expanded) .vg-sidebar-bottom-section {

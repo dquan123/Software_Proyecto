@@ -16,6 +16,7 @@ import { buildApiUrl } from "../config/api";
 import useTheme from "../hooks/useTheme";
 import TopActions from "./TopActions";
 import VisaGuideLogo from "./VisaGuideLogo";
+import EmailVerificationNotice from "./EmailVerificationNotice";
 
 const menuItems = [
   { id: "inicio", label: "Inicio", icon: <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />, path: "/dashboard" },
@@ -293,6 +294,10 @@ export default function Sidebar({ currentPage }) {
               </p>
             </div>
           </a>
+
+          {usuario && usuario.emailVerificado === false && (
+            <EmailVerificationNotice correo={usuario.correo} />
+          )}
 
           <button
             className="vg-sidebar-label"

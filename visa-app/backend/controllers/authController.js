@@ -14,11 +14,41 @@ function presentLoginUser(row) {
     correo: row.correo,
     perfil: row.perfil || null,
     rol: row.rol || "cliente",
+    emailVerificado: row.email_verificado !== false,
   };
 }
 
 function createAuthController(authService, { activityLogService, testUsersReady, sendEmail }) {
-  const sendPasswordResetEmail = sendEmail || createSafeEmailSender();
+  const sendAuthEmail = sendEmail || createSafeEmailSender();
+
+  async function sendEmailVerification(usuarioRow, req) {
+    const token = await authService.createEmailVerificationToken(usuarioRow);
+    const verifyUrl = `${getFrontendBaseUrl()}/verificar-email?token=${token}`;
+
+    await sendAuthEmail({
+      to: usuarioRow.correo,
+      subject: "Verifica tu correo - VisaGuide",
+      text: [
+        `Hola ${usuarioRow.nombre},`,
+        "",
+        "Confirma tu correo electrónico usando el siguiente enlace (válido por 24 horas):",
+        verifyUrl,
+        "",
+        "Si no creaste esta cuenta, ignora este mensaje.",
+      ].join("\n"),
+    });
+
+    await activityLogService.logActivity({
+      req,
+      userId: usuarioRow.id_usuario,
+      userEmail: usuarioRow.correo,
+      role: usuarioRow.rol,
+      action: "user.email_verification_requested",
+      entityType: "usuario",
+      entityId: usuarioRow.id_usuario,
+      description: "Solicitud de verificación de correo",
+    });
+  }
 
   async function register(req, res) {
     const { nombre, correo, contrasena } = req.body;
@@ -40,6 +70,12 @@ function createAuthController(authService, { activityLogService, testUsersReady,
         entityId: usuario.id_usuario,
         description: "Usuario registrado",
       });
+
+      try {
+        await sendEmailVerification(usuarioRow, req);
+      } catch (verificationError) {
+        console.error("ERROR SEND EMAIL VERIFICATION:", verificationError);
+      }
 
       res.json({
         message: "Usuario guardado en BD",
@@ -108,7 +144,7 @@ function createAuthController(authService, { activityLogService, testUsersReady,
 
       if (result) {
         const resetUrl = `${getFrontendBaseUrl()}/restablecer-contrasena?token=${result.token}`;
-        await sendPasswordResetEmail({
+        await sendAuthEmail({
           to: result.usuario.correo,
           subject: "Recuperación de contraseña - VisaGuide",
           text: [
@@ -159,12 +195,61 @@ function createAuthController(authService, { activityLogService, testUsersReady,
     }
   }
 
+  async function verifyEmail(req, res) {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "El token de verificación es obligatorio" });
+    }
+
+    try {
+      const usuarioRow = await authService.verifyEmail(token);
+      if (!usuarioRow) {
+        return res.status(400).json({ error: "El enlace de verificación es inválido o expiró" });
+      }
+
+      await activityLogService.logActivity({
+        req,
+        userId: usuarioRow.id_usuario,
+        userEmail: usuarioRow.correo,
+        role: usuarioRow.rol,
+        action: "user.email_verified",
+        entityType: "usuario",
+        entityId: usuarioRow.id_usuario,
+        description: "Correo verificado",
+      });
+
+      res.json({ message: "Correo verificado correctamente", usuario: presentLoginUser(usuarioRow) });
+    } catch (error) {
+      console.error("ERROR VERIFY EMAIL:", error);
+      res.status(500).json({ error: "No fue posible verificar el correo" });
+    }
+  }
+
+  async function resendVerification(req, res) {
+    const { correo } = req.body;
+    const genericMessage = "Si el correo está registrado y aún no se ha verificado, recibirás un nuevo enlace.";
+
+    try {
+      const result = await authService.requestEmailVerification(correo);
+      if (result) {
+        await sendEmailVerification(result.usuario, req);
+      }
+      res.json({ message: genericMessage });
+    } catch (error) {
+      console.error("ERROR RESEND VERIFICATION:", error);
+      res.status(500).json({ error: "No fue posible procesar la solicitud" });
+    }
+  }
+
   return {
     register,
     login,
     validateSession,
     forgotPassword,
     resetPassword,
+    verifyEmail,
+    resendVerification,
   };
 }
 

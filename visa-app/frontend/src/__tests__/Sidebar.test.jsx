@@ -67,6 +67,56 @@ describe("Sidebar", () => {
     });
   });
 
+  it("no muestra el aviso de verificación cuando el correo ya está verificado", () => {
+    renderSidebar();
+
+    expect(screen.queryByText("Verifica tu correo electrónico")).not.toBeInTheDocument();
+  });
+
+  it("muestra el aviso de verificación y permite reenviar el enlace", async () => {
+    localStorage.setItem("visaguide_session", JSON.stringify({
+      id: 12,
+      nombre: "Ana López",
+      correo: "ana@example.com",
+      perfil: "turismo_negocios",
+      emailVerificado: false,
+    }));
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+      if (String(url).includes("/reenviar-verificacion")) {
+        return Promise.resolve({ ok: true, json: async () => ({ message: "ok" }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ total: 0 }) });
+    });
+
+    renderSidebar();
+
+    expect(screen.getByText("Verifica tu correo electrónico")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reenviar enlace" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enlace enviado" })).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/reenviar-verificacion"), expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ correo: "ana@example.com" }),
+    }));
+  });
+
+  it("permite cerrar el aviso de verificación", async () => {
+    localStorage.setItem("visaguide_session", JSON.stringify({
+      id: 12,
+      nombre: "Ana López",
+      correo: "ana@example.com",
+      emailVerificado: false,
+    }));
+    const user = userEvent.setup();
+
+    renderSidebar();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar aviso de verificación" }));
+
+    expect(screen.queryByText("Verifica tu correo electrónico")).not.toBeInTheDocument();
+  });
+
   it("permite expandir la navegación y activar el modo Senior", async () => {
     const user = userEvent.setup();
     renderSidebar();

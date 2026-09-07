@@ -1,0 +1,49 @@
+import { useState } from "react";
+import { AlertTriangle, X } from "lucide-react";
+import { buildApiUrl } from "../config/api";
+
+export default function EmailVerificationNotice({ correo }) {
+  const [dismissed, setDismissed] = useState(false);
+  const [status, setStatus] = useState("idle");
+
+  if (!correo || dismissed) return null;
+
+  const handleResend = async () => {
+    setStatus("sending");
+    try {
+      await fetch(buildApiUrl("/reenviar-verificacion"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo }),
+      });
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div className="vg-email-verify-notice" role="status">
+      <div className="vg-email-verify-notice__row">
+        <AlertTriangle size={16} aria-hidden="true" />
+        <span className="vg-sidebar-label">Verifica tu correo electrónico</span>
+        <button
+          type="button"
+          className="vg-email-verify-notice__close"
+          onClick={() => setDismissed(true)}
+          aria-label="Cerrar aviso de verificación"
+        >
+          <X size={14} aria-hidden="true" />
+        </button>
+      </div>
+      <button
+        type="button"
+        className="vg-sidebar-label vg-email-verify-notice__resend"
+        onClick={handleResend}
+        disabled={status === "sending" || status === "sent"}
+      >
+        {status === "sent" ? "Enlace enviado" : status === "sending" ? "Enviando..." : "Reenviar enlace"}
+      </button>
+    </div>
+  );
+}
