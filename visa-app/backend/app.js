@@ -19,12 +19,15 @@ const createAdminMetricsRoutes = require("./routes/adminMetricsRoutes");
 const createAdminDocumentRoutes = require("./routes/adminDocumentRoutes");
 const createAdminProcessRoutes = require("./routes/adminProcessRoutes");
 const createAdminManagementRoutes = require("./routes/adminManagementRoutes");
+const createConsularRoutes = require("./routes/consularRoutes");
 const { createRoleMiddleware, createSessionMiddleware, issueSessionToken } = require("./auth");
 const createInterviewSessionService = require("./services/interviewSessionService");
 const { createQuestionBankService } = require("./services/questionBankService");
 const createNotificacionService = require("./services/notificacionService");
 const createActivityLogService = require("./services/activityLogService");
 const createEmailReminderService = require("./services/emailReminderService");
+const createConsularPaymentService = require("./services/consularPaymentService");
+const createConsularAppointmentService = require("./services/consularAppointmentService");
 const { streamDs160Pdf } = require("./services/ds160PdfService");
 const { LOCAL_STORAGE_DIR, uploadStoredFile, deleteStoredFile, getStoredFile } = require("./storage");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
@@ -33,8 +36,8 @@ const app = express();
 
 app.set("trust proxy", 1);
 app.use(cors(createCorsOptions()));
-
 app.use(express.json());
+
 if (process.env.NODE_ENV !== "production") {
   app.use("/local-files", express.static(LOCAL_STORAGE_DIR));
 }
@@ -52,6 +55,7 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT),
 });
 const requireAdmin = createRoleMiddleware(pool, ["admin"]);
+const requireStaff = createRoleMiddleware(pool, ["asesor", "admin"]);
 const requireSession = createSessionMiddleware(pool);
 
 pool
@@ -311,6 +315,17 @@ notificacionService.ensureSchema().catch((error) => {
   console.error("ERROR NOTIFICACIONES SCHEMA:", error);
 });
 
+const consularPaymentService = createConsularPaymentService(pool, { notificacionService });
+const consularAppointmentService = createConsularAppointmentService(pool, {
+  notificacionService,
+  paymentService: consularPaymentService,
+});
+const consularSchemaReady = consularPaymentService.ensureSchema()
+  .then(() => consularAppointmentService.ensureSchema());
+consularSchemaReady.catch((error) => {
+  console.error("ERROR CONSULAR MODULE SCHEMA:", error);
+});
+
 const activityLogService = createActivityLogService(pool);
 activityLogService.ensureSchema().catch((error) => {
   console.error("ERROR ACTIVITY LOG SCHEMA:", error);
@@ -401,6 +416,16 @@ app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, passw
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/", createDocumentRoutes(pool, { documentSchemaReady, activityLogService }));
 app.use("/", createDs160Routes(pool, { activityLogService, notificacionService }));
+app.use("/", createConsularRoutes({
+  requireSession,
+  requireStaff,
+  paymentService: consularPaymentService,
+  appointmentService: consularAppointmentService,
+  schemaReady: consularSchemaReady,
+  upload,
+  uploadStoredFile,
+  deleteStoredFile,
+}));
 app.use("/admin/metrics", createAdminMetricsRoutes(pool, { requireAdmin }));
 app.use("/admin/documents", createAdminDocumentRoutes(pool, { requireAdmin, schemaReady: documentSchemaReady, notificacionService, activityLogService }));
 app.use("/admin/processes", createAdminProcessRoutes(pool, { requireAdmin, schemaReady: tramiteSchemaReady, notificacionService, activityLogService }));

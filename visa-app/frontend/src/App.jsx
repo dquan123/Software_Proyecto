@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "luc
 import { buildApiUrl } from "./config/api";
 import AuthLayout from "./components/auth/AuthLayout";
 import RequireAdmin from "./components/admin/RequireAdmin";
+import RequireStaff from "./components/RequireStaff";
 import "./components/auth/auth.css";
 
 const Upload = lazy(() => import("./Upload"));
@@ -19,6 +20,9 @@ const InterviewSimulator = lazy(() => import("./pages/InterviewSimulator"));
 const QuestionBank = lazy(() => import("./pages/QuestionBank"));
 const Chat = lazy(() => import("./pages/Chat"));
 const Notificaciones = lazy(() => import("./pages/Notificaciones"));
+const ConsularPayment = lazy(() => import("./pages/ConsularPayment"));
+const ConsularAppointments = lazy(() => import("./pages/ConsularAppointments"));
+const ConsularManagement = lazy(() => import("./pages/ConsularManagement"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
@@ -119,6 +123,7 @@ function App() {
         <Route path="/admin/assignments"              element={<RequireAdmin><AdminAssignments /></RequireAdmin>} />
         <Route path="/admin/documents"                element={<RequireAdmin><AdminDocuments /></RequireAdmin>} />
         <Route path="/admin/interviews"               element={<RequireAdmin><AdminInterviews /></RequireAdmin>} />
+        <Route path="/admin/consular"                 element={<RequireAdmin><ConsularManagement /></RequireAdmin>} />
         <Route path="/admin/processes"                element={<RequireAdmin><AdminProcesses /></RequireAdmin>} />
         <Route path="/admin/processes/:id"            element={<RequireAdmin><AdminProcessDetail /></RequireAdmin>} />
         <Route path="/admin/reports"                  element={<RequireAdmin><AdminReports /></RequireAdmin>} />
@@ -133,6 +138,9 @@ function App() {
         <Route path="/ds160"                          element={<DS160Form />} />
         <Route path="/chat"                           element={<Chat />} />
         <Route path="/notificaciones"                 element={<Notificaciones />} />
+        <Route path="/pagos"                          element={<ConsularPayment />} />
+        <Route path="/citas"                          element={<ConsularAppointments />} />
+        <Route path="/gestion-consular"               element={<RequireStaff><ConsularManagement /></RequireStaff>} />
       </Routes>
       </Suspense>
     </BrowserRouter>
@@ -462,11 +470,11 @@ function Registro() {
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
-  const [status, setStatus] = useState("verifying");
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState(token ? "verifying" : "error");
+  const [message, setMessage] = useState(token ? "" : "El enlace de verificación no es válido.");
 
   useEffect(() => {
-    if (!token) { setStatus("error"); setMessage("El enlace de verificación no es válido."); return; }
+    if (!token) return;
 
     const verify = async () => {
       try {

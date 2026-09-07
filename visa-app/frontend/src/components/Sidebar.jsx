@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  CalendarDays,
+  CreditCard,
   FileText,
   Folder,
   LayoutGrid,
@@ -23,9 +25,13 @@ const menuItems = [
   { id: "ds160", label: "DS-160", icon: <FileText size={20} strokeWidth={2} aria-hidden="true" />, path: "/ds160" },
   { id: "cronologia", label: "Cronología", icon: <Clock3 size={20} strokeWidth={2} aria-hidden="true" />, path: "/cronologia" },
   { id: "documentos", label: "Documentos", icon: <Folder size={20} strokeWidth={2} aria-hidden="true" />, path: "/documents" },
+  { id: "pagos", label: "Pago consular", icon: <CreditCard size={20} strokeWidth={2} aria-hidden="true" />, path: "/pagos" },
+  { id: "citas", label: "Cita consular", icon: <CalendarDays size={20} strokeWidth={2} aria-hidden="true" />, path: "/citas" },
   { id: "entrevista", label: "Entrevista", icon: <Users size={20} strokeWidth={2} aria-hidden="true" />, path: "/entrevista" },
   { id: "chat", label: "Chat con asesor", icon: <MessageSquare size={20} strokeWidth={2} aria-hidden="true" />, path: "/chat" },
 ];
+
+const staffMenuItem = { id: "gestion-consular", label: "Gestión consular", icon: <CreditCard size={20} strokeWidth={2} aria-hidden="true" />, path: "/gestion-consular" };
 
 export default function Sidebar({ currentPage }) {
   const [modoSenior, setModoSenior] = useState(
@@ -209,7 +215,7 @@ export default function Sidebar({ currentPage }) {
         <nav style={s.nav}>
           <p className="vg-sidebar-label" style={s.menuLabel}>MENÚ PRINCIPAL</p>
           <ul style={s.menuList}>
-            {menuItems.map((item) => {
+            {(usuario?.rol === "asesor" ? [menuItems[0], staffMenuItem, ...menuItems.slice(1)] : menuItems).map((item) => {
               const isActive = currentPage === item.id;
               return (
                 <li key={item.id}>
