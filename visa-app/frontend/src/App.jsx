@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { BrowserRouter, Link, Navigate, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { buildApiUrl } from "./config/api";
 import AuthLayout from "./components/auth/AuthLayout";
@@ -99,6 +99,8 @@ function App() {
         <Route path="/"                               element={<Navigate to="/login" replace />} />
         <Route path="/login"                          element={<Login />} />
         <Route path="/registro"                       element={<Registro />} />
+        <Route path="/recuperar-contrasena"           element={<ForgotPassword />} />
+        <Route path="/restablecer-contrasena"         element={<ResetPassword />} />
         <Route path="/upload"                         element={<Upload />} />
         <Route path="/perfil"                         element={<Perfil />} />
         <Route path="/seleccion-perfil"               element={<ProfileSelection />} />
@@ -234,7 +236,133 @@ function Login() {
       </form>
 
       <footer className="auth-form-footer">
+        <p><Link to="/recuperar-contrasena">¿Olvidaste tu contraseña?</Link></p>
         <p>¿No tienes cuenta? <Link to="/registro">Regístrate</Link></p>
+      </footer>
+    </AuthLayout>
+  );
+}
+
+/* ══════════════════════════
+   Recuperar contraseña
+   ══════════════════════════ */
+function ForgotPassword() {
+  const [correo, setCorreo]       = useState("");
+  const [error, setError]         = useState("");
+  const [success, setSuccess]     = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validate = () => {
+    if (!correo.trim()) { setError("El correo es obligatorio"); return false; }
+    if (!correo.includes("@") || !correo.includes(".")) { setError("Ingresa un correo válido"); return false; }
+    return true;
+  };
+
+  const handleSubmit = async (event) => {
+    event?.preventDefault();
+    setSuccess("");
+    if (!validate()) return;
+    setIsLoading(true); setError("");
+    try {
+      const res = await fetch(buildApiUrl("/forgot-password"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo }),
+      });
+      const data = await res.json();
+      setSuccess(data.message || "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.");
+    } catch { setError("Error de conexión."); }
+    finally { setIsLoading(false); }
+  };
+
+  return (
+    <AuthLayout>
+      <header className="auth-form-heading">
+        <h2>Recuperar contraseña</h2>
+        <p>Te enviaremos un enlace para restablecer tu contraseña.</p>
+      </header>
+
+      {error && <div className="auth-message auth-message--error" role="alert" aria-live="assertive"><AlertCircle aria-hidden="true" /><span>{error}</span></div>}
+      {success && <div className="auth-message auth-message--success" role="status" aria-live="polite"><CheckCircle2 aria-hidden="true" /><span>{success}</span></div>}
+
+      <form className="auth-form" onSubmit={handleSubmit} noValidate>
+        <div className="auth-field">
+          <label htmlFor="forgot-correo">Correo electrónico</label>
+          <input id="forgot-correo" type="email" autoComplete="username" placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
+        </div>
+        <button className="auth-submit" type="submit" disabled={isLoading}>
+          {isLoading ? <><Loader2 className="auth-spinner" aria-hidden="true" /> Enviando...</> : <>Enviar enlace <ArrowRight aria-hidden="true" /></>}
+        </button>
+      </form>
+
+      <footer className="auth-form-footer">
+        <p><Link to="/login">Volver a iniciar sesión</Link></p>
+      </footer>
+    </AuthLayout>
+  );
+}
+
+/* ══════════════════════════
+   Restablecer contraseña
+   ══════════════════════════ */
+function ResetPassword() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || "";
+  const [nuevaContrasena, setNuevaContrasena]         = useState("");
+  const [confirmarContrasena, setConfirmarContrasena] = useState("");
+  const [error, setError]                             = useState("");
+  const [success, setSuccess]                         = useState("");
+  const [isLoading, setIsLoading]                     = useState(false);
+  const [showPassword, setShowPassword]               = useState(false);
+  const [showConfirmation, setShowConfirmation]       = useState(false);
+
+  const validate = () => {
+    if (!token) { setError("El enlace de recuperación no es válido"); return false; }
+    if (!nuevaContrasena.trim() || nuevaContrasena.length < 4) { setError("La contraseña debe tener al menos 4 caracteres"); return false; }
+    if (nuevaContrasena !== confirmarContrasena) { setError("Las contraseñas no coinciden"); return false; }
+    return true;
+  };
+
+  const handleSubmit = async (event) => {
+    event?.preventDefault();
+    if (!validate()) return;
+    setIsLoading(true); setError(""); setSuccess("");
+    try {
+      const res = await fetch(buildApiUrl("/reset-password"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, nuevaContrasena }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess("Contraseña actualizada correctamente. Ya puedes iniciar sesión.");
+        setTimeout(() => navigate("/login", { replace: true }), 2000);
+      } else {
+        setError(data.error || "No fue posible restablecer la contraseña.");
+      }
+    } catch { setError("Error de conexión."); }
+    finally { setIsLoading(false); }
+  };
+
+  return (
+    <AuthLayout>
+      <header className="auth-form-heading">
+        <h2>Restablecer contraseña</h2>
+        <p>Ingresa tu nueva contraseña.</p>
+      </header>
+
+      {error && <div className="auth-message auth-message--error" role="alert" aria-live="assertive"><AlertCircle aria-hidden="true" /><span>{error}</span></div>}
+      {success && <div className="auth-message auth-message--success" role="status" aria-live="polite"><CheckCircle2 aria-hidden="true" /><span>{success}</span></div>}
+
+      <form className="auth-form" onSubmit={handleSubmit} noValidate>
+        <PasswordField id="reset-contrasena" label="Nueva contraseña" value={nuevaContrasena} onChange={setNuevaContrasena} visible={showPassword} onToggle={() => setShowPassword((visible) => !visible)} disabled={isLoading} />
+        <PasswordField id="reset-confirmacion" label="Confirmar contraseña" value={confirmarContrasena} onChange={setConfirmarContrasena} visible={showConfirmation} onToggle={() => setShowConfirmation((visible) => !visible)} disabled={isLoading} />
+        <button className="auth-submit" type="submit" disabled={isLoading}>
+          {isLoading ? <><Loader2 className="auth-spinner" aria-hidden="true" /> Guardando...</> : <>Guardar contraseña <ArrowRight aria-hidden="true" /></>}
+        </button>
+      </form>
+
+      <footer className="auth-form-footer">
+        <p><Link to="/login">Volver a iniciar sesión</Link></p>
       </footer>
     </AuthLayout>
   );
