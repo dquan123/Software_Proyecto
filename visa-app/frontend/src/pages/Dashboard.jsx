@@ -16,6 +16,7 @@ import {
   summarizeDocuments,
   TOTAL_PROCESS_STEPS,
 } from "../utils/dashboardStats";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 import "../styles/dashboard.css";
 
 // Pulse animation for active node
@@ -80,7 +81,7 @@ export default function Dashboard() {
           fetchJson("/ds160/load", postJson),
           fetchJson("/documentos/listar", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: buildSessionHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ usuario_id: session.id }),
           }),
         ]);

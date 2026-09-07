@@ -3,6 +3,7 @@ import { buildApiUrl } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 
 const TIPO_CONFIG = {
   etapa:       { label: "Etapa",       bg: "var(--vg-info-bg)", color: "var(--vg-info-text)" },
@@ -43,7 +44,7 @@ export default function Notificaciones() {
     try {
       const res = await fetch(buildApiUrl("/notificaciones/listar"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId: session.id }),
         signal,
       });
@@ -70,7 +71,7 @@ export default function Notificaciones() {
     try {
       const res = await fetch(buildApiUrl(`/notificaciones/${id}/leer`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId: session.id }),
       });
       if (!res.ok) throw new Error("Error al marcar notificación");
@@ -89,7 +90,7 @@ export default function Notificaciones() {
     try {
       const res = await fetch(buildApiUrl("/notificaciones/leer-todas"), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId: session.id }),
       });
       if (!res.ok) throw new Error("Error al marcar todas");
@@ -108,7 +109,7 @@ export default function Notificaciones() {
     try {
       const res = await fetch(buildApiUrl(`/notificaciones/${id}`), {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId: session.id }),
       });
       if (!res.ok) throw new Error("No se pudo eliminar la notificación");

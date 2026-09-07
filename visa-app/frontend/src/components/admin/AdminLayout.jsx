@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import VisaGuideLogo from "../VisaGuideLogo";
 import { buildApiUrl } from "../../config/api";
+import { buildSessionHeaders } from "../../utils/sessionAuth";
 import useTheme from "../../hooks/useTheme";
 import { useAdminSession } from "./AdminSessionContext";
 import "../../styles/admin.css";
@@ -81,7 +82,7 @@ export default function AdminLayout({ children }) {
       setNotificationsError("");
       const response = await fetch(buildApiUrl("/notificaciones/listar"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId }),
       });
       if (!response.ok) throw new Error("No se pudieron cargar las notificaciones.");

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildApiUrl } from "../config/api";
+import { isDocumentFileRoute, openDocumentPreview } from "../utils/documentPreview";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 
 const STATUS_CONFIG = {
   approved: {
@@ -176,6 +178,7 @@ function getUpdatedLabel(updatedAt, fallback) {
 function getPreviewUrl(preview, downloadUrl) {
   if (preview) return preview;
   if (!downloadUrl) return "";
+  if (isDocumentFileRoute(downloadUrl)) return "";
   return downloadUrl.startsWith("/") ? buildApiUrl(downloadUrl) : downloadUrl;
 }
 
@@ -289,6 +292,7 @@ export default function DocumentCard({
     try {
       const response = await fetch(buildApiUrl("/upload"), {
         method: "POST",
+        headers: buildSessionHeaders(),
         body: formData,
       });
 
@@ -347,7 +351,7 @@ export default function DocumentCard({
     try {
       const response = await fetch(buildApiUrl("/documentos"), {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           documento_id: doc.storedDocumentId,
           usuario_id: usuarioId,
@@ -375,9 +379,12 @@ export default function DocumentCard({
   };
 
   const handleOpenPreview = () => {
-    const previewUrl = getPreviewUrl(preview, doc.downloadUrl);
-    if (!previewUrl) return;
-    window.open(previewUrl, "_blank", "noopener,noreferrer");
+    if (preview) {
+      window.open(preview, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    openDocumentPreview({ archivo_url: doc.downloadUrl, nombre: doc.title });
   };
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;

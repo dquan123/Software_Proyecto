@@ -413,8 +413,8 @@ app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/", createPerfilRoutes(pool, { userSchemaReady, tramiteSchemaReady, activityLogService, notificacionService }));
 app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, passwordResetSchemaReady, emailVerificationSchemaReady, testUsersReady, requireSession, activityLogService }));
-app.use("/notificaciones", createNotificacionRoutes(pool));
-app.use("/", createDocumentRoutes(pool, { documentSchemaReady, activityLogService }));
+app.use("/notificaciones", createNotificacionRoutes(pool, { requireSession, requireAdmin }));
+app.use("/", createDocumentRoutes(pool, { documentSchemaReady, activityLogService, requireSession }));
 app.use("/", createDs160Routes(pool, { activityLogService, notificacionService }));
 app.use("/", createConsularRoutes({
   requireSession,

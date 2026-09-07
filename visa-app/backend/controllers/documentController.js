@@ -1,4 +1,39 @@
 function createDocumentController(documentService) {
+  function canAccessUser(req, usuarioId) {
+    const role = req.auth?.rol || "cliente";
+    return role === "admin" || role === "asesor" || Number(req.auth?.id_usuario) === Number(usuarioId);
+  }
+
+  function resolveUsuarioId(req, value, { source = "body" } = {}) {
+    const hasExplicitValue = value !== undefined && value !== null && value !== "";
+    const parsed = hasExplicitValue ? Number(value) : Number(req.auth?.id_usuario);
+
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      const error = new Error(
+        source === "params" || hasExplicitValue
+          ? "usuario_id debe ser numérico"
+          : "usuario_id requerido en el body y debe ser numérico"
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!canAccessUser(req, parsed)) {
+      const error = new Error("No puedes acceder a documentos de otro usuario");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return parsed;
+  }
+
+  function ensureCanAccessDocument(req, document) {
+    if (canAccessUser(req, document.usuario_id)) return;
+
+    const error = new Error("No puedes acceder a documentos de otro usuario");
+    error.statusCode = 403;
+    throw error;
+  }
 
   async function upload(req, res) {
     const { nombre, tipo, usuario_id, documento_key } = req.body;
@@ -8,12 +43,13 @@ function createDocumentController(documentService) {
     }
 
     try {
+      const scopedUsuarioId = resolveUsuarioId(req, usuario_id);
       const { documento, uploadedFile } = await documentService.saveDocumento(
         req.file,
         { 
           nombre: nombre?.trim() || req.file.originalname, 
           tipo: tipo?.trim() || req.file.mimetype || null, 
-          usuario_id, 
+          usuario_id: scopedUsuarioId,
           documento_key 
         },
         req
@@ -53,9 +89,10 @@ function createDocumentController(documentService) {
     }
 
     try {
+      const scopedUsuarioId = resolveUsuarioId(req, usuario_id);
       const { documento, uploadedFile } = await documentService.saveDocumento(
         req.file,
-        { nombre, tipo, usuario_id, documento_key },
+        { nombre, tipo, usuario_id: scopedUsuarioId, documento_key },
         req
       );
 
@@ -83,19 +120,18 @@ function createDocumentController(documentService) {
 
   async function listDocumentos(req, res) {
     const usuarioIdValue = req.params.usuarioId ?? req.body?.usuario_id ?? req.body?.usuarioId;
-    const usuarioId = Number(usuarioIdValue);
-
-    if (Number.isNaN(usuarioId)) {
-      const message = req.params.usuarioId === undefined
-        ? "usuario_id requerido en el body y debe ser numérico"
-        : "usuario_id debe ser numérico";
-      return res.status(400).json({ error: message });
-    }
 
     try {
+      const usuarioId = resolveUsuarioId(req, usuarioIdValue, {
+        source: req.params.usuarioId === undefined ? "body" : "params",
+      });
       const documentos = await documentService.listDocumentos(usuarioId);
       return res.json(documentos);
     } catch (error) {
+      if (error.statusCode) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
       console.error("ERROR GET DOCUMENTOS:", error);
       return res.status(500).json({ error: "No se pudieron cargar los documentos" });
     }
@@ -115,6 +151,7 @@ function createDocumentController(documentService) {
     }
 
     try {
+      resolveUsuarioId(req, usuarioId);
       const deleted = await documentService.deleteDocumento(documentId, usuarioId);
 
       if (!deleted) {
@@ -141,6 +178,8 @@ function createDocumentController(documentService) {
       if (!document) {
         return res.status(404).json({ error: "Documento no encontrado" });
       }
+
+      ensureCanAccessDocument(req, document);
 
       if (!document.storage_key) {
         if (documentService.isSelfDocumentFileUrl(document)) {

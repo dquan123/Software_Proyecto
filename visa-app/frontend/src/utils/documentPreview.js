@@ -1,6 +1,7 @@
 import { buildApiUrl } from "../config/api";
+import { buildSessionHeaders } from "./sessionAuth";
 
-function isDocumentFileRoute(url) {
+export function isDocumentFileRoute(url) {
   try {
     const parsedUrl = new URL(
       url,
@@ -30,5 +31,29 @@ export function getDocumentPreviewUrl(document) {
 export function openDocumentPreview(document) {
   const previewUrl = getDocumentPreviewUrl(document);
   if (!previewUrl) return;
-  window.open(previewUrl, "_blank", "noopener,noreferrer");
+
+  if (!isDocumentFileRoute(document.archivo_url)) {
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  fetch(previewUrl, { headers: buildSessionHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error("No se pudo abrir el documento.");
+      return response.blob();
+    })
+    .then((blob) => {
+      const objectUrl = URL.createObjectURL(blob);
+      if (previewWindow) {
+        previewWindow.location.href = objectUrl;
+      } else {
+        window.open(objectUrl, "_blank", "noopener,noreferrer");
+      }
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    })
+    .catch(() => {
+      if (previewWindow) previewWindow.close();
+    });
 }

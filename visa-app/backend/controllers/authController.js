@@ -20,6 +20,7 @@ function presentLoginUser(row) {
 
 function createAuthController(authService, { activityLogService, testUsersReady, sendEmail }) {
   const sendAuthEmail = sendEmail || createSafeEmailSender();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   async function sendEmailVerification(usuarioRow, req) {
     const token = await authService.createEmailVerificationToken(usuarioRow);
@@ -51,10 +52,23 @@ function createAuthController(authService, { activityLogService, testUsersReady,
   }
 
   async function register(req, res) {
-    const { nombre, correo, contrasena } = req.body;
+    const { nombre, correo, contrasena } = req.body || {};
+    const normalizedEmail = String(correo || "").trim().toLowerCase();
+
+    if (!String(nombre || "").trim() || !normalizedEmail || !contrasena) {
+      return res.status(400).json({ error: "Nombre, correo y contraseña son obligatorios" });
+    }
+
+    if (!emailPattern.test(normalizedEmail)) {
+      return res.status(400).json({ error: "Correo inválido" });
+    }
 
     try {
-      const usuarioRow = await authService.createUser({ nombre, correo, contrasena });
+      const usuarioRow = await authService.createUser({
+        nombre: String(nombre).trim(),
+        correo: normalizedEmail,
+        contrasena,
+      });
       const usuario = presentLoginUser(usuarioRow);
       
       await authService.createInitialTramite(usuario.id_usuario);

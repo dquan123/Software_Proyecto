@@ -10,6 +10,7 @@ import {
   getProcessTimeline,
   summarizeDocuments,
 } from "../utils/dashboardStats";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 import "../styles/cronologia.css";
 
 function CheckIcon() {
@@ -181,7 +182,7 @@ export default function Cronologia() {
           fetchJson("/ds160/load", postJson),
           fetchJson("/documentos/listar", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: buildSessionHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ usuario_id: session.id }),
           }),
         ]);
