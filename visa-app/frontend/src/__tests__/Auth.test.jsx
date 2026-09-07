@@ -259,6 +259,72 @@ describe("pantallas de autenticación", () => {
     expect(localStorage.getItem("correoUsuario")).toBe(newUser.correo);
   });
 
+  it("avisa que se envió un correo de verificación y guarda emailVerificado en la sesión", async () => {
+    const user = userEvent.setup();
+    const newUser = {
+      id_usuario: 42,
+      nombre: "Ana López",
+      correo: "ana@example.com",
+      perfil: null,
+      emailVerificado: false,
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
+      if (String(url).endsWith("/register")) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: newUser, token: "signed-registration-token" }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ valid: true }) });
+    });
+    window.history.pushState({}, "", "/registro");
+
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Nombre completo"), newUser.nombre);
+    await user.type(screen.getByLabelText("Correo electrónico"), newUser.correo);
+    await user.type(screen.getByLabelText("Contraseña"), "clave123");
+    await user.type(screen.getByLabelText("Confirmar contraseña"), "clave123");
+    await user.click(screen.getByRole("button", { name: /Crear cuenta/i }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/seleccion-perfil"));
+    expect(JSON.parse(localStorage.getItem("visaguide_session"))).toMatchObject({
+      emailVerificado: false,
+    });
+  });
+
+  it("verifica el correo con el token del enlace y actualiza la sesión", async () => {
+    localStorage.setItem("visaguide_session", JSON.stringify({
+      id: 42, correo: "ana@example.com", emailVerificado: false,
+    }));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Correo verificado correctamente", usuario: { emailVerificado: true } }),
+    });
+    window.history.pushState({}, "", "/verificar-email?token=abc123");
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Correo verificado correctamente"));
+    expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/verificar-email"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "abc123" }),
+    });
+    expect(JSON.parse(localStorage.getItem("visaguide_session"))).toMatchObject({ emailVerificado: true });
+  });
+
+  it("muestra un error cuando el enlace de verificación es inválido", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "El enlace de verificación es inválido o expiró" }),
+    });
+    window.history.pushState({}, "", "/verificar-email?token=vencido");
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(
+      "El enlace de verificación es inválido o expiró"
+    ));
+  });
+
   it("permite solicitar la recuperación de contraseña desde el login", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/login");

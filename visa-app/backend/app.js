@@ -87,7 +87,8 @@ async function ensureUserSchema() {
       ADD COLUMN IF NOT EXISTS pais                 VARCHAR(120),
       ADD COLUMN IF NOT EXISTS notificaciones_email BOOLEAN DEFAULT TRUE,
       ADD COLUMN IF NOT EXISTS idioma               VARCHAR(10)  DEFAULT 'es',
-      ADD COLUMN IF NOT EXISTS rol                  VARCHAR(20)  DEFAULT 'cliente'
+      ADD COLUMN IF NOT EXISTS rol                  VARCHAR(20)  DEFAULT 'cliente',
+      ADD COLUMN IF NOT EXISTS email_verificado     BOOLEAN DEFAULT TRUE
   `);
   await pool.query(`
     UPDATE usuario SET rol = 'cliente'
@@ -156,6 +157,20 @@ async function ensurePasswordResetSchema() {
   await pool.query("CREATE INDEX IF NOT EXISTS password_resets_usuario_idx ON password_resets(id_usuario)");
 }
 
+async function ensureEmailVerificationSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id SERIAL PRIMARY KEY,
+      id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL,
+      used_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS email_verifications_usuario_idx ON email_verifications(id_usuario)");
+}
+
 async function ensureAdminSchema() {
   await userSchemaReady;
   await tramiteSchemaReady;
@@ -195,6 +210,9 @@ const tramiteSchemaReady = userSchemaReady.then(ensureTramiteSchema).catch((erro
 });
 const passwordResetSchemaReady = userSchemaReady.then(ensurePasswordResetSchema).catch((error) => {
   console.error("ERROR PASSWORD RESET SCHEMA:", error);
+});
+const emailVerificationSchemaReady = userSchemaReady.then(ensureEmailVerificationSchema).catch((error) => {
+  console.error("ERROR EMAIL VERIFICATION SCHEMA:", error);
 });
 const adminSchemaReady = tramiteSchemaReady.then(ensureAdminSchema).catch((error) => {
   console.error("ERROR ADMIN SCHEMA:", error);
@@ -378,7 +396,7 @@ app.get("/", (req, res) => {
 app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService, activityLogService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/", createPerfilRoutes(pool, { userSchemaReady, tramiteSchemaReady, activityLogService, notificacionService }));
-app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, passwordResetSchemaReady, testUsersReady, requireSession, activityLogService }));
+app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, passwordResetSchemaReady, emailVerificationSchemaReady, testUsersReady, requireSession, activityLogService }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/", createDocumentRoutes(pool, { documentSchemaReady, activityLogService }));
 app.use("/", createDs160Routes(pool, { activityLogService, notificacionService }));
