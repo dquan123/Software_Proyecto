@@ -294,9 +294,9 @@ function defaultQueryHandler(sql, values) {
   }
 
   if (
-    normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
     normalized.includes("FROM documentos") &&
-    normalized.includes("WHERE id = $1")
+    normalized.includes("WHERE id = $1") &&
+    !normalized.includes("usuario_id")
   ) {
     return Promise.resolve({
       rows: [
@@ -1712,7 +1712,7 @@ describe("app endpoints", () => {
       .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
 
     expect(response.status).toBe(500);
-    expect(response.body).toEqual({ error: "No se pudo almacenar el archivo" });
+    expect(response.body).toEqual({ error: "No se pudo guardar el documento" });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
     expect(mockDeleteStoredFile).not.toHaveBeenCalled();
   });
@@ -1938,9 +1938,9 @@ describe("app endpoints", () => {
       const normalized = String(sql).replace(/\s+/g, " ").trim();
 
       if (
-        normalized.includes("SELECT id, nombre, tipo, archivo_url, storage_key") &&
         normalized.includes("FROM documentos") &&
-        normalized.includes("WHERE id = $1")
+        normalized.includes("WHERE id = $1") &&
+        !normalized.includes("usuario_id")
       ) {
         return Promise.resolve({
           rows: [
@@ -1962,7 +1962,7 @@ describe("app endpoints", () => {
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
-      error: "El archivo no esta disponible para vista previa",
+      error: "El archivo no está disponible para vista previa",
     });
     expect(mockGetStoredFile).not.toHaveBeenCalled();
   });
