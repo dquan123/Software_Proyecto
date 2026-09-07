@@ -5,6 +5,7 @@ import StatusCard from "../components/StatusCard";
 import useModoSenior from "../hooks/useModoSenior";
 import useRequireAuth from "../hooks/useRequireAuth";
 import { buildApiUrl } from "../config/api";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 import "../styles/documents.css";
 
 const REQUIRED_DOCUMENTS = [
@@ -117,7 +118,7 @@ export default function Documents() {
 
         const response = await fetch(buildApiUrl("/documentos/listar"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildSessionHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ usuario_id: session.id }),
           signal: controller.signal,
         });

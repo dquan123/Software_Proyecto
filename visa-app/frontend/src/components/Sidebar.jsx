@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { buildApiUrl } from "../config/api";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 import useTheme from "../hooks/useTheme";
 import TopActions from "./TopActions";
 import VisaGuideLogo from "./VisaGuideLogo";
@@ -64,7 +65,7 @@ export default function Sidebar({ currentPage }) {
       try {
         const res = await fetch(buildApiUrl("/notificaciones/no-leidas"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildSessionHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ userId: usuario.id }),
         });
         if (!res.ok) return;

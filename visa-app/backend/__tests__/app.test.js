@@ -812,40 +812,29 @@ describe("app endpoints", () => {
     });
   });
 
-  test("POST /register devuelve 500 cuando faltan campos obligatorios", async () => {
-    mockQuery.mockImplementation((sql, values) => {
-      if (String(sql).includes("INSERT INTO usuario") && !values?.[1]) {
-        return Promise.reject(
-          new Error('null value in column "correo" violates not-null constraint')
-        );
-      }
-      return defaultQueryHandler(sql, values);
-    });
-
+  test("POST /register devuelve 400 cuando faltan campos obligatorios", async () => {
     const response = await request(app).post("/register").send({
       nombre: "Usuario Sin Correo",
       contrasena: "1234",
     });
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: 'null value in column "correo" violates not-null constraint',
+      error: "Nombre, correo y contraseña son obligatorios",
     });
+    expect(mockQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO usuario"), expect.anything());
   });
 
-  test("POST /register acepta datos con formato invalido porque el backend no los valida", async () => {
+  test("POST /register rechaza datos con formato invalido", async () => {
     const response = await request(app).post("/register").send({
       nombre: "Usuario Invalido",
       correo: "correo-sin-formato",
-      contrasena: "",
+      contrasena: "1234",
     });
 
-    expect(response.status).toBe(200);
-    expect(response.body.message).toBe("Usuario guardado en BD");
-    expect(response.body.data).toMatchObject({
-      nombre: "Usuario Invalido",
-      correo: "correo-sin-formato",
-    });
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Correo inválido" });
+    expect(mockQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO usuario"), expect.anything());
   });
 
   test("POST /register devuelve 500 ante error simulado de base de datos", async () => {
@@ -1383,7 +1372,9 @@ describe("app endpoints", () => {
   });
 
   test("GET /notificaciones/:userId lista notificaciones del usuario", async () => {
-    const response = await request(app).get("/notificaciones/1");
+    const response = await request(app)
+      .get("/notificaciones/1")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body.notificaciones[0]).toMatchObject({
@@ -1395,6 +1386,7 @@ describe("app endpoints", () => {
   test("PUT /notificaciones/:id/leer marca una notificacion como leida", async () => {
     const response = await request(app)
       .put("/notificaciones/20/leer")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ userId: 1 });
 
     expect(response.status).toBe(200);
@@ -1405,6 +1397,7 @@ describe("app endpoints", () => {
   test("DELETE /notificaciones/:id elimina una notificacion del usuario", async () => {
     const response = await request(app)
       .delete("/notificaciones/20")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ userId: 1 });
 
     expect(response.status).toBe(200);
@@ -1555,6 +1548,7 @@ describe("app endpoints", () => {
   test("POST /upload guarda un documento mediante el proveedor configurado", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("tipo", "application/pdf")
       .field("usuario_id", "3")
@@ -1573,6 +1567,7 @@ describe("app endpoints", () => {
   test("POST /upload acepta imagen JPG valida", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Fotografia")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("jpg de prueba"), {
@@ -1588,6 +1583,7 @@ describe("app endpoints", () => {
   test("POST /upload rechaza archivo exe", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Ejecutable")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("exe de prueba"), {
@@ -1603,6 +1599,7 @@ describe("app endpoints", () => {
   test("POST /upload rechaza archivo js", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Script")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("console.log('x')"), {
@@ -1618,6 +1615,7 @@ describe("app endpoints", () => {
   test("POST /upload rechaza MIME permitido con extension peligrosa", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Archivo falso")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("pdf falso"), {
@@ -1633,6 +1631,7 @@ describe("app endpoints", () => {
   test("POST /upload rechaza archivos sin extension valida", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Sin extension")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("sin extension"), {
@@ -1648,6 +1647,7 @@ describe("app endpoints", () => {
   test("POST /upload rechaza archivos que exceden 5 MB", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Archivo grande")
       .field("usuario_id", "3")
       .attach("file", Buffer.alloc((5 * 1024 * 1024) + 1), {
@@ -1663,6 +1663,7 @@ describe("app endpoints", () => {
   test("POST /upload devuelve 400 cuando falta el archivo", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("usuario_id", "3");
 
@@ -1674,13 +1675,14 @@ describe("app endpoints", () => {
   test("POST /upload acepta metadatos faltantes porque el backend usa valores por defecto", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .attach("file", Buffer.from("pdf de prueba"), "documento.pdf");
 
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("Archivo subido correctamente");
     expect(response.body.documento).toMatchObject({
       nombre: "documento.pdf",
-      usuario_id: null,
+      usuario_id: 99,
       documento_key: null,
     });
     expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
@@ -1693,6 +1695,7 @@ describe("app endpoints", () => {
   test("POST /upload devuelve 400 cuando usuario_id no es numerico", async () => {
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("usuario_id", "abc")
       .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
@@ -1707,6 +1710,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
@@ -1727,6 +1731,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
@@ -1749,6 +1754,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .post("/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Pasaporte")
       .field("usuario_id", "999")
       .attach("file", Buffer.from("pdf de prueba"), "pasaporte.pdf");
@@ -1761,6 +1767,7 @@ describe("app endpoints", () => {
   test("POST /documentos crea un documento con archivo valido", async () => {
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Visa anterior")
       .field("tipo", "application/pdf")
       .field("usuario_id", "3")
@@ -1782,6 +1789,7 @@ describe("app endpoints", () => {
   test("POST /documentos acepta imagen PNG valida", async () => {
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Fotografia")
       .field("tipo", "image/png")
       .field("usuario_id", "3")
@@ -1799,6 +1807,7 @@ describe("app endpoints", () => {
   test("POST /documentos devuelve 400 cuando falta el archivo", async () => {
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Visa anterior")
       .field("usuario_id", "3");
 
@@ -1810,6 +1819,7 @@ describe("app endpoints", () => {
   test("POST /documentos devuelve 400 cuando falta el nombre", async () => {
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("usuario_id", "3")
       .attach("file", Buffer.from("pdf de prueba"), "visa-anterior.pdf");
 
@@ -1821,6 +1831,7 @@ describe("app endpoints", () => {
   test("POST /documentos devuelve 400 cuando usuario_id no es numerico", async () => {
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Visa anterior")
       .field("usuario_id", "abc")
       .attach("file", Buffer.from("pdf de prueba"), "visa-anterior.pdf");
@@ -1842,6 +1853,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Visa anterior")
       .field("usuario_id", "999")
       .attach("file", Buffer.from("pdf de prueba"), "visa-anterior.pdf");
@@ -1861,6 +1873,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .post("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .field("nombre", "Visa anterior")
       .field("usuario_id", "3")
       .attach("file", Buffer.from("pdf de prueba"), "visa-anterior.pdf");
@@ -1872,7 +1885,9 @@ describe("app endpoints", () => {
   });
 
   test("GET /documentos/:usuarioId lista documentos del usuario", async () => {
-    const response = await request(app).get("/documentos/3");
+    const response = await request(app)
+      .get("/documentos/3")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
@@ -1914,7 +1929,9 @@ describe("app endpoints", () => {
       return defaultQueryHandler(sql, values);
     });
 
-    const response = await request(app).get("/documentos/3");
+    const response = await request(app)
+      .get("/documentos/3")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body[0]).toMatchObject({
@@ -1924,7 +1941,9 @@ describe("app endpoints", () => {
   });
 
   test("GET /documentos/:id/archivo sirve PDF almacenado para vista previa inline", async () => {
-    const response = await request(app).get("/documentos/41/archivo");
+    const response = await request(app)
+      .get("/documentos/41/archivo")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("application/pdf");
@@ -1958,7 +1977,9 @@ describe("app endpoints", () => {
       return defaultQueryHandler(sql, values);
     });
 
-    const response = await request(app).get("/documentos/41/archivo");
+    const response = await request(app)
+      .get("/documentos/41/archivo")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -1968,21 +1989,27 @@ describe("app endpoints", () => {
   });
 
   test("GET /documentos/:usuarioId devuelve lista vacia cuando el usuario no tiene documentos", async () => {
-    const response = await request(app).get("/documentos/4");
+    const response = await request(app)
+      .get("/documentos/4")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
   });
 
   test("GET /documentos/:usuarioId devuelve lista vacia para usuario inexistente porque no valida usuario", async () => {
-    const response = await request(app).get("/documentos/999");
+    const response = await request(app)
+      .get("/documentos/999")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
   });
 
   test("GET /documentos/:usuarioId devuelve 400 cuando el id no es numerico", async () => {
-    const response = await request(app).get("/documentos/abc");
+    const response = await request(app)
+      .get("/documentos/abc")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ error: "usuario_id debe ser numérico" });
@@ -1999,7 +2026,9 @@ describe("app endpoints", () => {
       return defaultQueryHandler(sql, values);
     });
 
-    const response = await request(app).get("/documentos/3");
+    const response = await request(app)
+      .get("/documentos/3")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "No se pudieron cargar los documentos" });
@@ -2168,6 +2197,7 @@ describe("app endpoints", () => {
   test("DELETE /documentos elimina el registro y el archivo almacenado con IDs en body", async () => {
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(200);
@@ -2184,6 +2214,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: 404, usuario_id: 3 });
 
     expect(response.status).toBe(404);
@@ -2194,6 +2225,7 @@ describe("app endpoints", () => {
   test("DELETE /documentos devuelve 400 cuando el id no es numerico", async () => {
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: "abc", usuario_id: 3 });
 
     expect(response.status).toBe(400);
@@ -2204,6 +2236,7 @@ describe("app endpoints", () => {
   test("DELETE /documentos devuelve 400 cuando usuario_id no es numerico", async () => {
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: 41, usuario_id: "abc" });
 
     expect(response.status).toBe(400);
@@ -2221,6 +2254,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(500);
@@ -2232,6 +2266,7 @@ describe("app endpoints", () => {
 
     const response = await request(app)
       .delete("/documentos")
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ documento_id: 41, usuario_id: 3 });
 
     expect(response.status).toBe(200);
@@ -2333,6 +2368,7 @@ describe("app endpoints", () => {
 
       const uploadResponse = await request(app)
         .post("/upload")
+        .set("Authorization", `Bearer ${registerResponse.body.token}`)
         .field("nombre", "Pasaporte")
         .field("tipo", "application/pdf")
         .field("usuario_id", String(userId))
@@ -2349,7 +2385,9 @@ describe("app endpoints", () => {
       });
       expect(mockUploadStoredFile).toHaveBeenCalledTimes(1);
 
-      const documentosResponse = await request(app).get(`/documentos/${userId}`);
+      const documentosResponse = await request(app)
+        .get(`/documentos/${userId}`)
+        .set("Authorization", `Bearer ${registerResponse.body.token}`);
 
       expect(documentosResponse.status).toBe(200);
       expect(documentosResponse.body).toHaveLength(1);

@@ -906,10 +906,16 @@ describe("panel de administracion", () => {
     await user.click(screen.getByRole("button", { name: "Ver documento" }));
 
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^http:\/\/localhost:3000\/documentos\/41\/archivo$/),
+      "",
       "_blank",
       "noopener,noreferrer"
     );
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/^http:\/\/localhost:3000\/documentos\/41\/archivo$/),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: `Bearer ${adminSession.token}` }),
+      })
+    ));
     expect(window.location.pathname).toBe("/admin/documents");
   });
 

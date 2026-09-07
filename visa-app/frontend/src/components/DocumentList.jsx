@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { buildApiUrl } from "../config/api";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 
 function formatDate(value) {
   if (!value) return "Sin fecha";
@@ -54,7 +55,7 @@ export default function DocumentList({ usuarioId, refreshKey = 0 }) {
 
         const response = await fetch(buildApiUrl("/documentos/listar"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildSessionHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ usuario_id: usuarioId }),
         });
         if (!response.ok) {

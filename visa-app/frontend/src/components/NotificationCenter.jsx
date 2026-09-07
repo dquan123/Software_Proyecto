@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { buildApiUrl } from "../config/api";
+import { buildSessionHeaders } from "../utils/sessionAuth";
 
 export default function NotificationCenter({ userId, unreadCount = 0 }) {
   const [open, setOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function NotificationCenter({ userId, unreadCount = 0 }) {
     try {
       const response = await fetch(buildApiUrl("/notificaciones/listar"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildSessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ userId }),
         signal: controller.signal,
       });

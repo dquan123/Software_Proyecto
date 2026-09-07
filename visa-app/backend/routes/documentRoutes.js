@@ -3,22 +3,22 @@ const upload = require("../upload");
 const createDocumentController = require("../controllers/documentController");
 const createDocumentService = require("../services/documentService");
 
-function createDocumentRoutes(pool, { documentSchemaReady, activityLogService }) {
+function createDocumentRoutes(pool, { documentSchemaReady, activityLogService, requireSession = (_req, _res, next) => next() }) {
   const router = express.Router();
 
   const documentService = createDocumentService(pool, { documentSchemaReady, activityLogService });
   const documentController = createDocumentController(documentService);
 
-  router.post("/upload", upload.single("file"), documentController.upload);
-  router.post("/documentos", upload.single("file"), documentController.createDocumento);
-  router.post("/documentos/listar", documentController.listDocumentos);
+  router.post("/upload", requireSession, upload.single("file"), documentController.upload);
+  router.post("/documentos", requireSession, upload.single("file"), documentController.createDocumento);
+  router.post("/documentos/listar", requireSession, documentController.listDocumentos);
   
   // IMPORTANTE: /archivo debe ir ANTES de /:usuarioId
-  router.get("/documentos/:id/archivo", documentController.getArchivo);
-  router.get("/documentos/:usuarioId", documentController.listDocumentos);
+  router.get("/documentos/:id/archivo", requireSession, documentController.getArchivo);
+  router.get("/documentos/:usuarioId", requireSession, documentController.listDocumentos);
   
-  router.delete("/documentos", documentController.deleteDocumento);
-  router.delete("/documentos/:id", documentController.deleteDocumento);
+  router.delete("/documentos", requireSession, documentController.deleteDocumento);
+  router.delete("/documentos/:id", requireSession, documentController.deleteDocumento);
 
   return router;
 }
