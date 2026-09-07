@@ -506,6 +506,7 @@ describe("panel de administracion", () => {
       "Documentos",
       "Formularios DS-160",
       "Entrevistas",
+      "Pagos y citas",
       "Banco de preguntas",
       "Reportes",
       "Actividad",

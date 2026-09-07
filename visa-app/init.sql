@@ -235,3 +235,79 @@ CREATE TABLE IF NOT EXISTS notificaciones (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS visa_fee_catalog (
+  id SERIAL PRIMARY KEY,
+  profile_key VARCHAR(80) NOT NULL UNIQUE,
+  label VARCHAR(160) NOT NULL,
+  consular_fee_cents INT NOT NULL CHECK (consular_fee_cents >= 0),
+  advisory_fee_cents INT NOT NULL CHECK (advisory_fee_cents >= 0),
+  currency VARCHAR(3) NOT NULL DEFAULT 'usd',
+  package_amount_minor INT,
+  package_currency VARCHAR(3),
+  included_consular_fee_usd_cents INT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS consular_payments (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  provider VARCHAR(30) NOT NULL,
+  amount_cents INT NOT NULL CHECK (amount_cents > 0),
+  currency VARCHAR(3) NOT NULL,
+  consular_fee_cents INT,
+  advisory_fee_cents INT,
+  package_amount_minor INT,
+  package_currency VARCHAR(3),
+  included_consular_fee_usd_cents INT,
+  visa_profile_key VARCHAR(80),
+  visa_profile_label VARCHAR(160),
+  status VARCHAR(30) NOT NULL DEFAULT 'pending',
+  transfer_reference VARCHAR(160),
+  transfer_receipt_url TEXT,
+  transfer_receipt_storage_key TEXT,
+  transfer_submitted_at TIMESTAMP,
+  transfer_reviewed_at TIMESTAMP,
+  transfer_reviewed_by INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  transfer_rejection_reason TEXT,
+  official_receipt_number VARCHAR(120),
+  official_receipt_url TEXT,
+  official_receipt_storage_key TEXT,
+  consular_paid_at TIMESTAMP,
+  consular_recorded_by INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  consular_notes TEXT,
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS consular_payments_user_idx
+ON consular_payments(user_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS consular_payments_one_active_user_idx
+ON consular_payments(user_id)
+WHERE status IN ('transfer_pending', 'client_paid', 'consular_processing', 'consular_paid');
+
+CREATE TABLE IF NOT EXISTS consular_appointments (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  consulate VARCHAR(200) NOT NULL,
+  appointment_at TIMESTAMPTZ NOT NULL,
+  original_appointment_at TIMESTAMPTZ,
+  reschedule_count INT NOT NULL DEFAULT 0 CHECK (reschedule_count BETWEEN 0 AND 2),
+  last_rescheduled_at TIMESTAMP,
+  status VARCHAR(30) NOT NULL DEFAULT 'scheduled',
+  confirmation_code VARCHAR(120) NOT NULL UNIQUE,
+  notes TEXT,
+  recorded_by INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  cancelled_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS consular_appointments_user_idx
+ON consular_appointments(user_id, appointment_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS consular_appointments_one_active_user_idx
+ON consular_appointments(user_id) WHERE status = 'scheduled';
