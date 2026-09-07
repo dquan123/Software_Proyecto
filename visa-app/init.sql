@@ -201,6 +201,17 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
   reviewed_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+  id SERIAL PRIMARY KEY,
+  id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS password_resets_usuario_idx ON password_resets(id_usuario);
+
 CREATE TABLE IF NOT EXISTS notificaciones (
   id SERIAL PRIMARY KEY,
   id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,

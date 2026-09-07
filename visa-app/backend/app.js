@@ -142,6 +142,20 @@ async function ensureTramiteSchema() {
   `);
 }
 
+async function ensurePasswordResetSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id SERIAL PRIMARY KEY,
+      id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL,
+      used_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS password_resets_usuario_idx ON password_resets(id_usuario)");
+}
+
 async function ensureAdminSchema() {
   await userSchemaReady;
   await tramiteSchemaReady;
@@ -178,6 +192,9 @@ const userSchemaReady = ensureUserSchema().catch((error) => {
 });
 const tramiteSchemaReady = userSchemaReady.then(ensureTramiteSchema).catch((error) => {
   console.error("ERROR TRAMITE SCHEMA:", error);
+});
+const passwordResetSchemaReady = userSchemaReady.then(ensurePasswordResetSchema).catch((error) => {
+  console.error("ERROR PASSWORD RESET SCHEMA:", error);
 });
 const adminSchemaReady = tramiteSchemaReady.then(ensureAdminSchema).catch((error) => {
   console.error("ERROR ADMIN SCHEMA:", error);
@@ -361,7 +378,7 @@ app.get("/", (req, res) => {
 app.use("/interview-sessions", createInterviewSessionRoutes(pool, { requireAdmin, notificacionService, activityLogService }));
 app.use("/questions", createQuestionBankRoutes(pool, { requireAdmin }));
 app.use("/", createPerfilRoutes(pool, { userSchemaReady, tramiteSchemaReady, activityLogService, notificacionService }));
-app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, testUsersReady, requireSession, activityLogService }));
+app.use("/", createAuthRoutes(pool, { userSchemaReady, tramiteSchemaReady, passwordResetSchemaReady, testUsersReady, requireSession, activityLogService }));
 app.use("/notificaciones", createNotificacionRoutes(pool));
 app.use("/", createDocumentRoutes(pool, { documentSchemaReady, activityLogService }));
 app.use("/", createDs160Routes(pool, { activityLogService, notificacionService }));

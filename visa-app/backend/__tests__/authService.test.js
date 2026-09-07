@@ -1,0 +1,143 @@
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+const createAuthService = require("../services/authService");
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function createPool(handler) {
+  return { query: jest.fn(handler) };
+}
+
+const schemaReady = Promise.resolve();
+
+describe("authService - recuperación de contraseña", () => {
+  test("createPasswordResetToken devuelve null si el correo no existe", async () => {
+    const pool = createPool(async (sql) => {
+      if (String(sql).includes("FROM usuario WHERE correo")) return { rows: [] };
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const result = await authService.createPasswordResetToken("noexiste@example.com");
+
+    expect(result).toBeNull();
+  });
+
+  test("createPasswordResetToken genera un token y guarda su hash con expiración", async () => {
+    let insertedValues;
+    const pool = createPool(async (sql, values) => {
+      const normalized = String(sql).replace(/\s+/g, " ").trim();
+      if (normalized.includes("FROM usuario WHERE correo")) {
+        return { rows: [{ id_usuario: 5, nombre: "Ana", correo: values[0], rol: "cliente" }] };
+      }
+      if (normalized.includes("INSERT INTO password_resets")) {
+        insertedValues = values;
+        return { rows: [] };
+      }
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const result = await authService.createPasswordResetToken("ana@example.com");
+
+    expect(result.usuario.id_usuario).toBe(5);
+    expect(result.token).toMatch(/^[0-9a-f]{64}$/);
+    expect(insertedValues[0]).toBe(5);
+    expect(insertedValues[1]).toBe(hashToken(result.token));
+    expect(insertedValues[2]).toBeInstanceOf(Date);
+    expect(insertedValues[2].getTime()).toBeGreaterThan(Date.now());
+  });
+
+  test("resetPassword devuelve false con token inexistente", async () => {
+    const pool = createPool(async (sql) => {
+      if (String(sql).includes("FROM password_resets")) return { rows: [] };
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const success = await authService.resetPassword("token-invalido", "nueva1234");
+
+    expect(success).toBe(false);
+  });
+
+  test("resetPassword devuelve false con token expirado", async () => {
+    const token = "a".repeat(64);
+    const pool = createPool(async (sql) => {
+      if (String(sql).includes("FROM password_resets")) {
+        return { rows: [{ id: 1, id_usuario: 5, expires_at: new Date(Date.now() - 1000), used_at: null }] };
+      }
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const success = await authService.resetPassword(token, "nueva1234");
+
+    expect(success).toBe(false);
+  });
+
+  test("resetPassword devuelve false con token ya utilizado", async () => {
+    const token = "b".repeat(64);
+    const pool = createPool(async (sql) => {
+      if (String(sql).includes("FROM password_resets")) {
+        return { rows: [{ id: 1, id_usuario: 5, expires_at: new Date(Date.now() + 1000 * 60), used_at: new Date() }] };
+      }
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const success = await authService.resetPassword(token, "nueva1234");
+
+    expect(success).toBe(false);
+  });
+
+  test("resetPassword actualiza la contraseña con bcrypt y marca el token como usado", async () => {
+    const token = "c".repeat(64);
+    const queries = [];
+    const pool = createPool(async (sql, values) => {
+      const normalized = String(sql).replace(/\s+/g, " ").trim();
+      queries.push({ normalized, values });
+      if (normalized.includes("FROM password_resets")) {
+        return { rows: [{ id: 9, id_usuario: 5, expires_at: new Date(Date.now() + 1000 * 60), used_at: null }] };
+      }
+      return { rows: [] };
+    });
+    const authService = createAuthService(pool, {
+      userSchemaReady: schemaReady,
+      tramiteSchemaReady: schemaReady,
+      passwordResetSchemaReady: schemaReady,
+    });
+
+    const success = await authService.resetPassword(token, "nueva1234");
+
+    expect(success).toBe(true);
+
+    const updateUsuario = queries.find((q) => q.normalized.includes("UPDATE usuario SET contrasena"));
+    expect(updateUsuario.values[1]).toBe(5);
+    expect(await bcrypt.compare("nueva1234", updateUsuario.values[0])).toBe(true);
+
+    const markUsed = queries.find((q) => q.normalized.includes("UPDATE password_resets SET used_at"));
+    expect(markUsed.values[0]).toBe(9);
+  });
+});

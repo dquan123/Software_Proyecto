@@ -259,6 +259,92 @@ describe("pantallas de autenticación", () => {
     expect(localStorage.getItem("correoUsuario")).toBe(newUser.correo);
   });
 
+  it("permite solicitar la recuperación de contraseña desde el login", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/login");
+
+    render(<App />);
+
+    await user.click(screen.getByRole("link", { name: "¿Olvidaste tu contraseña?" }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/recuperar-contrasena"));
+    expect(screen.getByRole("heading", { name: "Recuperar contraseña" })).toBeInTheDocument();
+  });
+
+  it("valida el correo y envía la solicitud de recuperación de contraseña", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña." }),
+    });
+    window.history.pushState({}, "", "/recuperar-contrasena");
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /Enviar enlace/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("El correo es obligatorio");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Correo electrónico"), "persona@example.com");
+    await user.click(screen.getByRole("button", { name: /Enviar enlace/i }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(
+      "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
+    ));
+    expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/forgot-password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: "persona@example.com" }),
+    });
+  });
+
+  it("valida la nueva contraseña y la envía junto al token del enlace", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Contraseña actualizada correctamente" }),
+    });
+    window.history.pushState({}, "", "/restablecer-contrasena?token=abc123");
+
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Nueva contraseña"), "clave123");
+    await user.type(screen.getByLabelText("Confirmar contraseña"), "otra-clave");
+    await user.click(screen.getByRole("button", { name: /Guardar contraseña/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Las contraseñas no coinciden");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText("Confirmar contraseña"));
+    await user.type(screen.getByLabelText("Confirmar contraseña"), "clave123");
+    await user.click(screen.getByRole("button", { name: /Guardar contraseña/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(buildApiUrl("/reset-password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "abc123", nuevaContrasena: "clave123" }),
+    }));
+    expect(screen.getByRole("status")).toHaveTextContent("Contraseña actualizada correctamente");
+  });
+
+  it("muestra el error del servidor cuando el token de restablecimiento es inválido", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "El enlace de recuperación es inválido o expiró" }),
+    });
+    window.history.pushState({}, "", "/restablecer-contrasena?token=vencido");
+
+    render(<App />);
+
+    await user.type(screen.getByLabelText("Nueva contraseña"), "clave123");
+    await user.type(screen.getByLabelText("Confirmar contraseña"), "clave123");
+    await user.click(screen.getByRole("button", { name: /Guardar contraseña/i }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(
+      "El enlace de recuperación es inválido o expiró"
+    ));
+  });
+
   it.each([
     ["/login", "turismo_negocios", "/dashboard"],
     ["/registro", "turismo_negocios", "/dashboard"],
